@@ -13,8 +13,10 @@ This scale was designed to be used in conjunction with GaggiMate, but can also b
 
 <br>
 <br>
+<p>
 <img src="docs/assets/dashboard.jpg" alt="WeighMyBru Dashboard" width="250" />
-
+<img src="docs/assets/weighmybru.jpg" alt="WeighMyBru Dashboard" width="700" />
+</p>
 ## Documentation
 
 The documentation is currently being worked on. 
