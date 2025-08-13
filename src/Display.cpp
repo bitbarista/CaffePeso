@@ -11,7 +11,7 @@ Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRat
       timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false),
       lastWeight(0.0), lastWeightChangeTime(0), waitingForStabilization(false),
       weightWhenChanged(0.0), stabilizationStartTime(0), autoTareEnabled(true),
-      lastFlowRate(0.0), autoTimerStarted(false), pendingModeTare(false), modeSwitchTime(0), stabilizationMessageShown(false),
+      lastFlowRate(0.0), autoTimerStarted(false), autoTareCompletedTime(0), pendingModeTare(false), modeSwitchTime(0), stabilizationMessageShown(false),
       waitingForModeTareStabilization(false), modeTareStabilizationStart(0), lastStableWeight(0.0), 
       fingerPressWeight(0.0), fingerReleaseDetected(false) {
     display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -116,21 +116,19 @@ void Display::setupDisplay() {
 }
 
 void Display::update() {
-    // Return early if display is not connected
-    if (!displayConnected) {
-        return;
-    }
-    
-    // Check if we're showing a temporary message
-    if (showingMessage) {
-        if (millis() - messageStartTime > messageDuration) { // Use stored duration
-            showingMessage = false;
-        } else {
-            return; // Keep showing the message
+    // Always run auto-tare logic even without display for web interface support
+    if (scalePtr != nullptr && currentMode == ScaleMode::AUTO) {
+        float weight = scalePtr->getCurrentWeight();
+        checkAutoTare(weight);
+        
+        // Also check auto-timer logic
+        if (flowRatePtr != nullptr) {
+            float currentFlowRate = flowRatePtr->getFlowRate();
+            checkAutoTimer(currentFlowRate);
         }
     }
     
-    // Handle mode tare stabilization monitoring (two-stage process)
+    // Handle mode tare stabilization monitoring even without display
     if (waitingForModeTareStabilization && scalePtr != nullptr) {
         unsigned long currentTime = millis();
         float currentWeight = scalePtr->getCurrentWeight();
@@ -162,6 +160,20 @@ void Display::update() {
                 modeTareStabilizationStart = currentTime;
                 lastStableWeight = currentWeight;
             }
+        }
+    }
+    
+    // Return early if display is not connected - but auto-tare logic above still runs
+    if (!displayConnected) {
+        return;
+    }
+    
+    // Check if we're showing a temporary message
+    if (showingMessage) {
+        if (millis() - messageStartTime > messageDuration) { // Use stored duration
+            showingMessage = false;
+        } else {
+            return; // Keep showing the message
         }
     }
     
@@ -996,6 +1008,7 @@ void Display::setMode(ScaleMode mode, bool delayTare) {
             autoTareEnabled = true;
             waitingForStabilization = false;
             autoTimerStarted = false;
+            autoTareCompletedTime = 0; // Reset timing
             lastWeight = 0.0;
             lastFlowRate = 0.0;
             Serial.println("Auto mode activated - auto-tare and auto-timer enabled");
@@ -1033,6 +1046,11 @@ void Display::startTimer() {
         timerStartTime = millis();
         timerRunning = true;
         timerPaused = false;
+        
+        // Start flow rate averaging when timer starts
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->startTimerAveraging();
+        }
     }
 }
 
@@ -1040,6 +1058,11 @@ void Display::stopTimer() {
     if (timerRunning && !timerPaused) {
         timerPausedTime = millis() - timerStartTime;
         timerPaused = true;
+        
+        // Stop flow rate averaging when timer stops
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->stopTimerAveraging();
+        }
     }
 }
 
@@ -1048,6 +1071,11 @@ void Display::resetTimer() {
     timerPausedTime = 0;
     timerRunning = false;
     timerPaused = false;
+    
+    // Reset flow rate averaging when timer is reset
+    if (flowRatePtr != nullptr) {
+        flowRatePtr->resetTimerAveraging();
+    }
 }
 
 bool Display::isTimerRunning() const {
@@ -1158,7 +1186,8 @@ void Display::checkAutoTare(float weight) {
             }
             waitingForStabilization = false;
             autoTareEnabled = false; // Disable auto-tare, now ready for timer
-            Serial.println("Auto-tare complete - auto-timer now enabled");
+            autoTareCompletedTime = millis(); // Set completion time to add delay before timer
+            Serial.println("Auto-tare complete - auto-timer enabled with delay");
         }
     }
     
@@ -1166,9 +1195,15 @@ void Display::checkAutoTare(float weight) {
 }
 
 void Display::checkAutoTimer(float flowRate) {
-    // Only allow auto-timer to start if auto-tare has been completed
-    // This prevents timer from starting when placing a cup on the scale
+    // Only check auto timer in AUTO mode and when auto-tare is disabled
     if (!autoTareEnabled && !waitingForStabilization) {
+        unsigned long currentTime = millis();
+        
+        // Simple 2-second delay after any tare operation
+        if (autoTareCompletedTime > 0 && currentTime - autoTareCompletedTime < 2000) {
+            return;
+        }
+        
         // Start timer when flow rate increases above threshold (0.2g/s)
         if (!timerRunning && !autoTimerStarted && flowRate > 0.2) {
             startTimer();
@@ -1179,14 +1214,8 @@ void Display::checkAutoTimer(float flowRate) {
                 powerManagerPtr->resetTimerState();
             }
             
-            Serial.println("Auto-timer started - coffee flow detected");
+            Serial.printf("Auto-timer started - coffee flow detected (%.3f g/s)\n", flowRate);
         }
-        
-        // Timer continues running even when flow stops
-        // Timer only stops when:
-        // 1. Cup is removed (handled by resetAutoSequence)
-        // 2. Power button is short-pressed (handled by PowerManager)
-        // No automatic stopping based on flow rate anymore
     }
     
     lastFlowRate = flowRate;
@@ -1203,9 +1232,32 @@ void Display::resetAutoSequence() {
         autoTareEnabled = true;
         waitingForStabilization = false;
         autoTimerStarted = false;
+        autoTareCompletedTime = 0; // Reset timing
         lastWeight = 0.0;
         lastFlowRate = 0.0;
         
-        Serial.println("Auto sequence reset - ready for new auto-tare cycle");
+        // Clear flow rate buffer to ensure clean start for next cycle
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->clearFlowRateBuffer();
+        }
+        
+        Serial.println("Auto sequence reset - ready for new auto-tare cycle, flow rate cleared");
+    }
+}
+
+void Display::completeTareOperation() {
+    if (currentMode == ScaleMode::AUTO) {
+        // Manual tare completed - reset for next auto-tare cycle
+        autoTareEnabled = true;           // Re-enable auto-tare for next cycle
+        waitingForStabilization = false;  // Clear any pending stabilization
+        autoTimerStarted = false;         // Reset timer state
+        autoTareCompletedTime = millis(); // Set completion time for delay
+        
+        // Clear flow rate buffer to prevent false triggers from tare operation
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->clearFlowRateBuffer();
+        }
+        
+        Serial.println("Manual tare completed - auto-tare re-enabled for next cycle");
     }
 }

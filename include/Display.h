@@ -70,6 +70,7 @@ public:
     void checkAutoTare(float weight);
     void checkAutoTimer(float flowRate);
     void resetAutoSequence(); // Reset auto mode sequence when manually tared
+    void completeTareOperation(); // Called after manual tare to set up proper timing
     
 private:
     uint8_t sdaPin;
@@ -109,6 +110,7 @@ private:
     bool autoTareEnabled;
     float lastFlowRate;
     bool autoTimerStarted;
+    unsigned long autoTareCompletedTime; // Track when auto-tare completed to prevent immediate timer start
     
     // Mode switching system
     bool pendingModeTare;

@@ -31,6 +31,9 @@ PowerManager powerManager(sleepTouchPin, &oledDisplay);
 void setup() {
   Serial.begin(115200);
   
+  // Link scale and flow rate for tare operation coordination
+  scale.setFlowRatePtr(&flowRate);
+  
   // Check for factory reset request (hold touch pin during boot)
   pinMode(touchPin, INPUT_PULLDOWN);
   if (digitalRead(touchPin) == HIGH) {
@@ -130,6 +133,9 @@ void setup() {
   if (oledDisplay.isConnected()) {
     touchSensor.setDisplay(&oledDisplay);
   }
+  
+  // Link flow rate to touch sensor for averaging reset on tare
+  touchSensor.setFlowRate(&flowRate);
 
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay);
 }

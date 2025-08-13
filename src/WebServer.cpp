@@ -147,11 +147,19 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
       json += "\"timer_elapsed\":" + String(elapsedTime) + ",";
       json += "\"timer_display\":\"" + String(minutes) + ":" + 
               (seconds < 10 ? "0" : "") + String(seconds) + "." + 
-              (milliseconds < 100 ? (milliseconds < 10 ? "00" : "0") : "") + String(milliseconds) + "\"";
+              (milliseconds < 100 ? (milliseconds < 10 ? "00" : "0") : "") + String(milliseconds) + "\",";
+      
+      // Add timer average flow rate
+      if (flowRate.hasTimerAverage()) {
+        json += "\"timer_avg_flowrate\":" + String(flowRate.getTimerAverageFlowRate(), 2);
+      } else {
+        json += "\"timer_avg_flowrate\":null";
+      }
     } else {
       json += "\"timer_running\":false,";
       json += "\"timer_elapsed\":0,";
-      json += "\"timer_display\":\"0:00.000\"";
+      json += "\"timer_display\":\"0:00.000\",";
+      json += "\"timer_avg_flowrate\":null";
     }
     
     json += "}";
@@ -256,9 +264,20 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  server.on("/api/tare", HTTP_POST, [&scale](AsyncWebServerRequest *request){
+  server.on("/api/tare", HTTP_POST, [&scale, &display, &flowRate](AsyncWebServerRequest *request){
     scale.tare(20);
-    request->send(200, "text/plain", "Scale tared!");
+    
+    // Reset timer when taring (prepare for fresh brew)
+    display.resetTimer();
+    
+    // Reset flow rate averaging for fresh brew measurement
+    flowRate.resetTimerAveraging();
+    
+    // Complete tare operation and set up proper timing for auto-timer
+    // (This will also clear the flow rate buffer internally)
+    display.completeTareOperation();
+    
+    request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });
 
   server.on("/api/set-calibrationfactor", HTTP_POST, [&scale](AsyncWebServerRequest *request){

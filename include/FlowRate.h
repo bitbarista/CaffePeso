@@ -7,6 +7,19 @@ public:
     FlowRate();
     void update(float currentWeight);
     float getFlowRate() const; // grams per second
+    
+    // Timer-based average flow rate tracking
+    void startTimerAveraging();
+    void stopTimerAveraging();
+    void resetTimerAveraging();
+    float getTimerAverageFlowRate() const;
+    bool hasTimerAverage() const;
+    
+    // Tare operation support
+    void pauseCalculation();  // Pause flow rate during tare operations
+    void resumeCalculation(); // Resume flow rate after tare completes
+    void clearFlowRateBuffer(); // Clear all flow rate history for fresh start
+    
 private:
     float lastWeight;
     unsigned long lastTime;
@@ -14,6 +27,14 @@ private:
     float flowRateBuffer[FLOWRATE_AVG_WINDOW];
     int bufferIndex;
     int bufferCount;
+    
+    // Timer-based average tracking
+    bool timerAveragingActive;
+    float timerFlowRateSum;
+    int timerFlowRateSamples;
+    float timerAverageFlowRate;
+    bool hasValidTimerAverage;
+    bool calculationPaused; // Flag to pause flow rate during tare operations
     
     // Flow rate filtering parameters
     static constexpr float WEIGHT_DEADBAND = 0.08f;     // Increased deadband for load cell noise

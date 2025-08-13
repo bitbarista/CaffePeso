@@ -1,6 +1,7 @@
 #include "Scale.h"
 #include "WebServer.h"
 #include "Calibration.h"
+#include "FlowRate.h"
 
 Scale::Scale(uint8_t dataPin, uint8_t clockPin, float calibrationFactor)
     : dataPin(dataPin), clockPin(clockPin), calibrationFactor(calibrationFactor), currentWeight(0.0f),
@@ -98,9 +99,20 @@ void Scale::tare(uint8_t times) {
         return;
     }
     
+    // Pause flow rate calculation to prevent tare operation from affecting flow rate
+    if (flowRatePtr != nullptr) {
+        flowRatePtr->pauseCalculation();
+    }
+    
     Serial.println("Taring scale...");
     hx711.tare(times);
     Serial.println("Tare complete");
+    
+    // Resume flow rate calculation after a short delay to ensure stable readings
+    if (flowRatePtr != nullptr) {
+        delay(100); // Short delay to let scale stabilize
+        flowRatePtr->resumeCalculation();
+    }
 }
 
 void Scale::set_scale(float factor) {
@@ -279,4 +291,8 @@ void Scale::loadFilterSettings() {
     stabilityTimeout = preferences.getULong("stab_timeout", 2000);
     medianSamples = preferences.getInt("median_samples", 3);
     averageSamples = preferences.getInt("avg_samples", 2); // Reduced for faster response
+}
+
+void Scale::setFlowRatePtr(FlowRate* flowRatePtr) {
+    this->flowRatePtr = flowRatePtr;
 }

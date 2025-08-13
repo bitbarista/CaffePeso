@@ -32,6 +32,9 @@ public:
     void saveFilterSettings();
     void loadFilterSettings();
     
+    // FlowRate integration for tare operations
+    void setFlowRatePtr(class FlowRate* flowRatePtr);
+    
 private:
     HX711 hx711;
     Preferences preferences;
@@ -40,6 +43,7 @@ private:
     float calibrationFactor = 0.0f;
     float currentWeight;
     bool isConnected = false;  // Track HX711 connection status
+    class FlowRate* flowRatePtr = nullptr; // For pausing flow rate during tare
     
     // Smart filtering variables - reduced buffer for faster response
     static const int MAX_SAMPLES = 10;  // Reduced from 50 to 10 for faster response

@@ -82,6 +82,7 @@
     <!-- Timer Status -->
     <div class="text-center">
       <p class="text-sm text-gray-400" id="timerStatus">Stopped</p>
+      <p class="text-sm text-blue-400" id="avgFlowRate" style="display: none;"></p>
     </div>
 
     <!-- Action Buttons -->
@@ -128,7 +129,11 @@
   function tareScale() {
     fetch('/api/tare', { method: 'POST' })
       .then(response => response.text())
-      .then(data => alert(data))
+      .then(data => {
+        alert(data);
+        // Hide average flow rate display since we've reset for fresh brew
+        document.getElementById('avgFlowRate').style.display = 'none';
+      })
       .catch(err => alert("Tare failed!"));
   }
 
@@ -229,6 +234,16 @@
           // Color code timer based on status
           const timerElement = document.getElementById('timer');
           timerElement.className = 'text-3xl font-bold ' + (data.timer_running ? 'text-green-400' : 'text-white');
+          
+          // Show timer average flow rate when timer is stopped and average is available
+          const avgFlowRateElement = document.getElementById('avgFlowRate');
+          if (!data.timer_running && data.timer_avg_flowrate !== null && data.timer_avg_flowrate > 0) {
+            avgFlowRateElement.innerText = `Avg Flow Rate: ${data.timer_avg_flowrate.toFixed(2)} g/s`;
+            avgFlowRateElement.style.display = 'block';
+          } else if (data.timer_running) {
+            // Hide average when timer is running
+            avgFlowRateElement.style.display = 'none';
+          }
         }
       })
       .catch(err => console.error("Dashboard fetch error:", err));

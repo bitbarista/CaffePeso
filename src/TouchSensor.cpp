@@ -1,9 +1,10 @@
 #include "TouchSensor.h"
 #include "Scale.h"
 #include "Display.h"
+#include "FlowRate.h"
 
 TouchSensor::TouchSensor(uint8_t touchPin, Scale* scale) 
-    : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), touchThreshold(30000), 
+    : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), flowRatePtr(nullptr), touchThreshold(30000), 
       lastTouchState(false), lastTouchTime(0), touchStartTime(0), debounceDelay(200),
       longPressDetected(false), delayedTarePending(false), delayedTareTime(0) {
 }
@@ -87,6 +88,10 @@ void TouchSensor::setDisplay(Display* display) {
     displayPtr = display;
 }
 
+void TouchSensor::setFlowRate(FlowRate* flowRate) {
+    flowRatePtr = flowRate;
+}
+
 void TouchSensor::handleTouch() {
     if (scalePtr != nullptr) {
         Serial.println("Touch detected! Taring scale...");
@@ -105,9 +110,16 @@ void TouchSensor::handleTouch() {
             Serial.println("Timer reset with manual tare");
         }
         
-        // Reset auto sequence if in Auto mode
+        // Reset flow rate averaging for fresh brew
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->resetTimerAveraging();
+            Serial.println("Flow rate averaging reset for fresh brew");
+        }
+        
+        // Complete tare operation and set up proper timing for auto-timer
+        // (This will also clear the flow rate buffer internally)
         if (displayPtr != nullptr) {
-            displayPtr->resetAutoSequence();
+            displayPtr->completeTareOperation();
         }
         
         // Show completion message on display if available
@@ -160,9 +172,16 @@ void TouchSensor::checkDelayedTare() {
                 Serial.println("Timer reset with manual tare");
             }
             
-            // Reset auto sequence if in Auto mode
+            // Reset flow rate averaging for fresh brew
+            if (flowRatePtr != nullptr) {
+                flowRatePtr->resetTimerAveraging();
+                Serial.println("Flow rate averaging reset for fresh brew");
+            }
+            
+            // Complete tare operation and set up proper timing for auto-timer
+            // (This will also clear the flow rate buffer internally)
             if (displayPtr != nullptr) {
-                displayPtr->resetAutoSequence();
+                displayPtr->completeTareOperation();
             }
             
             // Show completion message on display if available

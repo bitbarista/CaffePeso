@@ -2,11 +2,18 @@
 #include "Calibration.h"
 #include <Arduino.h>
 
-FlowRate::FlowRate() : lastWeight(0), lastTime(0), flowRate(0), bufferIndex(0), bufferCount(0) {
+FlowRate::FlowRate() : lastWeight(0), lastTime(0), flowRate(0), bufferIndex(0), bufferCount(0),
+    timerAveragingActive(false), timerFlowRateSum(0), timerFlowRateSamples(0), 
+    timerAverageFlowRate(0), hasValidTimerAverage(false), calculationPaused(false) {
     for (int i = 0; i < FLOWRATE_AVG_WINDOW; ++i) flowRateBuffer[i] = 0;
 }
 
 void FlowRate::update(float currentWeight) {
+    // Skip flow rate calculation if paused (during tare operations)
+    if (calculationPaused) {
+        return;
+    }
+    
     unsigned long now = millis();
     
     if (lastTime > 0) {
@@ -15,41 +22,65 @@ void FlowRate::update(float currentWeight) {
         
         // Only update if enough time has passed for meaningful calculation
         if (deltaTime >= MIN_DELTA_TIME) {
-            // Detect different types of changes with higher thresholds
-            bool majorWeightIncrease = deltaWeight > RAPID_CHANGE_THRESHOLD;
-            bool weightRemoval = deltaWeight < -NEGATIVE_CHANGE_THRESHOLD;
+            // Simple tare transition detection
+            bool tareTransition = false;
             
-            // Apply stronger deadband filter for load cell noise
-            if (abs(deltaWeight) < WEIGHT_DEADBAND) {
-                deltaWeight = 0.0f;
+            // Check for tare transition: negative weight going to near zero
+            if (lastWeight < -5.0f && abs(currentWeight) < 2.0f) {
+                tareTransition = true;
             }
             
-            if (deltaTime > 0) {
-                float instantRate = deltaWeight / deltaTime;
+            // Check for large weight jump (likely tare operation)
+            if (abs(deltaWeight) > 50.0f) {
+                tareTransition = true;
+            }
+            
+            if (!tareTransition) {
+                // Detect different types of changes with higher thresholds
+                bool majorWeightIncrease = deltaWeight > RAPID_CHANGE_THRESHOLD;
+                bool weightRemoval = deltaWeight < -NEGATIVE_CHANGE_THRESHOLD;
                 
-                // Only clear buffer for significant weight removal
-                if (weightRemoval && abs(deltaWeight) > 1.0f) {
-                    // Major weight removed - reset buffer for fast zero response
-                    for (int i = 0; i < FLOWRATE_AVG_WINDOW; i++) {
-                        flowRateBuffer[i] = 0.0f;
+                // Apply stronger deadband filter for load cell noise
+                if (abs(deltaWeight) < WEIGHT_DEADBAND) {
+                    deltaWeight = 0.0f;
+                }
+                
+                if (deltaTime > 0) {
+                    float instantRate = deltaWeight / deltaTime;
+                    
+                    // Only clear buffer for significant weight removal
+                    if (weightRemoval && abs(deltaWeight) > 1.0f) {
+                        // Major weight removed - reset buffer for fast zero response
+                        for (int i = 0; i < FLOWRATE_AVG_WINDOW; i++) {
+                            flowRateBuffer[i] = 0.0f;
+                        }
+                        bufferCount = 1;
+                        bufferIndex = 0;
+                        flowRateBuffer[0] = instantRate;
+                    } else {
+                        // Normal operation - store in circular buffer
+                        flowRateBuffer[bufferIndex] = instantRate;
+                        bufferIndex = (bufferIndex + 1) % FLOWRATE_AVG_WINDOW;
+                        if (bufferCount < FLOWRATE_AVG_WINDOW) bufferCount++;
                     }
-                    bufferCount = 1;
-                    bufferIndex = 0;
-                    flowRateBuffer[0] = instantRate;
-                } else {
-                    // Normal operation - store in circular buffer
-                    flowRateBuffer[bufferIndex] = instantRate;
-                    bufferIndex = (bufferIndex + 1) % FLOWRATE_AVG_WINDOW;
-                    if (bufferCount < FLOWRATE_AVG_WINDOW) bufferCount++;
+                    
+                    // Calculate stable average with consistent smoothing
+                    flowRate = calculateStableAverage(weightRemoval);
+                    
+                    // Track flow rate for timer-based averaging (only when positive flow)
+                    if (timerAveragingActive && flowRate > 0.1f) { // Only count meaningful positive flow
+                        timerFlowRateSum += flowRate;
+                        timerFlowRateSamples++;
+                    }
+                    
+                    // Apply zero threshold to eliminate tiny fluctuations
+                    if (abs(flowRate) < ZERO_THRESHOLD) {
+                        flowRate = 0.0f;
+                    }
                 }
-                
-                // Calculate stable average with consistent smoothing
-                flowRate = calculateStableAverage(weightRemoval);
-                
-                // Apply zero threshold to eliminate tiny fluctuations
-                if (abs(flowRate) < ZERO_THRESHOLD) {
-                    flowRate = 0.0f;
-                }
+            } else {
+                // Tare transition detected - set flow rate to zero
+                flowRate = 0.0f;
             }
             
             lastWeight = currentWeight;
@@ -96,3 +127,69 @@ float FlowRate::calculateStableAverage(bool isWeightRemoval) {
 float FlowRate::getFlowRate() const {
     return flowRate;
 }
+
+// Timer-based average flow rate methods
+void FlowRate::startTimerAveraging() {
+    timerAveragingActive = true;
+    timerFlowRateSum = 0;
+    timerFlowRateSamples = 0;
+    hasValidTimerAverage = false;
+    Serial.println("Started timer-based flow rate averaging");
+}
+
+void FlowRate::stopTimerAveraging() {
+    if (timerAveragingActive && timerFlowRateSamples > 0) {
+        timerAverageFlowRate = timerFlowRateSum / timerFlowRateSamples;
+        hasValidTimerAverage = true;
+        Serial.printf("Timer flow rate average: %.2f g/s (from %d samples)\n", 
+                     timerAverageFlowRate, timerFlowRateSamples);
+    } else {
+        timerAverageFlowRate = 0;
+        hasValidTimerAverage = false;
+        Serial.println("No valid flow rate samples during timer period");
+    }
+    timerAveragingActive = false;
+}
+
+void FlowRate::resetTimerAveraging() {
+    timerAveragingActive = false;
+    timerFlowRateSum = 0;
+    timerFlowRateSamples = 0;
+    timerAverageFlowRate = 0;
+    hasValidTimerAverage = false;
+    Serial.println("Timer averaging reset");
+}
+
+float FlowRate::getTimerAverageFlowRate() const {
+    return hasValidTimerAverage ? timerAverageFlowRate : 0.0f;
+}
+
+bool FlowRate::hasTimerAverage() const {
+    return hasValidTimerAverage;
+}
+
+void FlowRate::pauseCalculation() {
+    calculationPaused = true;
+    Serial.println("Flow rate calculation paused");
+}
+
+void FlowRate::resumeCalculation() {
+    calculationPaused = false;
+    // Reset timing to avoid using old weight data
+    lastTime = millis();
+    Serial.println("Flow rate calculation resumed");
+}
+
+void FlowRate::clearFlowRateBuffer() {
+    // Clear all flow rate history and reset to zero state
+    for (int i = 0; i < FLOWRATE_AVG_WINDOW; i++) {
+        flowRateBuffer[i] = 0.0f;
+    }
+    bufferIndex = 0;
+    bufferCount = 0;
+    flowRate = 0.0f;
+    lastWeight = 0.0f;
+    lastTime = 0;
+    Serial.println("Flow rate buffer cleared for fresh start");
+}
+
