@@ -683,24 +683,20 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     if (displayWeight < 0) {
         weightStr = String(displayWeight, 1);
     } else {
-        weightStr = " " + String(displayWeight, 1);
+        weightStr = " " + String(displayWeight, 1); // Add space for positive numbers
     }
     weightStr += "g";
     
-    // Calculate text width for centering weight
-    display->setTextSize(2);
+    // Top center: Large weight display (size 3) centered
+    display->setTextSize(3);
     int16_t x1, y1;
     uint16_t textWidth, textHeight;
     display->getTextBounds(weightStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    
-    // Center the weight text horizontally
     int centerX = (SCREEN_WIDTH - textWidth) / 2;
-    
-    // Large weight display - centered at top
     display->setCursor(centerX, 0);
     display->print(weightStr);
     
-    // Get flow rate and format it for left side
+    // Get flow rate and format it for bottom left
     float currentFlowRate = 0.0;
     if (flowRatePtr != nullptr) {
         currentFlowRate = flowRatePtr->getFlowRate();
@@ -712,7 +708,7 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         displayFlowRate = 0.0;
     }
     
-    // Format flow rate string (shorter format for space)
+    // Format flow rate string (compact format)
     String flowRateStr = "";
     if (displayFlowRate < 0) {
         flowRateStr += String(displayFlowRate, 1);
@@ -721,23 +717,23 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     }
     flowRateStr += "g/s";
     
-    // Get timer for right side
+    // Get timer for bottom right
     float currentTime = getTimerSeconds();
     String timerStr = String(currentTime, 1) + "s";
     
-    // Small text at bottom - flow rate on left, timer on right
+    // Bottom line: Small text (size 1) - flow rate left, timer right
     display->setTextSize(1);
     
     // Flow rate on bottom left
     display->setCursor(0, 24);
     display->print(flowRateStr);
     
-    // Timer on bottom right (adjusted for Bluetooth indicator if present)
+    // Timer on bottom right - calculate position to right-align
     display->getTextBounds(timerStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
     int timerX = SCREEN_WIDTH - textWidth;
-    // If Bluetooth is connected, move timer left a bit to avoid overlap
+    // Adjust for Bluetooth indicator if present
     if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        timerX -= 25; // Move 25 pixels left to avoid "BT" text
+        timerX -= 25; // Move left to avoid "BT" text
     }
     display->setCursor(timerX, 24);
     display->print(timerStr);
