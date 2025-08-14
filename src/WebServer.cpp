@@ -127,15 +127,8 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += "\"flowrate\":" + String(flowRate.getFlowRate(), 1) + ",";
     json += "\"scale_connected\":" + String(scale.isHX711Connected() ? "true" : "false") + ",";
     
-    // Add current mode
-    String modeStr;
-    switch(display.getMode()) {
-      case ScaleMode::FLOW: modeStr = "FLOW"; break;
-      case ScaleMode::TIME: modeStr = "TIME"; break;
-      case ScaleMode::AUTO: modeStr = "AUTO"; break;
-      default: modeStr = "UNKNOWN"; break;
-    }
-    json += "\"mode\":\"" + modeStr + "\",";
+    // Always show unified mode
+    json += "\"mode\":\"UNIFIED\",";
     
     // Add timer information
     unsigned long elapsedTime = display.getElapsedTime();
@@ -164,64 +157,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     
     json += "}";
     request->send(200, "application/json", json);
-  });
-
-  // Mode and timer specific endpoint
-  server.on("/api/mode", HTTP_GET, [&display](AsyncWebServerRequest *request) {
-    String json = "{";
-    
-    // Current mode
-    String modeStr;
-    switch(display.getMode()) {
-      case ScaleMode::FLOW: modeStr = "FLOW"; break;
-      case ScaleMode::TIME: modeStr = "TIME"; break;
-      case ScaleMode::AUTO: modeStr = "AUTO"; break;
-      default: modeStr = "UNKNOWN"; break;
-    }
-    json += "\"mode\":\"" + modeStr + "\",";
-    
-    // Timer information
-    unsigned long elapsedTime = display.getElapsedTime();
-    if (elapsedTime > 0 || display.isTimerRunning()) {
-      unsigned long minutes = elapsedTime / 60000;
-      unsigned long seconds = (elapsedTime % 60000) / 1000;
-      unsigned long milliseconds = elapsedTime % 1000;
-      json += "\"timer_running\":" + String(display.isTimerRunning() ? "true" : "false") + ",";
-      json += "\"timer_elapsed\":" + String(elapsedTime) + ",";
-      json += "\"timer_display\":\"" + String(minutes) + ":" + 
-              (seconds < 10 ? "0" : "") + String(seconds) + "." + 
-              (milliseconds < 100 ? (milliseconds < 10 ? "00" : "0") : "") + String(milliseconds) + "\"";
-    } else {
-      json += "\"timer_running\":false,";
-      json += "\"timer_elapsed\":0,";
-      json += "\"timer_display\":\"0:00.000\"";
-    }
-    
-    json += "}";
-    request->send(200, "application/json", json);
-  });
-
-  // Mode switching endpoint
-  server.on("/api/mode", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    if (request->hasParam("mode", true)) {
-      String mode = request->getParam("mode", true)->value();
-      mode.toUpperCase();
-      
-      if (mode == "FLOW") {
-        display.setMode(ScaleMode::FLOW);
-        request->send(200, "text/plain", "Mode set to FLOW");
-      } else if (mode == "TIME") {
-        display.setMode(ScaleMode::TIME);
-        request->send(200, "text/plain", "Mode set to TIME");
-      } else if (mode == "AUTO") {
-        display.setMode(ScaleMode::AUTO);
-        request->send(200, "text/plain", "Mode set to AUTO");
-      } else {
-        request->send(400, "text/plain", "Invalid mode. Use FLOW, TIME, or AUTO");
-      }
-    } else {
-      request->send(400, "text/plain", "Missing mode parameter");
-    }
   });
 
   // Timer control endpoints
@@ -272,10 +207,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     
     // Reset flow rate averaging for fresh brew measurement
     flowRate.resetTimerAveraging();
-    
-    // Complete tare operation and set up proper timing for auto-timer
-    // (This will also clear the flow rate buffer internally)
-    display.completeTareOperation();
     
     request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });

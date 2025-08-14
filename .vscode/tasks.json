@@ -15,6 +15,15 @@
 			"problemMatcher": [
 				"$platformio"
 			]
+		},
+		{
+			"label": "PlatformIO Build",
+			"type": "shell",
+			"command": "platformio run",
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
 		}
 	]
 }

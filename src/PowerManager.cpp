@@ -68,28 +68,16 @@ void PowerManager::update() {
                         displayPtr->showSleepCancelledMessage();
                     }
                 } else if (!cancelledRecently) {
-                    // Check current mode to determine behavior
-                    if (displayPtr != nullptr && (displayPtr->getMode() == ScaleMode::TIME || displayPtr->getMode() == ScaleMode::AUTO)) {
-                        // In TIME or AUTO mode - just record touch start time, handle timer on release
-                        touchStartTime = currentTime;
-                        longPressDetected = false;
-                        Serial.println("Timer control touch started");
-                    } else {
-                        // In FLOW mode - start timing for long press (sleep functionality)
-                        touchStartTime = currentTime;
-                        longPressDetected = false;
-                        Serial.println("Sleep touch started");
-                    }
+                    // Always handle timer control since we have unified mode
+                    touchStartTime = currentTime;
+                    longPressDetected = false;
+                    Serial.println("Timer control touch started");
                 }
             } else {
                 // Touch ended
                 if (!sleepCountdownActive && !longPressDetected && !cancelledRecently) {
-                    // Check if we're in TIME or AUTO mode for timer control
-                    if (displayPtr != nullptr && (displayPtr->getMode() == ScaleMode::TIME || displayPtr->getMode() == ScaleMode::AUTO)) {
-                        handleTimerControl();
-                    } else {
-                        Serial.println("Sleep touch released (short press - no action in FLOW mode)");
-                    }
+                    // Always handle timer control in unified mode
+                    handleTimerControl();
                 }
                 // Don't reset longPressDetected here if countdown is active
                 if (!sleepCountdownActive) {
@@ -183,20 +171,7 @@ void PowerManager::handleTimerControl() {
     lastTimerControlTime = currentTime;
     Serial.println("Timer control triggered");
     
-    // Special handling for AUTO mode
-    if (displayPtr->getMode() == ScaleMode::AUTO) {
-        // In AUTO mode, power button only stops auto-started timers
-        if (displayPtr->isAutoTimerActive()) {
-            displayPtr->stopAutoTimer();
-            timerState = TimerState::PAUSED; // Sync state
-            Serial.println("Auto-timer stopped by power button");
-        } else {
-            Serial.println("Power button pressed in AUTO mode - no auto timer to stop");
-        }
-        return;
-    }
-    
-    // Normal timer control for TIME mode
+    // Unified mode timer control
     switch (timerState) {
         case TimerState::STOPPED:
             // First tap - start timer

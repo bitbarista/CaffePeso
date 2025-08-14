@@ -33,25 +33,12 @@ void TouchSensor::update() {
                 if (!longPressDetected) {
                     // Short press - schedule delayed tare to allow scale to stabilize
                     scheduleDelayedTare();
-                } else {
-                    // Touch ended after long press - complete any pending mode tare
-                    if (displayPtr != nullptr) {
-                        displayPtr->completePendingModeTare();
-                    }
                 }
                 longPressDetected = false;
                 Serial.println("Touch ended");
             }
             lastTouchState = currentTouchState;
             lastTouchTime = currentTime;
-        }
-    }
-    
-    // Check for long press (1 second) while touch is active
-    if (currentTouchState && !longPressDetected) {
-        if (currentTime - touchStartTime >= 1000) {
-            longPressDetected = true;
-            handleLongPress();
         }
     }
     
@@ -116,29 +103,12 @@ void TouchSensor::handleTouch() {
             Serial.println("Flow rate averaging reset for fresh brew");
         }
         
-        // Complete tare operation and set up proper timing for auto-timer
-        // (This will also clear the flow rate buffer internally)
-        if (displayPtr != nullptr) {
-            displayPtr->completeTareOperation();
-        }
-        
         // Show completion message on display if available
         if (displayPtr != nullptr) {
             displayPtr->showTaredMessage();
         }
     } else {
         Serial.println("Error: Scale pointer is null");
-    }
-}
-
-void TouchSensor::handleLongPress() {
-    Serial.println("Long press detected! Switching mode...");
-    
-    if (displayPtr != nullptr) {
-        displayPtr->nextMode(true); // Use delayed tare
-        Serial.println("Mode switched with delayed tare");
-    } else {
-        Serial.println("Error: Display pointer is null");
     }
 }
 
@@ -176,12 +146,6 @@ void TouchSensor::checkDelayedTare() {
             if (flowRatePtr != nullptr) {
                 flowRatePtr->resetTimerAveraging();
                 Serial.println("Flow rate averaging reset for fresh brew");
-            }
-            
-            // Complete tare operation and set up proper timing for auto-timer
-            // (This will also clear the flow rate buffer internally)
-            if (displayPtr != nullptr) {
-                displayPtr->completeTareOperation();
             }
             
             // Show completion message on display if available

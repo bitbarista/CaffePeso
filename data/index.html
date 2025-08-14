@@ -48,14 +48,9 @@
     <!-- Title -->
     <h1 class="text-center text-xl font-semibold">WeighMyBru Dashboard</h1>
 
-    <!-- Mode Badge -->
-    <div class="flex justify-center">
-      <span id="modeBadge" class="px-4 py-1 bg-green-600 text-white rounded-full text-sm font-medium">FLOW MODE</span>
-    </div>
-
     <!-- Scale Status Indicator -->
     <div class="flex justify-center">
-      <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">Scale Connected</span>
+      <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
     </div>
 
     <!-- Graph Placeholder -->
@@ -89,19 +84,6 @@
     <div class="grid grid-cols-2 gap-2 mt-2">
       <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">Tare</button>
       <button id="brewModeBtn" onclick="toggleBrewMode()" class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold">Brew Mode</button>
-    </div>
-    
-    <!-- Mode Control Buttons -->
-    <div class="grid grid-cols-3 gap-2 mt-2">
-      <button id="flowBtn" onclick="setMode('FLOW')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm">
-        Flow
-      </button>
-      <button id="timeBtn" onclick="setMode('TIME')" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg text-sm">
-        Time
-      </button>
-      <button id="autoBtn" onclick="setMode('AUTO')" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg text-sm">
-        Auto
-      </button>
     </div>
     
     <!-- Timer Control Buttons -->
@@ -158,24 +140,6 @@
       .catch(err => console.error("Timer reset failed:", err));
   }
 
-  function setMode(mode) {
-    const params = new URLSearchParams();
-    params.append('mode', mode);
-    
-    fetch('/api/mode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    })
-      .then(response => response.text())
-      .then(data => {
-        console.log("Mode changed:", data);
-        // Update the display immediately
-        updateWeight();
-      })
-      .catch(err => console.error("Mode change failed:", err));
-  }
-
   function updateWeight() {
     // Use combined endpoint for better performance
     fetch('/api/dashboard')
@@ -193,37 +157,11 @@
         // Update scale connection status
         const scaleStatus = document.getElementById('scaleStatus');
         if (data.scale_connected) {
-          scaleStatus.innerText = 'Scale Connected';
+          scaleStatus.innerText = 'HX711 Connected';
           scaleStatus.className = 'px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium';
         } else {
-          scaleStatus.innerText = 'Scale Disconnected';
+          scaleStatus.innerText = 'HX711 Disconnected';
           scaleStatus.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
-        }
-        
-        // Update mode display
-        if (data.mode) {
-          const modeBadge = document.getElementById('modeBadge');
-          modeBadge.innerText = data.mode + ' MODE';
-          // Keep mode badge always green
-          modeBadge.className = 'px-4 py-1 text-white rounded-full text-sm font-medium bg-green-600';
-          
-          // Update button states - reset all to gray first
-          document.getElementById('flowBtn').className = 'bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg text-sm';
-          document.getElementById('timeBtn').className = 'bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg text-sm';
-          document.getElementById('autoBtn').className = 'bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg text-sm';
-          
-          // Highlight the active mode button in green
-          switch(data.mode) {
-            case 'FLOW':
-              document.getElementById('flowBtn').className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm';
-              break;
-            case 'TIME':
-              document.getElementById('timeBtn').className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm';
-              break;
-            case 'AUTO':
-              document.getElementById('autoBtn').className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm';
-              break;
-          }
         }
         
         // Update timer display

@@ -10,12 +10,6 @@ class FlowRate; // Forward declaration
 class BluetoothScale; // Forward declaration
 class PowerManager; // Forward declaration
 
-enum class ScaleMode {
-    FLOW = 0,
-    TIME = 1,
-    AUTO = 2
-};
-
 class Display {
 public:
     Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate);
@@ -30,9 +24,6 @@ public:
     void showSleepCancelledMessage(); // Show "Sleep / Cancelled" message like WeighMyBru Ready
     void showTaringMessage(); // Show "Taring..." message like WeighMyBru Ready
     void showTaredMessage(); // Show "Tared!" message like WeighMyBru Ready
-    void showAutoTaredMessage(); // Show "Auto Tared!" message like WeighMyBru Ready
-    void showModeMessage(ScaleMode mode); // Show mode name like WeighMyBru Ready
-    void showModeMessage(ScaleMode mode, int duration); // Show mode name with custom duration
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show WiFi IP addresses
     void clear();
@@ -44,33 +35,13 @@ public:
     // Power manager reference for timer state synchronization
     void setPowerManager(PowerManager* powerManager);
     
-    // Mode management
-    void setMode(ScaleMode mode);
-    void setMode(ScaleMode mode, bool delayTare); // Overload with option to delay tare
-    ScaleMode getMode() const;
-    void nextMode();
-    void nextMode(bool delayTare); // Overload for mode switching with delayed tare
-    
-    // Timer management for TIME mode
+    // Timer management
     void startTimer();
     void stopTimer();
     void resetTimer();
     bool isTimerRunning() const;
     float getTimerSeconds() const;
     unsigned long getElapsedTime() const; // Get current elapsed time in milliseconds
-    
-    // Auto mode timer management
-    bool isAutoTimerActive() const; // Check if auto timer was started and is still active
-    void stopAutoTimer(); // Stop auto timer specifically (for power button control)
-    
-    // Mode switching with delayed tare
-    void completePendingModeTare(); // Complete mode tare after touch release
-    
-    // Auto mode functionality
-    void checkAutoTare(float weight);
-    void checkAutoTimer(float flowRate);
-    void resetAutoSequence(); // Reset auto mode sequence when manually tared
-    void completeTareOperation(); // Called after manual tare to set up proper timing
     
 private:
     uint8_t sdaPin;
@@ -92,41 +63,15 @@ private:
     bool showingMessage;
     String currentMessage;
     
-    // Mode system
-    ScaleMode currentMode;
-    
-    // Timer system for TIME mode
+    // Timer system
     unsigned long timerStartTime;
     unsigned long timerPausedTime;
     bool timerRunning;
     bool timerPaused;
-    
-    // Auto mode system
-    float lastWeight;
-    unsigned long lastWeightChangeTime;
-    bool waitingForStabilization;
-    float weightWhenChanged;
-    unsigned long stabilizationStartTime;
-    bool autoTareEnabled;
-    float lastFlowRate;
-    bool autoTimerStarted;
-    unsigned long autoTareCompletedTime; // Track when auto-tare completed to prevent immediate timer start
-    
-    // Mode switching system
-    bool pendingModeTare;
-    unsigned long modeSwitchTime; // Track when mode was switched
-    bool stabilizationMessageShown; // Track if we've shown the stabilization end message
-    
-    // Mode tare stabilization tracking
-    bool waitingForModeTareStabilization;
-    unsigned long modeTareStabilizationStart;
-    float lastStableWeight;
-    float fingerPressWeight; // Weight when finger was pressing (for release detection)
-    bool fingerReleaseDetected; // Track if we've detected finger release
+    float lastFlowRate; // Store last flow rate for comparison
     
     void drawWeight(float weight);
-    void showWeightWithTimer(float weight); // For TIME mode display
-    void showWeightWithFlowAndTimer(float weight); // For AUTO mode display
+    void showWeightWithFlowAndTimer(float weight); // Main display showing weight, flow rate, and timer
     void setupDisplay();
     void drawBluetoothStatus(); // Draw Bluetooth connection status icon
 };
