@@ -5,7 +5,8 @@
 
 Scale::Scale(uint8_t dataPin, uint8_t clockPin, float calibrationFactor)
     : dataPin(dataPin), clockPin(clockPin), calibrationFactor(calibrationFactor), currentWeight(0.0f),
-      readingIndex(0), samplesInitialized(false), previousFilteredWeight(0), medianSamples(3), averageSamples(2) {
+      readingIndex(0), samplesInitialized(false), previousFilteredWeight(0), medianSamples(3), averageSamples(2),
+      currentFilterState(STABLE), lastBrewingActivity(0), lastStableWeight(0.0f) {
     // Initialize readings array
     for (int i = 0; i < MAX_SAMPLES; i++) {
         readings[i] = 0.0f;
@@ -72,11 +73,12 @@ bool Scale::begin() {
         Serial.println("Performing initial tare...");
         hx711.tare();
         
-        Serial.println("Scale filtering configured:");
+        Serial.println("Smart Scale filtering configured:");
         Serial.println("Brewing threshold: " + String(brewingThreshold) + "g");
         Serial.println("Stability timeout: " + String(stabilityTimeout) + "ms");
-        Serial.println("Median samples: " + String(medianSamples));
-        Serial.println("Average samples: " + String(averageSamples));
+        Serial.println("Median samples (brewing): " + String(medianSamples));
+        Serial.println("Average samples (stable): " + String(averageSamples));
+        Serial.println("Smart filtering: ENABLED - Dynamic filter switching based on brewing activity");
         
         return true;
     } else {
@@ -107,6 +109,16 @@ void Scale::tare(uint8_t times) {
     Serial.println("Taring scale...");
     hx711.tare(times);
     Serial.println("Tare complete");
+    
+    // Reset smart filter state after taring - return to stable mode
+    currentFilterState = STABLE;
+    lastBrewingActivity = 0;
+    currentWeight = 0.0f;
+    lastStableWeight = 0.0f;
+    
+    // Reinitialize sample buffer
+    samplesInitialized = false;
+    Serial.println("Smart filter reset to STABLE state");
     
     // Resume flow rate calculation after a short delay to ensure stable readings
     if (flowRatePtr != nullptr) {
@@ -167,6 +179,8 @@ float Scale::getWeight() {
     if (!samplesInitialized) {
         initializeSamples(rawReading);
         currentWeight = rawReading;
+        lastStableWeight = rawReading;
+        currentFilterState = STABLE;
         return currentWeight;
     }
     
@@ -174,18 +188,70 @@ float Scale::getWeight() {
     readings[readingIndex] = rawReading;
     readingIndex = (readingIndex + 1) % MAX_SAMPLES;
     
-    // Detect rapid weight changes for faster response
+    // Smart filtering based on brewing activity detection
     float weightChange = abs(rawReading - currentWeight);
+    bool brewingDetected = false;
     
-    if (weightChange > 5.0f) {  // Rapid change detected (>5g difference)
-        // Clear buffer and reinitialize with new reading for immediate response
-        initializeSamples(rawReading);
-        currentWeight = rawReading;
-    } else {
-        // Normal filtering for stable readings
-        currentWeight = averageFilter(averageSamples);
+    // Detect brewing activity using configurable threshold
+    if (currentFilterState == STABLE) {
+        // Check if weight change exceeds brewing threshold
+        if (weightChange > brewingThreshold) {
+            brewingDetected = true;
+            currentFilterState = BREWING;
+            lastBrewingActivity = currentTime;
+        }
+    } else if (currentFilterState == BREWING) {
+        // Continue monitoring for brewing activity
+        if (weightChange > brewingThreshold) {
+            brewingDetected = true;
+            lastBrewingActivity = currentTime;
+        } else {
+            // Check if we should transition to stable
+            if (currentTime - lastBrewingActivity > stabilityTimeout) {
+                currentFilterState = TRANSITIONING;
+            }
+        }
+    } else if (currentFilterState == TRANSITIONING) {
+        // In transition phase - verify stability
+        if (weightChange > brewingThreshold) {
+            // Activity detected again - back to brewing
+            brewingDetected = true;
+            currentFilterState = BREWING;
+            lastBrewingActivity = currentTime;
+        } else if (currentTime - lastBrewingActivity > stabilityTimeout * 2) {
+            // Extended stability confirmed - switch to stable mode
+            currentFilterState = STABLE;
+            lastStableWeight = currentWeight;
+        }
     }
     
+    // Apply appropriate filter based on current state
+    float filteredWeight;
+    switch (currentFilterState) {
+        case BREWING:
+            // Use median filter during brewing for noise rejection
+            filteredWeight = medianFilter(medianSamples);
+            break;
+        case STABLE:
+        case TRANSITIONING:
+            // Use average filter for stable readings - smoother and faster
+            filteredWeight = averageFilter(averageSamples);
+            break;
+    }
+    
+    // Handle rapid changes (>5g) with immediate response regardless of filter state
+    if (weightChange > 5.0f) {
+        filteredWeight = rawReading;
+        // Reset sample buffer for immediate response
+        initializeSamples(rawReading);
+        // Update state appropriately
+        if (currentFilterState == STABLE) {
+            currentFilterState = BREWING;
+            lastBrewingActivity = currentTime;
+        }
+    }
+    
+    currentWeight = filteredWeight;
     return currentWeight;
 }
 
@@ -295,4 +361,13 @@ void Scale::loadFilterSettings() {
 
 void Scale::setFlowRatePtr(FlowRate* flowRatePtr) {
     this->flowRatePtr = flowRatePtr;
+}
+
+String Scale::getFilterState() const {
+    switch (currentFilterState) {
+        case STABLE: return "STABLE";
+        case BREWING: return "BREWING";
+        case TRANSITIONING: return "TRANSITIONING";
+        default: return "UNKNOWN";
+    }
 }

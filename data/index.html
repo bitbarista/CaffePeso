@@ -48,11 +48,6 @@
     <!-- Title -->
     <h1 class="text-center text-xl font-semibold">WeighMyBru Dashboard</h1>
 
-    <!-- Scale Status Indicator -->
-    <div class="flex justify-center">
-      <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
-    </div>
-
     <!-- Graph Placeholder -->
     <div class="h-32 bg-gray-700 rounded-lg mt-2 flex items-center justify-center text-gray-400 text-sm">
       Flow Rate Graph Placeholder
@@ -97,6 +92,14 @@
       <button onclick="resetTimer()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg text-sm">
         Reset
       </button>
+    </div>
+    
+    <!-- Scale Status and Filter State Container -->
+    <div class="bg-black-select rounded-xl p-3 space-y-2 mt-2">
+      <div class="flex justify-center space-x-2">
+        <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
+        <span id="filterState" class="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">STABLE</span>
+      </div>
     </div>
     
     <!-- Status -->
@@ -162,6 +165,20 @@
         } else {
           scaleStatus.innerText = 'HX711 Disconnected';
           scaleStatus.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
+        }
+        
+        // Update filter state indicator
+        const filterState = document.getElementById('filterState');
+        if (data.filter_state) {
+          filterState.innerText = data.filter_state;
+          // Color code based on filter state
+          if (data.filter_state === 'BREWING') {
+            filterState.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
+          } else if (data.filter_state === 'TRANSITIONING') {
+            filterState.className = 'px-3 py-1 bg-orange-600 text-white rounded-full text-xs font-medium';
+          } else {
+            filterState.className = 'px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium';
+          }
         }
         
         // Update timer display

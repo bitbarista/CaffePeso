@@ -126,6 +126,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += "\"weight\":" + String(scale.getCurrentWeight(), 2) + ",";
     json += "\"flowrate\":" + String(flowRate.getFlowRate(), 1) + ",";
     json += "\"scale_connected\":" + String(scale.isHX711Connected() ? "true" : "false") + ",";
+    json += "\"filter_state\":\"" + scale.getFilterState() + "\",";
     
     // Always show unified mode
     json += "\"mode\":\"UNIFIED\",";
@@ -356,6 +357,19 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     } else {
       request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"No valid parameters provided\"}");
     }
+  });
+
+  // Filter debug endpoint - shows current filter state
+  server.on("/api/filter-debug", HTTP_GET, [&scale](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"filterState\":\"" + scale.getFilterState() + "\",";
+    json += "\"brewingThreshold\":" + String(scale.getBrewingThreshold(), 2) + ",";
+    json += "\"stabilityTimeout\":" + String(scale.getStabilityTimeout()) + ",";
+    json += "\"medianSamples\":" + String(scale.getMedianSamples()) + ",";
+    json += "\"averageSamples\":" + String(scale.getAverageSamples()) + ",";
+    json += "\"currentWeight\":" + String(scale.getCurrentWeight(), 1);
+    json += "}";
+    request->send(200, "application/json", json);
   });
 
   // Combined settings endpoint for faster loading

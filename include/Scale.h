@@ -28,6 +28,7 @@ public:
     unsigned long getStabilityTimeout() const { return stabilityTimeout; }
     int getMedianSamples() const { return medianSamples; }
     int getAverageSamples() const { return averageSamples; }
+    String getFilterState() const; // Get current filter state as string for debugging
     
     void saveFilterSettings();
     void loadFilterSettings();
@@ -51,6 +52,16 @@ private:
     int readingIndex = 0;
     bool samplesInitialized = false;
     float previousFilteredWeight = 0;
+    
+    // Brewing state tracking for smart filtering
+    enum FilterState {
+        STABLE,     // Using average filter - stable weight
+        BREWING,    // Using median filter - active brewing
+        TRANSITIONING // Waiting for stability after brewing activity
+    };
+    FilterState currentFilterState = STABLE;
+    unsigned long lastBrewingActivity = 0;  // Track when brewing was last detected
+    float lastStableWeight = 0.0f;          // Last weight when in stable state
     
     // Configurable filtering parameters
     float brewingThreshold = 0.15f;  // Keep for API compatibility
