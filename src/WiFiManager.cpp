@@ -146,44 +146,67 @@ void setupWiFi() {
     WiFi.mode(WIFI_OFF);
     delay(500); // Longer delay for complete reset
     
+    // Set WiFi power to maximum for better AP visibility
+    WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
+    Serial.println("WiFi power set to maximum for better AP visibility");
+    
     // Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
-    WiFi.setSleep(true);
-    Serial.println("WiFi sleep enabled for BLE coexistence");
+    WiFi.setSleep(false); // Disable sleep for better AP reliability
+    Serial.println("WiFi sleep disabled for better AP performance");
     
     // Always start with AP mode first for stable operation
     Serial.println("Starting AP mode...");
     WiFi.mode(WIFI_AP);
     delay(1000); // Ensure mode switch is stable
     
-    // Configure AP with optimized settings for stability
+    // Configure AP with optimized settings for maximum visibility
     WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
     
-    // Try different channels if AP fails to start
+    // Force AP broadcast with maximum power and visibility settings
     bool apStarted = false;
-    int channels[] = {1, 6, 11}; // Less congested channels
+    Serial.println("Starting AP with maximum visibility settings...");
     
-    for (int i = 0; i < 3 && !apStarted; i++) {
-        Serial.printf("Trying AP on channel %d...\n", channels[i]);
-        apStarted = WiFi.softAP(ap_ssid, ap_password, channels[i], 0, 8); // Increased max clients to 8
+    // Try channel 6 first (most common and widely supported)
+    apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4); // Channel 6, broadcast SSID, max 4 clients
+    
+    if (apStarted) {
+        Serial.println("AP started successfully on channel 6 with broadcast enabled");
+    } else {
+        Serial.println("Channel 6 failed, trying channel 1...");
+        apStarted = WiFi.softAP(ap_ssid, ap_password, 1, false, 4); // Channel 1, broadcast SSID
         
         if (apStarted) {
-            Serial.printf("AP started successfully on channel %d\n", channels[i]);
-            break;
+            Serial.println("AP started successfully on channel 1 with broadcast enabled");
         } else {
-            Serial.printf("Failed to start AP on channel %d, trying next...\n", channels[i]);
-            delay(1000);
+            Serial.println("Channel 1 failed, trying default settings...");
+            apStarted = WiFi.softAP(ap_ssid); // Simplest possible configuration
+            if (apStarted) {
+                Serial.println("AP started with default settings");
+            }
         }
-    }
-    
-    if (!apStarted) {
-        Serial.println("ERROR: Failed to start AP on all channels! Trying default...");
-        apStarted = WiFi.softAP(ap_ssid, ap_password); // Try with default settings
     }
     
     Serial.println("AP Started: " + String(apStarted ? "YES" : "NO"));
     Serial.println("AP IP: " + WiFi.softAPIP().toString());
     Serial.println("AP SSID: " + String(ap_ssid));
     Serial.println("AP MAC: " + WiFi.softAPmacAddress());
+    
+    // Enhanced AP diagnostics
+    if (apStarted) {
+        Serial.println("=== AP DIAGNOSTICS ===");
+        Serial.printf("AP Channel: %d\n", WiFi.channel());
+        Serial.printf("AP Gateway: %s\n", WiFi.softAPIP().toString().c_str());
+        Serial.printf("AP Subnet: %s\n", WiFi.softAPSubnetMask().toString().c_str());
+        Serial.printf("WiFi TX Power: %d dBm\n", WiFi.getTxPower());
+        Serial.println("AP should now be visible as 'WeighMyBru-AP'");
+        Serial.println("If still not visible, try:");
+        Serial.println("1. Restart your phone/computer WiFi");
+        Serial.println("2. Manually add network 'WeighMyBru-AP' (no password)");
+        Serial.println("3. Check for 2.4GHz band support on your device");
+        Serial.println("======================");
+    } else {
+        Serial.println("ERROR: AP failed to start - hardware or RF issue suspected");
+    }
     
     // Start mDNS immediately for AP mode access
     if (MDNS.begin("weighmybru")) {
