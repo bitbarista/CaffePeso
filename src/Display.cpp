@@ -582,10 +582,41 @@ void Display::drawBluetoothStatus() {
     
     // Only draw if we have a bluetooth instance and it's connected
     if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        // Draw a small "BT" in the top-right corner
-        display->setTextSize(1);
-        display->setCursor(108, 0); // Position at top-right (128-20=108 pixels from left)
-        display->print("BT");
+        // Draw a small Bluetooth icon in the top-right corner
+        // Create a simple 8x12 Bluetooth symbol using pixels
+        int iconX = 118; // Start position for the icon
+        int iconY = 2;   // Top position with small margin
+        
+        // Draw the Bluetooth icon pixel by pixel
+        // Center line (vertical)
+        display->drawPixel(iconX + 3, iconY + 1, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 2, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 3, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 4, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 5, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 6, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 7, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 8, SSD1306_WHITE);
+        display->drawPixel(iconX + 3, iconY + 9, SSD1306_WHITE);
+        
+        // Upper triangle (right side)
+        display->drawPixel(iconX + 4, iconY + 2, SSD1306_WHITE);
+        display->drawPixel(iconX + 5, iconY + 1, SSD1306_WHITE);
+        display->drawPixel(iconX + 5, iconY + 3, SSD1306_WHITE);
+        display->drawPixel(iconX + 4, iconY + 4, SSD1306_WHITE);
+        
+        // Lower triangle (right side)
+        display->drawPixel(iconX + 4, iconY + 6, SSD1306_WHITE);
+        display->drawPixel(iconX + 5, iconY + 7, SSD1306_WHITE);
+        display->drawPixel(iconX + 5, iconY + 9, SSD1306_WHITE);
+        display->drawPixel(iconX + 4, iconY + 8, SSD1306_WHITE);
+        
+        // Left diagonal lines
+        display->drawPixel(iconX + 2, iconY + 3, SSD1306_WHITE);
+        display->drawPixel(iconX + 1, iconY + 4, SSD1306_WHITE);
+        display->drawPixel(iconX, iconY + 5, SSD1306_WHITE);
+        display->drawPixel(iconX + 1, iconY + 6, SSD1306_WHITE);
+        display->drawPixel(iconX + 2, iconY + 7, SSD1306_WHITE);
     }
 }
 
@@ -595,26 +626,27 @@ void Display::drawBatteryStatus() {
         return;
     }
     
-    // Draw 3-segment battery indicator in top-left corner
+    // Draw 4-segment battery indicator in top-left corner
     int segments = batteryPtr->getBatterySegments();
     bool isLow = batteryPtr->isLowBattery();
     bool isCritical = batteryPtr->isCriticalBattery();
     
-    // Battery outline (12x6 pixels)
-    display->drawRect(0, 0, 12, 6, SSD1306_WHITE);  // Main battery body
-    display->drawRect(12, 2, 2, 2, SSD1306_WHITE);  // Battery terminal
-    
-    // Fill segments based on battery level
-    for (int i = 0; i < segments; i++) {
-        int x = 1 + (i * 3);
-        display->fillRect(x, 1, 2, 4, SSD1306_WHITE);
-    }
-    
     // For critical battery, make it flash (every 500ms)
     if (isCritical && (millis() % 1000 < 500)) {
-        // Flash the entire battery outline
-        display->fillRect(0, 0, 14, 6, SSD1306_WHITE);
-        display->fillRect(1, 1, 10, 4, SSD1306_BLACK);  // Clear inside
+        // Flash state - draw entire battery solid white
+        display->fillRect(0, 0, 12, 6, SSD1306_WHITE);  // Fill main body solid
+        display->fillRect(12, 2, 2, 2, SSD1306_WHITE);  // Fill terminal solid
+    } else {
+        // Normal battery display
+        // Battery outline (12x6 pixels main body + 2x2 terminal)
+        display->drawRect(0, 0, 12, 6, SSD1306_WHITE);  // Main battery body
+        display->drawRect(12, 2, 2, 2, SSD1306_WHITE);  // Battery terminal
+        
+        // Fill segments based on battery level
+        for (int i = 0; i < segments; i++) {
+            int x = 1 + (i * 3);
+            display->fillRect(x, 1, 2, 4, SSD1306_WHITE);
+        }
     }
 }
 
@@ -633,14 +665,13 @@ void Display::drawWeight(float weight) {
         displayWeight = 0.0; // Force to exactly 0.0 to avoid negative sign
     }
     
-    // Format weight string with consistent spacing
+    // Format weight string with consistent spacing (without "g" unit)
     String weightStr;
     if (displayWeight < 0) {
         weightStr = String(displayWeight, 1); // Keep negative sign for values below -0.1g
     } else {
         weightStr = " " + String(displayWeight, 1); // Add space where negative sign would be
     }
-    weightStr += "g";
     
     // Calculate text width for centering weight
     display->setTextSize(2);
@@ -676,7 +707,7 @@ void Display::drawWeight(float weight) {
         flowRateStr += String(displayFlowRate, 1); // No extra space needed for shorter format
     }
     flowRateStr += "g/s";
-    
+
     // Small flow rate text at bottom left (same as Auto mode)
     display->setTextSize(1);
     display->setCursor(0, 24);
@@ -722,7 +753,6 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     } else {
         weightStr = " " + String(displayWeight, 1); // Add space for positive numbers
     }
-    weightStr += "g";
     
     // Top center: Large weight display (size 3) centered
     display->setTextSize(3);
@@ -770,7 +800,7 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     int timerX = SCREEN_WIDTH - textWidth;
     // Adjust for Bluetooth indicator if present
     if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        timerX -= 25; // Move left to avoid "BT" text
+        timerX -= 15; // Move left to avoid Bluetooth icon
     }
     display->setCursor(timerX, 24);
     display->print(timerStr);
