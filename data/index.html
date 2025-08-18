@@ -99,6 +99,18 @@
       <div class="flex justify-center space-x-2">
         <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
         <span id="filterState" class="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">STABLE</span>
+        <span id="batteryStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium flex items-center">
+          <!-- Battery icon with 3 segments -->
+          <svg class="w-3 h-2 mr-1" viewBox="0 0 14 6" fill="none">
+            <rect x="0" y="0" width="12" height="6" stroke="currentColor" stroke-width="0.5" fill="none"/>
+            <rect x="12" y="2" width="2" height="2" fill="currentColor"/>
+            <!-- Battery segments (filled based on battery level) -->
+            <rect id="batterySegment1" x="1" y="1" width="2" height="4" fill="currentColor"/>
+            <rect id="batterySegment2" x="4" y="1" width="2" height="4" fill="currentColor"/>
+            <rect id="batterySegment3" x="7" y="1" width="2" height="4" fill="currentColor"/>
+          </svg>
+          <span id="batteryPercentage">100%</span>
+        </span>
       </div>
     </div>
     
@@ -178,6 +190,31 @@
             filterState.className = 'px-3 py-1 bg-orange-600 text-white rounded-full text-xs font-medium';
           } else {
             filterState.className = 'px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium';
+          }
+        }
+        
+        // Update battery status indicator
+        if (data.battery_percentage !== undefined) {
+          const batteryPercentage = document.getElementById('batteryPercentage');
+          const batteryStatus = document.getElementById('batteryStatus');
+          const segment1 = document.getElementById('batterySegment1');
+          const segment2 = document.getElementById('batterySegment2');
+          const segment3 = document.getElementById('batterySegment3');
+          
+          batteryPercentage.innerText = data.battery_percentage + '%';
+          
+          // Update segments visibility
+          segment1.style.opacity = data.battery_segments >= 1 ? '1' : '0.2';
+          segment2.style.opacity = data.battery_segments >= 2 ? '1' : '0.2';
+          segment3.style.opacity = data.battery_segments >= 3 ? '1' : '0.2';
+          
+          // Color code based on battery level
+          if (data.battery_critical) {
+            batteryStatus.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium flex items-center';
+          } else if (data.battery_low) {
+            batteryStatus.className = 'px-3 py-1 bg-orange-600 text-white rounded-full text-xs font-medium flex items-center';
+          } else {
+            batteryStatus.className = 'px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium flex items-center';
           }
         }
         

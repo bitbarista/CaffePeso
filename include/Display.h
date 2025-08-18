@@ -9,6 +9,7 @@ class Scale; // Forward declaration
 class FlowRate; // Forward declaration
 class BluetoothScale; // Forward declaration
 class PowerManager; // Forward declaration
+class BatteryMonitor; // Forward declaration
 
 class Display {
 public:
@@ -35,6 +36,9 @@ public:
     // Power manager reference for timer state synchronization
     void setPowerManager(PowerManager* powerManager);
     
+    // Battery monitor reference for battery status display
+    void setBatteryMonitor(BatteryMonitor* battery);
+    
     // Timer management
     void startTimer();
     void stopTimer();
@@ -50,6 +54,7 @@ private:
     FlowRate* flowRatePtr;
     BluetoothScale* bluetoothPtr;
     PowerManager* powerManagerPtr;
+    BatteryMonitor* batteryPtr;
     Adafruit_SSD1306* display;
     bool displayConnected; // Track if display is actually connected
     
@@ -74,6 +79,7 @@ private:
     void showWeightWithFlowAndTimer(float weight); // Main display showing weight, flow rate, and timer
     void setupDisplay();
     void drawBluetoothStatus(); // Draw Bluetooth connection status icon
+    void drawBatteryStatus(); // Draw battery status with 3-segment indicator
 };
 
 #endif

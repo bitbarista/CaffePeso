@@ -107,7 +107,7 @@ AsyncWebServer server(80);
  * Response: {"weight":45.23,"flowrate":2.15}
  */
 
-void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display) {
+void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery) {
   if (!LittleFS.begin()) {
     return;
   }
@@ -121,7 +121,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   getStoredSSID();            // This will cache WiFi credentials
 
   // Register API route first
-  server.on("/api/dashboard", HTTP_GET, [&scale, &flowRate, &display](AsyncWebServerRequest *request) {
+  server.on("/api/dashboard", HTTP_GET, [&scale, &flowRate, &display, &battery](AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"weight\":" + String(scale.getCurrentWeight(), 2) + ",";
     json += "\"flowrate\":" + String(flowRate.getFlowRate(), 1) + ",";
@@ -155,6 +155,14 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
       json += "\"timer_display\":\"0:00.000\",";
       json += "\"timer_avg_flowrate\":null";
     }
+    
+    // Add battery information
+    json += ",\"battery_voltage\":" + String(battery.getBatteryVoltage(), 2);
+    json += ",\"battery_percentage\":" + String(battery.getBatteryPercentage());
+    json += ",\"battery_status\":\"" + battery.getBatteryStatus() + "\"";
+    json += ",\"battery_segments\":" + String(battery.getBatterySegments());
+    json += ",\"battery_low\":" + String(battery.isLowBattery() ? "true" : "false");
+    json += ",\"battery_critical\":" + String(battery.isCriticalBattery() ? "true" : "false");
     
     json += "}";
     request->send(200, "application/json", json);
@@ -197,6 +205,20 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     // Minimal JSON for brewing systems
     String json = "{\"w\":" + String(scale.getCurrentWeight(), 1) + 
                   ",\"f\":" + String(flowRate.getFlowRate(), 1) + "}";
+    request->send(200, "application/json", json);
+  });
+
+  // Battery monitoring endpoint
+  server.on("/api/battery", HTTP_GET, [&battery](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"voltage\":" + String(battery.getBatteryVoltage(), 3);
+    json += ",\"percentage\":" + String(battery.getBatteryPercentage());
+    json += ",\"status\":\"" + battery.getBatteryStatus() + "\"";
+    json += ",\"segments\":" + String(battery.getBatterySegments());
+    json += ",\"low_battery\":" + String(battery.isLowBattery() ? "true" : "false");
+    json += ",\"critical_battery\":" + String(battery.isCriticalBattery() ? "true" : "false");
+    json += ",\"charging\":" + String(battery.isCharging() ? "true" : "false");
+    json += "}";
     request->send(200, "application/json", json);
   });
 

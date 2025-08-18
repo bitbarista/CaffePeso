@@ -12,12 +12,14 @@
 #include "TouchSensor.h"
 #include "Display.h"
 #include "PowerManager.h"
+#include "BatteryMonitor.h"
 
 // Pins and calibration
 uint8_t dataPin = 5;   // HX711 Data pin (moved from 12)
 uint8_t clockPin = 6;  // HX711 Clock pin (moved from 11)
 uint8_t touchPin = 4;  // T0 - Confirmed working touch pin for tare
 uint8_t sleepTouchPin = 3;  // GPIO3 - Digital touch sensor for sleep functionality
+uint8_t batteryPin = 1;    // GPIO1 - Battery voltage monitoring (ADC1_CH0)
 uint8_t sdaPin = 8;    // I2C Data pin for display (moved from 5)
 uint8_t sclPin = 9;    // I2C Clock pin for display (moved from 6)
 float calibrationFactor = 4195.712891;
@@ -27,6 +29,7 @@ BluetoothScale bluetoothScale;
 TouchSensor touchSensor(touchPin, &scale);
 Display oledDisplay(sdaPin, sclPin, &scale, &flowRate);
 PowerManager powerManager(sleepTouchPin, &oledDisplay);
+BatteryMonitor batteryMonitor(batteryPin);
 
 void setup() {
   Serial.begin(115200);
@@ -116,12 +119,20 @@ void setup() {
   if (oledDisplay.isConnected()) {
     oledDisplay.setPowerManager(&powerManager);
   }
+  
+  // Set battery monitor reference in display for battery status (if display available)
+  if (oledDisplay.isConnected()) {
+    oledDisplay.setBatteryMonitor(&batteryMonitor);
+  }
 
   // Initialize touch sensor
   touchSensor.begin();
 
   // Initialize power manager
   powerManager.begin();
+
+  // Initialize battery monitor
+  batteryMonitor.begin();
 
   // Show IP addresses and welcome message if display is available
   delay(100); // Small delay to ensure WiFi is fully initialized
@@ -137,7 +148,7 @@ void setup() {
   // Link flow rate to touch sensor for averaging reset on tare
   touchSensor.setFlowRate(&flowRate);
 
-  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay);
+  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor);
 }
 
 void loop() {
@@ -168,6 +179,9 @@ void loop() {
   
   // Update power manager
   powerManager.update();
+  
+  // Update battery monitor
+  batteryMonitor.update();
   
   // Update display
   oledDisplay.update();

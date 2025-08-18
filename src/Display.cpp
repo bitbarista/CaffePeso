@@ -3,10 +3,11 @@
 #include "FlowRate.h"
 #include "BluetoothScale.h"
 #include "PowerManager.h"
+#include "BatteryMonitor.h"
 #include <WiFi.h>
 
 Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate)
-    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr),
+    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr),
       messageStartTime(0), messageDuration(2000), showingMessage(false), 
       timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false),
       lastFlowRate(0.0) {
@@ -569,6 +570,10 @@ void Display::setPowerManager(PowerManager* powerManager) {
     powerManagerPtr = powerManager;
 }
 
+void Display::setBatteryMonitor(BatteryMonitor* battery) {
+    batteryPtr = battery;
+}
+
 void Display::drawBluetoothStatus() {
     // Return early if display is not connected
     if (!displayConnected) {
@@ -581,6 +586,35 @@ void Display::drawBluetoothStatus() {
         display->setTextSize(1);
         display->setCursor(108, 0); // Position at top-right (128-20=108 pixels from left)
         display->print("BT");
+    }
+}
+
+void Display::drawBatteryStatus() {
+    // Return early if display is not connected or no battery monitor
+    if (!displayConnected || !batteryPtr) {
+        return;
+    }
+    
+    // Draw 3-segment battery indicator in top-left corner
+    int segments = batteryPtr->getBatterySegments();
+    bool isLow = batteryPtr->isLowBattery();
+    bool isCritical = batteryPtr->isCriticalBattery();
+    
+    // Battery outline (12x6 pixels)
+    display->drawRect(0, 0, 12, 6, SSD1306_WHITE);  // Main battery body
+    display->drawRect(12, 2, 2, 2, SSD1306_WHITE);  // Battery terminal
+    
+    // Fill segments based on battery level
+    for (int i = 0; i < segments; i++) {
+        int x = 1 + (i * 3);
+        display->fillRect(x, 1, 2, 4, SSD1306_WHITE);
+    }
+    
+    // For critical battery, make it flash (every 500ms)
+    if (isCritical && (millis() % 1000 < 500)) {
+        // Flash the entire battery outline
+        display->fillRect(0, 0, 14, 6, SSD1306_WHITE);
+        display->fillRect(1, 1, 10, 4, SSD1306_BLACK);  // Clear inside
     }
 }
 
@@ -650,6 +684,9 @@ void Display::drawWeight(float weight) {
     
     // Draw Bluetooth status if connected
     drawBluetoothStatus();
+    
+    // Draw battery status
+    drawBatteryStatus();
     
     display->display();
 }
@@ -740,6 +777,9 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     
     // Draw Bluetooth status if connected
     drawBluetoothStatus();
+    
+    // Draw battery status
+    drawBatteryStatus();
     
     display->display();
 }
