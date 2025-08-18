@@ -50,6 +50,44 @@
         </form>
       </div>
     </div>
+    
+    <!-- Battery Calibration Section -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mt-8">
+      <h2 class="text-2xl font-semibold mb-4"><i class="fa fa-battery-half mr-2" style="color: rgb(71, 168, 100);"></i>Battery Calibration</h2>
+      <div id="batteryMessage" class="text-green-400 mb-2"></div>
+      <p id="batteryStatus" class="text-yellow-400 mb-4"></p>
+      
+      <div id="currentBattery" class="mb-6">
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div><strong>Current Voltage:</strong> <span id="currentVoltage">Loading...</span></div>
+          <div><strong>Current Percentage:</strong> <span id="currentPercentage">Loading...</span></div>
+          <div><strong>Battery Status:</strong> <span id="batteryState">Loading...</span></div>
+          <div><strong>Calibration Offset:</strong> <span id="calibrationOffset">Loading...</span></div>
+        </div>
+      </div>
+      
+      <div class="mb-6">
+        <h3 class="text-xl font-semibold mb-2">Calibrate Battery Voltage</h3>
+        <div class="bg-black-background p-4 rounded mb-4">
+          <h4 class="font-semibold mb-2 text-yellow-400">Instructions:</h4>
+          <ol class="list-decimal list-inside text-sm space-y-1 text-gray-300">
+            <li>Use a multimeter to measure the actual battery voltage</li>
+            <li>Measure between BAT+ and BAT- terminals</li>
+            <li>Enter the measured voltage below</li>
+            <li>Click "Calibrate Battery" to apply the correction</li>
+          </ol>
+        </div>
+        
+        <form id="batteryCalibrationForm">
+          <label for="actualVoltage" class="block mb-2">Measured Battery Voltage (V):</label>
+          <input type="number" id="actualVoltage" name="actualVoltage" required step="0.01" min="2.5" max="5.0" 
+                 placeholder="e.g., 4.25" class="w-full px-3 py-2 mb-4 rounded text-black" />
+          <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">
+            <i class="fa fa-calibrate mr-2"></i>Calibrate Battery
+          </button>
+        </form>
+      </div>
+    </div>
   </main>
 </div>
 <script>
@@ -59,7 +97,13 @@
     const status = document.getElementById("status");
     const message = document.getElementById("message");
     const calibrateForm = document.getElementById("calibrateForm");
+    
+    // Battery elements
+    const batteryCalibrationForm = document.getElementById("batteryCalibrationForm");
+    const batteryStatus = document.getElementById("batteryStatus");
+    const batteryMessage = document.getElementById("batteryMessage");
 
+    // Scale calibration handlers
     tareBtn.addEventListener("click", async () => {
       status.textContent = "Taring...";
       const response = await fetch("/api/tare", { method: "POST" });
@@ -86,12 +130,85 @@
       status.textContent = result;
     });
 
+    // Battery calibration handler
+    batteryCalibrationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const actualVoltage = document.getElementById("actualVoltage").value;
+      batteryStatus.textContent = "Calibrating battery...";
+      batteryMessage.textContent = "";
+      
+      try {
+        const response = await fetch(`/api/battery/calibrate?voltage=${actualVoltage}`);
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          batteryMessage.textContent = `✓ ${result.message}`;
+          batteryStatus.textContent = `Before: ${result.before_voltage}V (${result.before_percentage}%) → After: ${result.after_voltage}V (${result.after_percentage}%)`;
+          batteryStatus.className = "text-green-400 mb-4";
+          
+          // Update current battery display
+          updateBatteryDisplay();
+          
+          // Clear form
+          document.getElementById("actualVoltage").value = "";
+        } else {
+          batteryMessage.textContent = "";
+          batteryStatus.textContent = `❌ Error: ${result.message}`;
+          batteryStatus.className = "text-red-400 mb-4";
+        }
+      } catch (error) {
+        batteryMessage.textContent = "";
+        batteryStatus.textContent = `❌ Network error: ${error.message}`;
+        batteryStatus.className = "text-red-400 mb-4";
+      }
+    });
+
+    // Function to update battery display
+    async function updateBatteryDisplay() {
+      try {
+        const response = await fetch('/api/battery');
+        const data = await response.json();
+        
+        document.getElementById('currentVoltage').textContent = `${data.voltage}V`;
+        document.getElementById('currentPercentage').textContent = `${data.percentage}%`;
+        document.getElementById('batteryState').textContent = data.status;
+        document.getElementById('calibrationOffset').textContent = `${data.calibration_offset}V`;
+        
+        // Color code the battery status
+        const voltageElement = document.getElementById('currentVoltage');
+        const percentageElement = document.getElementById('currentPercentage');
+        const statusElement = document.getElementById('batteryState');
+        
+        if (data.critical_battery) {
+          voltageElement.className = "text-red-400";
+          percentageElement.className = "text-red-400";
+          statusElement.className = "text-red-400";
+        } else if (data.low_battery) {
+          voltageElement.className = "text-yellow-400";
+          percentageElement.className = "text-yellow-400";
+          statusElement.className = "text-yellow-400";
+        } else {
+          voltageElement.className = "text-green-400";
+          percentageElement.className = "text-green-400";
+          statusElement.className = "text-green-400";
+        }
+      } catch (error) {
+        console.error('Error updating battery display:', error);
+      }
+    }
+
     // Fetch current calibration factor
     fetch('/api/calibrationfactor')
       .then(response => response.text())
       .then((data) => {
         document.getElementById('currentCalib').textContent = data;
       });
+      
+    // Initial battery display update
+    updateBatteryDisplay();
+    
+    // Update battery display every 5 seconds
+    setInterval(updateBatteryDisplay, 5000);
 </script>
 </body>
 </html>

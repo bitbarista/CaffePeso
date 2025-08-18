@@ -8,8 +8,10 @@ BatteryMonitor::BatteryMonitor(uint8_t batteryPin) : batteryPin(batteryPin) {
 void BatteryMonitor::begin() {
     Serial.println("Initializing Battery Monitor...");
     
-    // Configure ADC pin
+    // Configure ADC pin and settings
     pinMode(batteryPin, INPUT);
+    analogReadResolution(12);  // Use 12-bit resolution (0-4095)
+    analogSetAttenuation(ADC_11db);  // 0-3.3V range for better accuracy
     
     // Load calibration from preferences
     preferences.begin("battery", false);

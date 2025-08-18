@@ -72,6 +72,18 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build BLE Coexistence Fix",
+			"type": "shell",
+			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"esp32-s3-devkitc-1"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

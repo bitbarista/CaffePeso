@@ -43,7 +43,7 @@ private:
     
     // Hardware configuration
     static constexpr float VOLTAGE_DIVIDER_RATIO = 2.0f;  // 100k + 100k resistors
-    static constexpr float ADC_REFERENCE = 3.3f;
+    static constexpr float ADC_REFERENCE = 3.3f;          // ESP32-S3 with ADC_11db attenuation (0-3.3V)
     static constexpr int ADC_RESOLUTION = 4095;
     
     // Calibration and smoothing

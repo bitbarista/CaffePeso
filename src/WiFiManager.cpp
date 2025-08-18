@@ -150,9 +150,9 @@ void setupWiFi() {
     WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
     Serial.println("WiFi power set to maximum for better AP visibility");
     
-    // Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
-    WiFi.setSleep(false); // Disable sleep for better AP reliability
-    Serial.println("WiFi sleep disabled for better AP performance");
+    // CRITICAL: Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
+    WiFi.setSleep(true); // MUST be true when BLE is active
+    Serial.println("WiFi sleep enabled for BLE coexistence (required)");
     
     // Always start with AP mode first for stable operation
     Serial.println("Starting AP mode...");
@@ -289,8 +289,8 @@ void setupWiFi() {
     Serial.println("AP SSID: " + String(ap_ssid));
     Serial.println("AP IP: 192.168.4.1 (always available)");
     Serial.println("Hostname: weighmybru.local");
-    Serial.println("Max clients: 8");
-    Serial.println("WiFi sleep: disabled");
+    Serial.println("Max clients: 4");
+    Serial.println("WiFi sleep: enabled (required for BLE coexistence)");
     Serial.println("=======================");
 }
 
