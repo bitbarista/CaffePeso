@@ -582,41 +582,35 @@ void Display::drawBluetoothStatus() {
     
     // Only draw if we have a bluetooth instance and it's connected
     if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        // Draw a small Bluetooth icon in the top-right corner
-        // Create a simple 8x12 Bluetooth symbol using pixels
-        int iconX = 118; // Start position for the icon
-        int iconY = 2;   // Top position with small margin
+        /* Option 1: Simple "BT" text - clean and readable
+        display->setTextSize(1);
+        display->setCursor(115, 0);
+        display->print("BT");
+        */
         
-        // Draw the Bluetooth icon pixel by pixel
-        // Center line (vertical)
-        display->drawPixel(iconX + 3, iconY + 1, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 2, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 3, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 4, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 5, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 6, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 7, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 8, SSD1306_WHITE);
-        display->drawPixel(iconX + 3, iconY + 9, SSD1306_WHITE);
+        // Option 2: Simple dot indicator - minimal and clean
+        display->fillCircle(122, 3, 2, SSD1306_WHITE);
         
-        // Upper triangle (right side)
-        display->drawPixel(iconX + 4, iconY + 2, SSD1306_WHITE);
-        display->drawPixel(iconX + 5, iconY + 1, SSD1306_WHITE);
-        display->drawPixel(iconX + 5, iconY + 3, SSD1306_WHITE);
-        display->drawPixel(iconX + 4, iconY + 4, SSD1306_WHITE);
+        /* Option 3: Simplified Bluetooth symbol using lines - cleaner than pixels
+        int iconX = 119;
+        int iconY = 1;
+        // Vertical center line
+        display->drawLine(iconX + 2, iconY, iconX + 2, iconY + 6, SSD1306_WHITE);
+        // Upper triangle
+        display->drawLine(iconX + 2, iconY, iconX + 4, iconY + 2, SSD1306_WHITE);
+        display->drawLine(iconX + 4, iconY + 2, iconX + 2, iconY + 3, SSD1306_WHITE);
+        // Lower triangle  
+        display->drawLine(iconX + 2, iconY + 3, iconX + 4, iconY + 4, SSD1306_WHITE);
+        display->drawLine(iconX + 4, iconY + 4, iconX + 2, iconY + 6, SSD1306_WHITE);
+        // Left diagonal
+        display->drawLine(iconX, iconY + 2, iconX + 2, iconY + 4, SSD1306_WHITE);
+        */
         
-        // Lower triangle (right side)
-        display->drawPixel(iconX + 4, iconY + 6, SSD1306_WHITE);
-        display->drawPixel(iconX + 5, iconY + 7, SSD1306_WHITE);
-        display->drawPixel(iconX + 5, iconY + 9, SSD1306_WHITE);
-        display->drawPixel(iconX + 4, iconY + 8, SSD1306_WHITE);
-        
-        // Left diagonal lines
-        display->drawPixel(iconX + 2, iconY + 3, SSD1306_WHITE);
-        display->drawPixel(iconX + 1, iconY + 4, SSD1306_WHITE);
-        display->drawPixel(iconX, iconY + 5, SSD1306_WHITE);
-        display->drawPixel(iconX + 1, iconY + 6, SSD1306_WHITE);
-        display->drawPixel(iconX + 2, iconY + 7, SSD1306_WHITE);
+        /* Option 4: Just letter "B" - ultra simple
+        display->setTextSize(1);
+        display->setCursor(122, 0);
+        display->print("B");
+        */
     }
 }
 
