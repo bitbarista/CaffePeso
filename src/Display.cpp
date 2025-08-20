@@ -626,27 +626,33 @@ void Display::drawBatteryStatus() {
         return;
     }
     
-    // Draw 4-segment battery indicator in top-left corner
-    int segments = batteryPtr->getBatterySegments();
-    bool isLow = batteryPtr->isLowBattery();
+    // Get battery percentage and critical status
+    int batteryPercentage = batteryPtr->getBatteryPercentage();
     bool isCritical = batteryPtr->isCriticalBattery();
+    
+    // Format percentage string
+    String percentStr = String(batteryPercentage) + "%";
+    
+    // Set small text size for percentage display
+    display->setTextSize(1);
     
     // For critical battery, make it flash (every 500ms)
     if (isCritical && (millis() % 1000 < 500)) {
-        // Flash state - draw entire battery solid white
-        display->fillRect(0, 0, 12, 6, SSD1306_WHITE);  // Fill main body solid
-        display->fillRect(12, 2, 2, 2, SSD1306_WHITE);  // Fill terminal solid
-    } else {
-        // Normal battery display
-        // Battery outline (12x6 pixels main body + 2x2 terminal)
-        display->drawRect(0, 0, 12, 6, SSD1306_WHITE);  // Main battery body
-        display->drawRect(12, 2, 2, 2, SSD1306_WHITE);  // Battery terminal
+        // Flash state - draw text with inverted colors (black text on white background)
+        int16_t x1, y1;
+        uint16_t textWidth, textHeight;
+        display->getTextBounds(percentStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
         
-        // Fill segments based on battery level
-        for (int i = 0; i < segments; i++) {
-            int x = 1 + (i * 3);
-            display->fillRect(x, 1, 2, 4, SSD1306_WHITE);
-        }
+        // Fill background white and draw black text
+        display->fillRect(0, 0, textWidth + 2, textHeight + 2, SSD1306_WHITE);
+        display->setTextColor(SSD1306_BLACK);
+        display->setCursor(1, 1);
+        display->print(percentStr);
+        display->setTextColor(SSD1306_WHITE); // Reset text color
+    } else {
+        // Normal percentage display in top-left corner
+        display->setCursor(0, 0);
+        display->print(percentStr);
     }
 }
 
