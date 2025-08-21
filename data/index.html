@@ -45,10 +45,14 @@
 
   <!-- Main Content - Centered Card Layout -->
   <div class="w-[375px] bg-black-select rounded-xl p-4 space-y-4 md:ml-64 mt-16 md:mt-0">
-    <!-- Header with Title and Battery -->
+    <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
-      <div class="flex items-center space-x-1">
+      <div class="flex items-center" style="gap: 8px;">
+        <!-- Bluetooth icon -->
+        <div id="bluetoothStatus" class="flex items-center">
+          <span id="bluetoothIcon" style="font-size: 12px; font-weight: bold; color: #9ca3af; font-family: monospace; border: 1px solid #9ca3af; border-radius: 3px; padding: 1px 3px;">BT</span>
+        </div>
         <!-- Phone-style battery indicator -->
         <div id="batteryStatus" class="flex items-center space-x-1">
           <!-- Battery icon -->
@@ -241,6 +245,9 @@
           segment4.style.fill = activeSegments >= 4 ? batteryColor : 'rgba(107, 114, 128, 0.5)';
         }
         
+        // Update Bluetooth status indicator
+        updateBluetoothStatus();
+        
         // Update timer display
         if (data.timer_display) {
           document.getElementById('timer').innerText = data.timer_display;
@@ -331,6 +338,38 @@
   // Run smart detection every 200ms to adjust update frequency
   setInterval(smartUpdate, 200);
   updateWeight();
+
+  // Bluetooth status update function
+  function updateBluetoothStatus() {
+    fetch('/api/bluetooth/status')
+      .then(response => response.json())
+      .then(data => {
+        console.log("Bluetooth status response:", data); // Debug log
+        const bluetoothIcon = document.getElementById('bluetoothIcon');
+        if (bluetoothIcon) {
+          if (data.connected === true) {
+            console.log("Bluetooth CONNECTED - Setting icon to blue"); // Debug log
+            bluetoothIcon.style.color = '#3b82f6'; // Blue color when connected
+            bluetoothIcon.style.borderColor = '#3b82f6'; // Blue border when connected
+          } else {
+            console.log("Bluetooth DISCONNECTED - Setting icon to grey"); // Debug log
+            bluetoothIcon.style.color = '#9ca3af'; // Grey color when disconnected
+            bluetoothIcon.style.borderColor = '#9ca3af'; // Grey border when disconnected
+          }
+        } else {
+          console.error("Bluetooth icon element not found!");
+        }
+      })
+      .catch(err => {
+        console.error("Bluetooth status fetch error:", err);
+        // Default to grey on error
+        const bluetoothIcon = document.getElementById('bluetoothIcon');
+        if (bluetoothIcon) {
+          bluetoothIcon.style.color = '#9ca3af';
+          bluetoothIcon.style.borderColor = '#9ca3af';
+        }
+      });
+  }
 
   // Load decimal setting once (no need to poll this frequently)
   fetch('/api/decimal-setting')
