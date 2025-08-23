@@ -115,6 +115,9 @@ void setup() {
     oledDisplay.setBluetoothScale(&bluetoothScale);
   }
   
+  // Set display reference in bluetooth for timer control
+  bluetoothScale.setDisplay(&oledDisplay);
+  
   // Set power manager reference in display for timer state synchronization (if display available)
   if (oledDisplay.isConnected()) {
     oledDisplay.setPowerManager(&powerManager);

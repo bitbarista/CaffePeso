@@ -1,4 +1,5 @@
 #include "BluetoothScale.h"
+#include "Display.h"
 #include <Arduino.h>
 #include <stdexcept>
 
@@ -8,7 +9,7 @@ const char* BluetoothScale::WEIGHT_CHARACTERISTIC_UUID = "6E400002-B5A3-F393-E0A
 const char* BluetoothScale::COMMAND_CHARACTERISTIC_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
 
 BluetoothScale::BluetoothScale() 
-    : scale(nullptr), server(nullptr), service(nullptr), 
+    : scale(nullptr), display(nullptr), server(nullptr), service(nullptr), 
       weightCharacteristic(nullptr), commandCharacteristic(nullptr),
       advertising(nullptr), deviceConnected(false), oldDeviceConnected(false),
       lastHeartbeat(0), lastWeightSent(0), lastWeight(0.0f) {
@@ -320,6 +321,49 @@ void BluetoothScale::handleTareCommand() {
     }
 }
 
+void BluetoothScale::handleTimerCommand(BeanConquerorCommand command) {
+    if (!display) {
+        Serial.println("BluetoothScale: Display not available for timer command");
+        return;
+    }
+    
+    switch (command) {
+        case BeanConquerorCommand::TIMER_START:
+            Serial.println("BluetoothScale: Starting timer");
+            display->startTimer();
+            // Send timer start confirmation
+            {
+                uint8_t payload[] = {0x03, 0x0a, 0x02, 0x01, 0x00};
+                sendMessage(WeighMyBruMessageType::SYSTEM, payload, sizeof(payload));
+            }
+            break;
+            
+        case BeanConquerorCommand::TIMER_STOP:
+            Serial.println("BluetoothScale: Stopping timer");
+            display->stopTimer();
+            // Send timer stop confirmation
+            {
+                uint8_t payload[] = {0x03, 0x0a, 0x03, 0x01, 0x00};
+                sendMessage(WeighMyBruMessageType::SYSTEM, payload, sizeof(payload));
+            }
+            break;
+            
+        case BeanConquerorCommand::TIMER_RESET:
+            Serial.println("BluetoothScale: Resetting timer");
+            display->resetTimer();
+            // Send timer reset confirmation
+            {
+                uint8_t payload[] = {0x03, 0x0a, 0x04, 0x01, 0x00};
+                sendMessage(WeighMyBruMessageType::SYSTEM, payload, sizeof(payload));
+            }
+            break;
+            
+        default:
+            Serial.printf("BluetoothScale: Unknown timer command: 0x%02X\n", static_cast<uint8_t>(command));
+            break;
+    }
+}
+
 void BluetoothScale::processIncomingMessage(uint8_t* data, size_t length) {
     if (length < 2) return;
     
@@ -329,10 +373,37 @@ void BluetoothScale::processIncomingMessage(uint8_t* data, size_t length) {
     Serial.printf("BluetoothScale: Received message - Product: 0x%02X, Type: 0x%02X\n", 
                   productNumber, static_cast<uint8_t>(messageType));
     
-    if (messageType == WeighMyBruMessageType::SYSTEM) {
-        // Check for tare command
-        if (length >= 6 && data[2] == 0x0a && data[3] == 0x01) {
-            handleTareCommand();
+    if (messageType == WeighMyBruMessageType::SYSTEM && length >= 4) {
+        BeanConquerorCommand command = static_cast<BeanConquerorCommand>(data[2]);
+        
+        switch (command) {
+            case BeanConquerorCommand::TARE:
+                if (data[3] == 0x01) { // Command trigger
+                    handleTareCommand();
+                }
+                break;
+                
+            case BeanConquerorCommand::TIMER_START:
+                if (data[3] == 0x01) { // Command trigger
+                    handleTimerCommand(BeanConquerorCommand::TIMER_START);
+                }
+                break;
+                
+            case BeanConquerorCommand::TIMER_STOP:
+                if (data[3] == 0x01) { // Command trigger
+                    handleTimerCommand(BeanConquerorCommand::TIMER_STOP);
+                }
+                break;
+                
+            case BeanConquerorCommand::TIMER_RESET:
+                if (data[3] == 0x01) { // Command trigger
+                    handleTimerCommand(BeanConquerorCommand::TIMER_RESET);
+                }
+                break;
+                
+            default:
+                Serial.printf("BluetoothScale: Unknown command: 0x%02X\n", static_cast<uint8_t>(command));
+                break;
         }
     }
 }
@@ -370,4 +441,9 @@ void BluetoothScale::begin() {
 void BluetoothScale::setScale(Scale* scaleInstance) {
     scale = scaleInstance;
     Serial.println("BluetoothScale: Scale reference set");
+}
+
+void BluetoothScale::setDisplay(Display* displayInstance) {
+    display = displayInstance;
+    Serial.println("BluetoothScale: Display reference set");
 }

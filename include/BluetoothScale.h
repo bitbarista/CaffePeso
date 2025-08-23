@@ -6,9 +6,18 @@
 #include <BLE2902.h>
 #include "Scale.h"
 
+class Display; // Forward declaration
+
 enum class WeighMyBruMessageType : uint8_t {
   SYSTEM = 0x0A,
   WEIGHT = 0x0B
+};
+
+enum class BeanConquerorCommand : uint8_t {
+  TARE = 0x01,
+  TIMER_START = 0x02,
+  TIMER_STOP = 0x03,
+  TIMER_RESET = 0x04
 };
 
 class BluetoothScale : public BLEServerCallbacks, public BLECharacteristicCallbacks {
@@ -19,11 +28,13 @@ public:
     void begin(Scale* scale);
     void begin();  // Initialize without scale reference
     void setScale(Scale* scale);  // Set scale reference later
+    void setDisplay(Display* display); // Set display reference for timer control
     void end();
     void update();
     bool isConnected();
     void sendWeight(float weight);
     void handleTareCommand();
+    void handleTimerCommand(BeanConquerorCommand command);
     
     // BLE Server callbacks
     void onConnect(BLEServer* pServer) override;
@@ -34,6 +45,7 @@ public:
 
 private:
     Scale* scale;
+    Display* display; // Reference to display for timer control
     BLEServer* server;
     BLEService* service;
     BLECharacteristic* weightCharacteristic;
