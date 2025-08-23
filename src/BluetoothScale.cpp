@@ -228,42 +228,20 @@ bool BluetoothScale::isConnected() {
 void BluetoothScale::sendWeightNotification(float weight) {
     if (!deviceConnected || !weightCharacteristic) return;
     
-    // Convert weight to integer (grams * 100 for 0.01g precision)
-    int32_t weightInt = (int32_t)(weight * 100);
+    // Bean Conqueror expects a simple 4-byte float in little-endian format
+    // Send weight directly as float (in grams)
+    union {
+        float floatValue;
+        uint8_t bytes[4];
+    } weightData;
     
-    // Create weight message following WeighMyBru protocol
-    uint8_t payload[PROTOCOL_LENGTH] = {0};
+    weightData.floatValue = weight;
     
-    // Header
-    payload[0] = PRODUCT_NUMBER; // Product number
-    payload[1] = static_cast<uint8_t>(WeighMyBruMessageType::WEIGHT); // Message type
-    payload[2] = 0x00; // Reserved
-    payload[3] = 0x00; // Reserved
-    payload[4] = 0x00; // Reserved
-    payload[5] = 0x00; // Reserved
-    
-    // Sign (positive = 43, negative = 45)
-    payload[6] = (weightInt >= 0) ? 43 : 45;
-    
-    // Weight data (3 bytes, big endian)
-    uint32_t absWeight = abs(weightInt);
-    payload[7] = (absWeight >> 16) & 0xFF;
-    payload[8] = (absWeight >> 8) & 0xFF;
-    payload[9] = absWeight & 0xFF;
-    
-    // Fill remaining bytes with zeros
-    for (int i = 10; i < PROTOCOL_LENGTH - 1; i++) {
-        payload[i] = 0x00;
-    }
-    
-    // Calculate and set checksum (last byte)
-    payload[PROTOCOL_LENGTH - 1] = calculateChecksum(payload, PROTOCOL_LENGTH - 1);
-    
-    // Send notification
-    weightCharacteristic->setValue(payload, PROTOCOL_LENGTH);
+    // ESP32 is little-endian, so bytes are already in correct order for Bean Conqueror
+    weightCharacteristic->setValue(weightData.bytes, 4);
     weightCharacteristic->notify();
     
-    Serial.printf("BluetoothScale: Sent weight %.2fg\n", weight);
+    Serial.printf("BluetoothScale: Sent weight %.2fg as 4-byte float\n", weight);
 }
 
 void BluetoothScale::sendHeartbeat() {

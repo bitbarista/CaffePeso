@@ -817,6 +817,7 @@ void Display::showWeightWithFlowAndTimer(float weight) {
 // Timer management methods
 void Display::startTimer() {
     if (!timerRunning) {
+        // Fresh start
         timerStartTime = millis();
         timerRunning = true;
         timerPaused = false;
@@ -825,7 +826,17 @@ void Display::startTimer() {
         if (flowRatePtr != nullptr) {
             flowRatePtr->startTimerAveraging();
         }
+    } else if (timerPaused) {
+        // Resume from paused state
+        timerStartTime = millis() - timerPausedTime;
+        timerPaused = false;
+        
+        // Resume flow rate averaging when timer resumes
+        if (flowRatePtr != nullptr) {
+            flowRatePtr->startTimerAveraging();
+        }
     }
+    // If timer is already running and not paused, do nothing
 }
 
 void Display::stopTimer() {

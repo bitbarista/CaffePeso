@@ -65,9 +65,11 @@
 
 ### Weight Data Format
 - Sent via weight characteristic notifications
-- Format follows WeighMyBru protocol
-- Weight in grams as floating-point value
-- Automatic notifications every 50ms when connected
+- **Format**: Simple 4-byte float in little-endian byte order  
+- **Data**: Weight value directly in grams (e.g., 15.67g)
+- **Precision**: Full floating-point precision
+- **Update Rate**: Automatic notifications every 50ms when connected
+- **Byte Layout**: `[float32_little_endian]` (4 bytes total)
 
 ### Connection Behavior
 - Automatically starts advertising when disconnected
@@ -82,6 +84,15 @@
 3. **Weight Subscription**: Subscribe to notifications on `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 4. **Command Sending**: Write commands to `6E400003-B5A3-F393-E0A9-E50E24DCCA9E`
 5. **Timer Control**: All timer functions (start/stop/reset) are now available via BLE
+
+### Important: Bean Conqueror Weight Format
+Bean Conqueror expects weight data as a simple 4-byte float32 in little-endian format:
+```javascript
+// Bean Conqueror reads weight like this:
+const weight = new DataView(rawData.buffer).getFloat32(0, true); // true = little-endian
+```
+
+This is different from other WeighMyBru clients that use the full protocol format with headers and checksums.
 
 ## Technical Specifications
 
