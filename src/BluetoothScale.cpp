@@ -5,14 +5,15 @@
 
 // UUIDs for WeighMyBru protocol - unique to avoid conflicts with Bookoo scales
 const char* BluetoothScale::SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
-const char* BluetoothScale::WEIGHT_CHARACTERISTIC_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
+const char* BluetoothScale::WEIGHT_CHARACTERISTIC_UUID = "6E400004-B5A3-F393-E0A9-E50E24DCCA9E";  // Bean Conqueror (new UUID)
+const char* BluetoothScale::GAGGIMATE_CHARACTERISTIC_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";  // GaggiMate (original UUID)
 const char* BluetoothScale::COMMAND_CHARACTERISTIC_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
 
 BluetoothScale::BluetoothScale() 
     : scale(nullptr), display(nullptr), server(nullptr), service(nullptr), 
-      weightCharacteristic(nullptr), commandCharacteristic(nullptr),
-      advertising(nullptr), deviceConnected(false), oldDeviceConnected(false),
-      lastHeartbeat(0), lastWeightSent(0), lastWeight(0.0f) {
+      weightCharacteristic(nullptr), gaggiMateWeightCharacteristic(nullptr), 
+      commandCharacteristic(nullptr), advertising(nullptr), deviceConnected(false), 
+      oldDeviceConnected(false), lastHeartbeat(0), lastWeightSent(0), lastWeight(0.0f) {
 }
 
 BluetoothScale::~BluetoothScale() {
@@ -115,7 +116,30 @@ void BluetoothScale::initializeBLE() {
     
     Serial.println("BluetoothScale: Creating characteristics...");
     
-    // Create Weight Characteristic (for notifications)
+    // Create Weight Characteristic for GaggiMate (WeighMyBru protocol format) - Keep original UUID
+    gaggiMateWeightCharacteristic = service->createCharacteristic(
+        GAGGIMATE_CHARACTERISTIC_UUID,
+        BLECharacteristic::PROPERTY_READ |
+        BLECharacteristic::PROPERTY_NOTIFY |
+        BLECharacteristic::PROPERTY_INDICATE
+    );
+    
+    if (!gaggiMateWeightCharacteristic) {
+        Serial.println("BluetoothScale: ERROR - Failed to create GaggiMate weight characteristic");
+        throw std::runtime_error("Failed to create GaggiMate weight characteristic");
+    }
+    
+    Serial.println("BluetoothScale: GaggiMate characteristic created successfully");
+    
+    // Add Client Characteristic Configuration Descriptor for notifications
+    BLE2902* gaggiMateDescriptor = new BLE2902();
+    if (gaggiMateDescriptor) {
+        gaggiMateDescriptor->setNotifications(true);
+        gaggiMateWeightCharacteristic->addDescriptor(gaggiMateDescriptor);
+        Serial.println("BluetoothScale: GaggiMate descriptor added");
+    }
+    
+    // Create Weight Characteristic for Bean Conqueror (simple float format) - New UUID
     weightCharacteristic = service->createCharacteristic(
         WEIGHT_CHARACTERISTIC_UUID,
         BLECharacteristic::PROPERTY_READ |
@@ -124,13 +148,20 @@ void BluetoothScale::initializeBLE() {
     );
     
     if (!weightCharacteristic) {
-        throw std::runtime_error("Failed to create weight characteristic");
+        Serial.println("BluetoothScale: ERROR - Failed to create Bean Conqueror weight characteristic");
+        throw std::runtime_error("Failed to create Bean Conqueror weight characteristic");
     }
+    
+    Serial.println("BluetoothScale: Bean Conqueror characteristic created successfully");
     
     // Add Client Characteristic Configuration Descriptor for notifications
     BLE2902* weightDescriptor = new BLE2902();
-    weightDescriptor->setNotifications(true);
-    weightCharacteristic->addDescriptor(weightDescriptor);
+    if (weightDescriptor) {
+        weightDescriptor->setNotifications(true);
+        weightCharacteristic->addDescriptor(weightDescriptor);
+        Serial.println("BluetoothScale: Bean Conqueror descriptor added");
+    }
+    gaggiMateWeightCharacteristic->addDescriptor(gaggiMateDescriptor);
     
     // Create Command Characteristic (for receiving commands)
     commandCharacteristic = service->createCharacteristic(
@@ -226,22 +257,87 @@ bool BluetoothScale::isConnected() {
 }
 
 void BluetoothScale::sendWeightNotification(float weight) {
-    if (!deviceConnected || !weightCharacteristic) return;
+    if (!deviceConnected) {
+        return;
+    }
     
-    // Bean Conqueror expects a simple 4-byte float in little-endian format
-    // Send weight directly as float (in grams)
-    union {
-        float floatValue;
-        uint8_t bytes[4];
-    } weightData;
+    // Send to GaggiMate first (WeighMyBru protocol format) - critical for backward compatibility
+    sendGaggiMateWeight(weight);
     
-    weightData.floatValue = weight;
+    // Send to Bean Conqueror (simple float format)  
+    sendBeanConquerorWeight(weight);
+}
+
+void BluetoothScale::sendBeanConquerorWeight(float weight) {
+    if (!weightCharacteristic) {
+        return;
+    }
     
-    // ESP32 is little-endian, so bytes are already in correct order for Bean Conqueror
-    weightCharacteristic->setValue(weightData.bytes, 4);
-    weightCharacteristic->notify();
+    try {
+        // Bean Conqueror expects a simple 4-byte float in little-endian format
+        union {
+            float floatValue;
+            uint8_t bytes[4];
+        } weightData;
+        
+        weightData.floatValue = weight;
+        
+        // ESP32 is little-endian, so bytes are already in correct order for Bean Conqueror
+        weightCharacteristic->setValue(weightData.bytes, 4);
+        weightCharacteristic->notify();
+        
+        //Serial.printf("BluetoothScale: Sent Bean Conqueror weight %.2fg as 4-byte float\n", weight);
+    } catch (const std::exception& e) {
+        Serial.printf("BluetoothScale: ERROR sending Bean Conqueror weight: %s\n", e.what());
+    }
+}
+
+void BluetoothScale::sendGaggiMateWeight(float weight) {
+    if (!gaggiMateWeightCharacteristic) {
+        Serial.println("BluetoothScale: WARNING - GaggiMate characteristic is null!");
+        return;
+    }
     
-    Serial.printf("BluetoothScale: Sent weight %.2fg as 4-byte float\n", weight);
+    try {
+        // Convert weight to integer (grams * 100 for 0.01g precision)
+        int32_t weightInt = (int32_t)(weight * 100);
+        
+        // Create weight message following WeighMyBru protocol
+        uint8_t payload[PROTOCOL_LENGTH] = {0};
+        
+        // Header
+        payload[0] = PRODUCT_NUMBER; // Product number
+        payload[1] = static_cast<uint8_t>(WeighMyBruMessageType::WEIGHT); // Message type
+        payload[2] = 0x00; // Reserved
+        payload[3] = 0x00; // Reserved
+        payload[4] = 0x00; // Reserved
+        payload[5] = 0x00; // Reserved
+        
+        // Sign (positive = 43, negative = 45)
+        payload[6] = (weightInt >= 0) ? 43 : 45;
+        
+        // Weight data (3 bytes, big endian)
+        uint32_t absWeight = abs(weightInt);
+        payload[7] = (absWeight >> 16) & 0xFF;
+        payload[8] = (absWeight >> 8) & 0xFF;
+        payload[9] = absWeight & 0xFF;
+        
+        // Fill remaining bytes with zeros
+        for (int i = 10; i < PROTOCOL_LENGTH - 1; i++) {
+            payload[i] = 0x00;
+        }
+        
+        // Calculate and set checksum (last byte)
+        payload[PROTOCOL_LENGTH - 1] = calculateChecksum(payload, PROTOCOL_LENGTH - 1);
+        
+        // Send notification
+        gaggiMateWeightCharacteristic->setValue(payload, PROTOCOL_LENGTH);
+        gaggiMateWeightCharacteristic->notify();
+        
+        //Serial.printf("BluetoothScale: Sent GaggiMate weight %.2fg as WeighMyBru protocol\n", weight);
+    } catch (const std::exception& e) {
+        Serial.printf("BluetoothScale: ERROR sending GaggiMate weight: %s\n", e.what());
+    }
 }
 
 void BluetoothScale::sendHeartbeat() {

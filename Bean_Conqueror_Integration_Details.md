@@ -8,12 +8,15 @@
 
 ### Service and Characteristic UUIDs
 - **Service UUID**: `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
-- **Weight Characteristic UUID**: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
+- **GaggiMate Weight Characteristic UUID**: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
   - Properties: READ, NOTIFY, INDICATE
-  - Used for: Weight data notifications (sent every 50ms during brewing)
+  - Used for: GaggiMate weight data (WeighMyBru protocol format)
 - **Command Characteristic UUID**: `6E400003-B5A3-F393-E0A9-E50E24DCCA9E`
   - Properties: WRITE, WRITE_NR, NOTIFY
-  - Used for: Receiving commands from Bean Conqueror (tare, timer control)
+  - Used for: Receiving commands from both apps (tare, timer control)
+- **Bean Conqueror Weight Characteristic UUID**: `6E400004-B5A3-F393-E0A9-E50E24DCCA9E`
+  - Properties: READ, NOTIFY, INDICATE
+  - Used for: Bean Conqueror weight data (simple float format)
 
 ### Required API Functions - Implementation Status
 
@@ -81,18 +84,22 @@
 
 1. **Discovery**: Look for device named "WeighMyBru" in BLE scan
 2. **Connection**: Connect to service UUID `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
-3. **Weight Subscription**: Subscribe to notifications on `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
+3. **Weight Subscription**: Subscribe to notifications on `6E400004-B5A3-F393-E0A9-E50E24DCCA9E` (Bean Conqueror specific)
 4. **Command Sending**: Write commands to `6E400003-B5A3-F393-E0A9-E50E24DCCA9E`
 5. **Timer Control**: All timer functions (start/stop/reset) are now available via BLE
 
-### Important: Bean Conqueror Weight Format
-Bean Conqueror expects weight data as a simple 4-byte float32 in little-endian format:
-```javascript
-// Bean Conqueror reads weight like this:
-const weight = new DataView(rawData.buffer).getFloat32(0, true); // true = little-endian
-```
+### Important: Dual App Support
+The WeighMyBru scale now supports **both Bean Conqueror and GaggiMate simultaneously**:
 
-This is different from other WeighMyBru clients that use the full protocol format with headers and checksums.
+**Bean Conqueror**: 
+- Weight data: `6E400004-...` (4-byte float32 little-endian)
+- Expected format: Simple float value in grams
+
+**GaggiMate**: 
+- Weight data: `6E400002-...` (20-byte WeighMyBru protocol)
+- Expected format: Full protocol with headers and checksums
+
+**Commands**: Both apps share `6E400003-...` for tare and timer commands
 
 ## Technical Specifications
 

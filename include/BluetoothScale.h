@@ -48,7 +48,8 @@ private:
     Display* display; // Reference to display for timer control
     BLEServer* server;
     BLEService* service;
-    BLECharacteristic* weightCharacteristic;
+    BLECharacteristic* weightCharacteristic;          // Bean Conqueror (simple float)
+    BLECharacteristic* gaggiMateWeightCharacteristic; // GaggiMate (WeighMyBru protocol)
     BLECharacteristic* commandCharacteristic;
     BLEAdvertising* advertising;
     
@@ -66,7 +67,8 @@ private:
     
     // WeighMyBru UUIDs - unique to avoid conflicts with Bookoo scales
     static const char* SERVICE_UUID;
-    static const char* WEIGHT_CHARACTERISTIC_UUID;
+    static const char* WEIGHT_CHARACTERISTIC_UUID;        // Bean Conqueror (simple float)
+    static const char* GAGGIMATE_CHARACTERISTIC_UUID;     // GaggiMate (WeighMyBru protocol)
     static const char* COMMAND_CHARACTERISTIC_UUID;
     
     void initializeBLE();
@@ -78,4 +80,6 @@ private:
     void processIncomingMessage(uint8_t* data, size_t length);
     uint8_t calculateChecksum(const uint8_t* data, size_t length);
     void sendWeightNotification(float weight);
+    void sendBeanConquerorWeight(float weight);    // Send simple float format
+    void sendGaggiMateWeight(float weight);        // Send WeighMyBru protocol format
 };
