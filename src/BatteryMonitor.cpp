@@ -106,13 +106,15 @@ String BatteryMonitor::getBatteryStatus() {
     if (voltage >= BATTERY_FULL) {
         return "Full";
     } else if (voltage >= BATTERY_GOOD) {
-        return "Good";
+        return "Good";        // 4.0V+ - Reliable ESP32 operation
+    } else if (voltage >= BATTERY_NOMINAL) {
+        return "Fair";        // 3.8V+ - Normal operation
     } else if (voltage >= BATTERY_LOW) {
-        return "Fair";
+        return "Low";         // 3.6V+ - Consider charging
     } else if (voltage >= BATTERY_CRITICAL) {
-        return "Low";
+        return "Critical";    // 3.2V+ - May not boot reliably
     } else {
-        return "Critical";
+        return "Empty";       // <3.2V - Charge immediately
     }
 }
 

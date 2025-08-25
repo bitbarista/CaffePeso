@@ -33,13 +33,13 @@ private:
     uint8_t batteryPin;
     Preferences preferences;
     
-    // Li-ion voltage thresholds (with protection circuit)
-    static constexpr float BATTERY_FULL = 4.2f;      // 100%
-    static constexpr float BATTERY_GOOD = 3.8f;      // ~75%
-    static constexpr float BATTERY_NOMINAL = 3.7f;   // ~50%
-    static constexpr float BATTERY_LOW = 3.4f;       // ~25%
-    static constexpr float BATTERY_CRITICAL = 3.0f;  // ~5%
-    static constexpr float BATTERY_EMPTY = 2.9f;     // 0% (protection kicks in)
+    // Li-ion voltage thresholds optimized for ESP32 operation (700mAh battery)
+    static constexpr float BATTERY_FULL = 4.2f;      // 100% - Fresh charge
+    static constexpr float BATTERY_GOOD = 4.0f;      // ~75% - Reliable ESP32 operation
+    static constexpr float BATTERY_NOMINAL = 3.8f;   // ~50% - Normal operation
+    static constexpr float BATTERY_LOW = 3.6f;       // ~25% - Consider charging soon
+    static constexpr float BATTERY_CRITICAL = 3.2f;  // ~5%  - May not boot reliably
+    static constexpr float BATTERY_EMPTY = 3.0f;     // 0%   - Protection circuit threshold
     
     // Hardware configuration
     static constexpr float VOLTAGE_DIVIDER_RATIO = 2.0f;  // 100k + 100k resistors
