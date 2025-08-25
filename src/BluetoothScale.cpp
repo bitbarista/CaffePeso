@@ -2,6 +2,7 @@
 #include "Display.h"
 #include <Arduino.h>
 #include <stdexcept>
+#include <esp_bt.h>
 
 // UUIDs for WeighMyBru protocol - unique to avoid conflicts with Bookoo scales
 const char* BluetoothScale::SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
@@ -93,6 +94,10 @@ void BluetoothScale::end() {
 
 void BluetoothScale::initializeBLE() {
     Serial.println("BluetoothScale: Initializing BLE device...");
+    
+    // Reduce BLE power consumption to prevent boot loops on battery
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_N12);      // Reduce advertising power
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_N9); // Reduce connection power
     
     // Initialize BLE Device with WeighMyBru name - this handles the low-level BLE stack
     BLEDevice::init("WeighMyBru");
@@ -446,6 +451,12 @@ void BluetoothScale::processIncomingMessage(uint8_t* data, size_t length) {
     
     Serial.printf("BluetoothScale: Received message - Product: 0x%02X, Type: 0x%02X\n", 
                   productNumber, static_cast<uint8_t>(messageType));
+    
+    // Only process WeighMyBru protocol messages (Product 0x03) to avoid GaggiMate loops
+    if (productNumber != PRODUCT_NUMBER) {
+        Serial.printf("BluetoothScale: Ignoring message from unknown product: 0x%02X\n", productNumber);
+        return;
+    }
     
     if (messageType == WeighMyBruMessageType::SYSTEM && length >= 4) {
         BeanConquerorCommand command = static_cast<BeanConquerorCommand>(data[2]);
