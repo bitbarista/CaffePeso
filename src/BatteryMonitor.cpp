@@ -112,9 +112,9 @@ String BatteryMonitor::getBatteryStatus() {
     } else if (voltage >= BATTERY_LOW) {
         return "Low";         // 3.6V+ - Consider charging
     } else if (voltage >= BATTERY_CRITICAL) {
-        return "Critical";    // 3.2V+ - May not boot reliably
+        return "Critical";    // 3.5V+ - Charge immediately
     } else {
-        return "Empty";       // <3.2V - Charge immediately
+        return "Empty";       // <3.5V - Conservative empty threshold
     }
 }
 
