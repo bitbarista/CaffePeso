@@ -1,0 +1,35 @@
+// This is a backup approach - single characteristic version
+// If dual characteristics cause boot loops, we can use this approach
+// and detect client type dynamically
+
+// Add to header:
+// bool beanConquerorMode = false;
+
+// In weight notification:
+void sendWeightNotification(float weight) {
+    if (!deviceConnected || !weightCharacteristic) return;
+    
+    if (beanConquerorMode) {
+        // Send simple float for Bean Conqueror
+        union { float floatValue; uint8_t bytes[4]; } weightData;
+        weightData.floatValue = weight;
+        weightCharacteristic->setValue(weightData.bytes, 4);
+        weightCharacteristic->notify();
+    } else {
+        // Send WeighMyBru protocol for GaggiMate
+        sendGaggiMateWeight(weight);
+    }
+}
+
+// Detect client type by first message received
+void detectClientType(uint8_t* data, size_t length) {
+    // If we get WeighMyBru protocol messages, stay in GaggiMate mode
+    // If we get unknown messages, switch to Bean Conqueror mode
+    if (length >= 2 && data[0] == PRODUCT_NUMBER) {
+        beanConquerorMode = false;
+        Serial.println("Detected GaggiMate client");
+    } else {
+        beanConquerorMode = true;
+        Serial.println("Detected Bean Conqueror client");
+    }
+}

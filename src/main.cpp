@@ -47,11 +47,17 @@ void setup() {
   
   // CRITICAL: Initialize BLE FIRST before WiFi to prevent radio conflicts
   Serial.println("Initializing BLE FIRST for GaggiMate compatibility...");
+  Serial.printf("Free heap before BLE init: %u bytes\n", ESP.getFreeHeap());
+  Serial.printf("Free PSRAM before BLE init: %u bytes\n", ESP.getFreePsram());
+  
   try {
     bluetoothScale.begin();  // Initialize BLE without scale reference
     Serial.println("BLE initialized successfully - GaggiMate should be able to connect");
+    Serial.printf("Free heap after BLE init: %u bytes\n", ESP.getFreeHeap());
+    Serial.printf("Free PSRAM after BLE init: %u bytes\n", ESP.getFreePsram());
   } catch (...) {
     Serial.println("BLE initialization failed - continuing without Bluetooth");
+    Serial.printf("Free heap after BLE fail: %u bytes\n", ESP.getFreeHeap());
   }
   
   // Initialize display with error handling - don't block if display fails

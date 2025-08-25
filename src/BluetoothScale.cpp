@@ -94,13 +94,22 @@ void BluetoothScale::end() {
 
 void BluetoothScale::initializeBLE() {
     Serial.println("BluetoothScale: Initializing BLE device...");
+    Serial.printf("BluetoothScale: Free heap at start: %u bytes\n", ESP.getFreeHeap());
     
-    // Reduce BLE power consumption to prevent boot loops on battery
-    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_N12);      // Reduce advertising power
-    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_N9); // Reduce connection power
+    // Reduce BLE power consumption during initialization to prevent voltage sag
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_N12);      // Minimum advertising power
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_N12); // Minimum connection power
     
     // Initialize BLE Device with WeighMyBru name - this handles the low-level BLE stack
     BLEDevice::init("WeighMyBru");
+    
+    // Set even lower power to reduce current draw during boot
+    BLEDevice::setPower(ESP_PWR_LVL_N12);  // Global BLE power reduction
+    
+    // Small delay to let power settle
+    delay(100);
+    
+    Serial.printf("BluetoothScale: Free heap after BLEDevice::init: %u bytes\n", ESP.getFreeHeap());
     
     Serial.println("BluetoothScale: Creating BLE server...");
     
