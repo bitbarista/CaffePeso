@@ -97,14 +97,14 @@ void BluetoothScale::initializeBLE() {
     Serial.printf("BluetoothScale: Free heap at start: %u bytes\n", ESP.getFreeHeap());
     
     // Reduce BLE power consumption during initialization to prevent voltage sag
-    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_N12);      // Minimum advertising power
-    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_N12); // Minimum connection power
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_N3);      // Moderate advertising power (-3dBm)
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_N3); // Moderate connection power (-3dBm)
     
     // Initialize BLE Device with WeighMyBru name - this handles the low-level BLE stack
     BLEDevice::init("WeighMyBru");
     
-    // Set even lower power to reduce current draw during boot
-    BLEDevice::setPower(ESP_PWR_LVL_N12);  // Global BLE power reduction
+    // Set moderate power to reduce current draw during boot while maintaining connectivity
+    BLEDevice::setPower(ESP_PWR_LVL_N3);  // Moderate BLE power reduction (-3dBm)
     
     // Small delay to let power settle
     delay(100);
@@ -461,8 +461,8 @@ void BluetoothScale::processIncomingMessage(uint8_t* data, size_t length) {
     Serial.printf("BluetoothScale: Received message - Product: 0x%02X, Type: 0x%02X\n", 
                   productNumber, static_cast<uint8_t>(messageType));
     
-    // Only process WeighMyBru protocol messages (Product 0x03) to avoid GaggiMate loops
-    if (productNumber != PRODUCT_NUMBER) {
+    // Accept messages from GaggiMate (Product 0x02) and WeighMyBru (Product 0x03)
+    if (productNumber != 0x02 && productNumber != PRODUCT_NUMBER) {
         Serial.printf("BluetoothScale: Ignoring message from unknown product: 0x%02X\n", productNumber);
         return;
     }
