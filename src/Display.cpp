@@ -788,22 +788,20 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     float currentTime = getTimerSeconds();
     String timerStr = String(currentTime, 1) + "s";
     
-    // Bottom line: Small text (size 1) - flow rate left, timer right
+    // Bottom line: Small text (size 1) - timer left, flow rate right
     display->setTextSize(1);
     
-    // Flow rate on bottom left
+    // Timer on bottom left
     display->setCursor(0, 24);
-    display->print(flowRateStr);
-    
-    // Timer on bottom right - calculate position to right-align
-    display->getTextBounds(timerStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    int timerX = SCREEN_WIDTH - textWidth;
-    // Adjust for Bluetooth indicator if present
-    if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        timerX -= 15; // Move left to avoid Bluetooth icon
-    }
-    display->setCursor(timerX, 24);
     display->print(timerStr);
+    
+    // Flow rate on bottom right - calculate position to right-align
+    display->getTextBounds(flowRateStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
+    int flowRateX = SCREEN_WIDTH - textWidth;
+    // Flow rate position stays fixed - don't adjust for Bluetooth indicator
+    // since the Bluetooth dot is at the top and flow rate is at the bottom
+    display->setCursor(flowRateX, 24);
+    display->print(flowRateStr);
     
     // Draw Bluetooth status if connected
     drawBluetoothStatus();
