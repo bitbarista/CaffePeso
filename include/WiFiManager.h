@@ -15,5 +15,7 @@ String getStoredPassword();
 void setupmDNS(); // Setup mDNS for weighmybru.local hostname
 void printWiFiStatus(); // Print detailed WiFi status for debugging
 void maintainWiFi(); // Periodic WiFi maintenance to ensure AP stability
+bool attemptSTAConnection(const char* ssid, const char* password); // Attempt STA connection and switch from AP mode
+void switchToAPMode(); // Switch back to AP mode if STA connection fails
 
 #endif

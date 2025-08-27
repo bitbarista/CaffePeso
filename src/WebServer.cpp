@@ -368,8 +368,24 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
       String ssid = request->getParam("ssid", true)->value();
       String password = request->getParam("password", true)->value();
+      
+      Serial.println("New WiFi credentials received via web interface");
+      
+      // Save credentials first
       saveWiFiCredentials(ssid.c_str(), password.c_str());
-      request->send(200, "text/plain", "WiFi credentials saved. Reboot to connect.");
+      
+      // Attempt immediate STA connection to avoid needing a reboot
+      bool connected = attemptSTAConnection(ssid.c_str(), password.c_str());
+      
+      if (connected) {
+        request->send(200, "application/json", 
+          "{\"status\":\"success\",\"message\":\"Connected successfully! AP mode disabled for power savings.\",\"ip\":\"" + WiFi.localIP().toString() + "\"}");
+      } else {
+        // Connection failed - switch back to AP mode
+        switchToAPMode();
+        request->send(200, "application/json", 
+          "{\"status\":\"failed\",\"message\":\"Connection failed. Check credentials and try again. AP mode restored.\"}");
+      }
     } else {
       request->send(400, "text/plain", "Missing SSID or password");
     }

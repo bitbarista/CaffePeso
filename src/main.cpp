@@ -95,7 +95,8 @@ void setup() {
       delay(1000);
       break;
   }
-  delay(2000);
+  //Wait for BLE to finish intitalizing before starting WiFi
+  delay(2000); 
   setupWiFi();
 
   // Wait for WiFi to fully stabilize after BLE is already running

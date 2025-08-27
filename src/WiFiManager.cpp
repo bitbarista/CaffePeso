@@ -146,15 +146,64 @@ void setupWiFi() {
     WiFi.mode(WIFI_OFF);
     delay(500); // Longer delay for complete reset
     
-    // Set WiFi power to maximum for better AP visibility
+    // Set WiFi power to maximum for better connectivity
     WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
-    Serial.println("WiFi power set to maximum for better AP visibility");
+    Serial.println("WiFi power set to maximum");
     
     // CRITICAL: Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
     WiFi.setSleep(true); // MUST be true when BLE is active
     Serial.println("WiFi sleep enabled for BLE coexistence (required)");
     
-    // Always start with AP mode first for stable operation
+    // Check if we have stored credentials - prioritize STA connection
+    if (strlen(ssid) > 0) {
+        Serial.println("Found stored credentials. Attempting STA connection first...");
+        Serial.println("Connecting to: " + String(ssid));
+        
+        // Try STA mode first for lower power consumption
+        WiFi.mode(WIFI_STA);
+        delay(1000); // Ensure mode switch is stable
+        
+        startAttemptTime = millis();
+        WiFi.begin(ssid, password);
+        
+        // Wait for connection with reasonable timeout
+        int connectionAttempts = 0;
+        const int maxAttempts = 20; // 10 seconds total
+        
+        while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxAttempts) {
+            delay(500);
+            Serial.print(".");
+            connectionAttempts++;
+            
+            // Check for immediate connection failures
+            if (WiFi.status() == WL_NO_SSID_AVAIL || WiFi.status() == WL_CONNECT_FAILED) {
+                Serial.println("\nSTA connection failed - bad credentials or network unavailable");
+                break;
+            }
+        }
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("\n✅ STA connection successful!");
+            Serial.println("Connected to: " + String(ssid));
+            Serial.println("IP Address: " + WiFi.localIP().toString());
+            Serial.println("Gateway: " + WiFi.gatewayIP().toString());
+            Serial.println("DNS: " + WiFi.dnsIP().toString());
+            Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+            
+            // Setup mDNS for STA mode
+            setupmDNS();
+            
+            Serial.println("⚡ Power optimized: AP mode disabled for lower consumption");
+            return; // Exit early - we're connected via STA, no need for AP
+        } else {
+            Serial.println("\n❌ STA connection failed or timed out");
+            Serial.println("Falling back to AP mode for configuration access");
+        }
+    } else {
+        Serial.println("No stored WiFi credentials found. Starting AP mode for initial setup.");
+    }
+    
+    // Fallback to AP mode if STA failed or no credentials exist
     Serial.println("Starting AP mode...");
     WiFi.mode(WIFI_AP);
     delay(1000); // Ensure mode switch is stable
@@ -162,136 +211,46 @@ void setupWiFi() {
     // Configure AP with optimized settings for maximum visibility
     WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
     
-    // Force AP broadcast with maximum power and visibility settings
+    // Start AP with maximum power and visibility settings
     bool apStarted = false;
-    Serial.println("Starting AP with maximum visibility settings...");
+    Serial.println("Starting AP for credential configuration...");
     
     // Try channel 6 first (most common and widely supported)
     apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4); // Channel 6, broadcast SSID, max 4 clients
     
     if (apStarted) {
-        Serial.println("AP started successfully on channel 6 with broadcast enabled");
+        Serial.println("✅ AP started successfully on channel 6");
     } else {
         Serial.println("Channel 6 failed, trying channel 1...");
         apStarted = WiFi.softAP(ap_ssid, ap_password, 1, false, 4); // Channel 1, broadcast SSID
         
         if (apStarted) {
-            Serial.println("AP started successfully on channel 1 with broadcast enabled");
+            Serial.println("✅ AP started successfully on channel 1");
         } else {
             Serial.println("Channel 1 failed, trying default settings...");
             apStarted = WiFi.softAP(ap_ssid); // Simplest possible configuration
             if (apStarted) {
-                Serial.println("AP started with default settings");
+                Serial.println("✅ AP started with default settings");
             }
         }
     }
     
-    Serial.println("AP Started: " + String(apStarted ? "YES" : "NO"));
-    Serial.println("AP IP: " + WiFi.softAPIP().toString());
-    Serial.println("AP SSID: " + String(ap_ssid));
-    Serial.println("AP MAC: " + WiFi.softAPmacAddress());
-    
-    // Enhanced AP diagnostics
     if (apStarted) {
-        Serial.println("=== AP DIAGNOSTICS ===");
+        Serial.println("=== AP MODE ACTIVE ===");
+        Serial.println("AP SSID: " + String(ap_ssid));
+        Serial.println("AP IP: " + WiFi.softAPIP().toString());
+        Serial.println("AP MAC: " + WiFi.softAPmacAddress());
         Serial.printf("AP Channel: %d\n", WiFi.channel());
-        Serial.printf("AP Gateway: %s\n", WiFi.softAPIP().toString().c_str());
-        Serial.printf("AP Subnet: %s\n", WiFi.softAPSubnetMask().toString().c_str());
         Serial.printf("WiFi TX Power: %d dBm\n", WiFi.getTxPower());
-        Serial.println("AP should now be visible as 'WeighMyBru-AP'");
-        Serial.println("If still not visible, try:");
-        Serial.println("1. Restart your phone/computer WiFi");
-        Serial.println("2. Manually add network 'WeighMyBru-AP' (no password)");
-        Serial.println("3. Check for 2.4GHz band support on your device");
-        Serial.println("======================");
+        Serial.println("📱 Connect to 'WeighMyBru-AP' to configure WiFi");
+        Serial.println("🌐 Access: http://192.168.4.1 or http://weighmybru.local");
+        Serial.println("=====================");
+        
+        // Setup mDNS for AP mode
+        setupmDNS();
     } else {
-        Serial.println("ERROR: AP failed to start - hardware or RF issue suspected");
+        Serial.println("❌ ERROR: AP failed to start - hardware or RF issue suspected");
     }
-    
-    // Start mDNS immediately for AP mode access
-    if (MDNS.begin("weighmybru")) {
-        Serial.println("mDNS responder started in AP mode");
-        Serial.println("Access the scale at: http://weighmybru.local or http://192.168.4.1");
-        MDNS.addService("http", "tcp", 80);
-    }
-    
-    // Give AP more time to fully stabilize
-    delay(2000);
-    
-    // Only try STA connection if credentials exist
-    if (strlen(ssid) > 0) {
-        Serial.println("Attempting STA connection to: " + String(ssid));
-        Serial.println("NOTE: STA connection may cause temporary AP instability");
-        
-        // Switch to dual mode only after AP is fully stable
-        WiFi.mode(WIFI_AP_STA);
-        delay(1000); // Longer delay for stable mode switch
-        
-        // Restart AP after mode switch to ensure it stays active
-        WiFi.softAP(ap_ssid, ap_password, 6, 0, 8);
-        delay(500);
-        
-        startAttemptTime = millis();
-        WiFi.begin(ssid, password);
-        
-        // Wait for connection with reduced timeout to minimize AP disruption
-        int connectionAttempts = 0;
-        const int maxAttempts = 10; // Reduced to 5 seconds max to minimize AP disruption
-        
-        while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxAttempts) {
-            delay(500);
-            Serial.print(".");
-            connectionAttempts++;
-            
-            // Check if connection is failing badly
-            if (WiFi.status() == WL_NO_SSID_AVAIL || WiFi.status() == WL_CONNECT_FAILED) {
-                Serial.println("\nSTA connection failed - bad credentials detected");
-                Serial.println("Clearing stored credentials and keeping AP-only mode");
-                
-                // Clear bad credentials
-                clearWiFiCredentials();
-                
-                // Immediately return to AP-only mode for stability
-                WiFi.disconnect(true);
-                delay(500);
-                WiFi.mode(WIFI_AP);
-                delay(1000);
-                
-                // Restart AP to ensure it's stable
-                WiFi.softAP(ap_ssid, ap_password, 6, 0, 8);
-                Serial.println("AP mode restored after credential failure");
-                break;
-            }
-        }
-        
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\nConnected to STA with IP: " + WiFi.localIP().toString());
-            Serial.println("Running in dual AP+STA mode - AP should remain accessible");
-        } else {
-            Serial.println("\nSTA connection timeout. Returning to AP-only mode for maximum stability.");
-            // Return to AP-only mode for stability
-            WiFi.disconnect(true);
-            delay(500);
-            WiFi.mode(WIFI_AP);
-            delay(1000);
-            WiFi.softAP(ap_ssid, ap_password, 6, 0, 8);
-            Serial.println("AP-only mode restored for stability");
-        }
-    } else {
-        Serial.println("No stored WiFi credentials. AP mode only.");
-    }
-    
-    // Setup mDNS after WiFi is stable
-    setupmDNS();
-    
-    Serial.println("WiFi setup complete.");
-    Serial.println("=== CONNECTION INFO ===");
-    Serial.println("AP SSID: " + String(ap_ssid));
-    Serial.println("AP IP: 192.168.4.1 (always available)");
-    Serial.println("Hostname: weighmybru.local");
-    Serial.println("Max clients: 4");
-    Serial.println("WiFi sleep: enabled (required for BLE coexistence)");
-    Serial.println("=======================");
 }
 
 void setupmDNS() {
@@ -352,5 +311,82 @@ void maintainWiFi() {
         
         // Print status for debugging
         Serial.println("WiFi maintenance check completed");
+    }
+}
+
+// Function to attempt STA connection with new credentials and switch from AP mode
+bool attemptSTAConnection(const char* ssid, const char* password) {
+    Serial.println("=== ATTEMPTING STA CONNECTION ===");
+    Serial.println("SSID: " + String(ssid));
+    Serial.println("Switching from AP mode to STA mode...");
+    
+    // Disconnect from AP mode but keep WiFi on
+    WiFi.mode(WIFI_STA);
+    delay(1000); // Allow mode switch to stabilize
+    
+    // Attempt connection with new credentials
+    startAttemptTime = millis();
+    WiFi.begin(ssid, password);
+    
+    // Wait for connection with reasonable timeout
+    int connectionAttempts = 0;
+    const int maxAttempts = 30; // 15 seconds total - more generous for initial connection
+    
+    Serial.print("Connecting");
+    while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxAttempts) {
+        delay(500);
+        Serial.print(".");
+        connectionAttempts++;
+        
+        // Check for immediate connection failures
+        if (WiFi.status() == WL_NO_SSID_AVAIL) {
+            Serial.println("\n❌ SSID not found");
+            return false;
+        }
+        if (WiFi.status() == WL_CONNECT_FAILED) {
+            Serial.println("\n❌ Connection failed - likely wrong password");
+            return false;
+        }
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\n🎉 STA CONNECTION SUCCESSFUL!");
+        Serial.println("✅ Connected to: " + String(ssid));
+        Serial.println("📍 IP Address: " + WiFi.localIP().toString());
+        Serial.println("🔗 Gateway: " + WiFi.gatewayIP().toString());
+        Serial.println("📡 RSSI: " + String(WiFi.RSSI()) + " dBm");
+        Serial.println("⚡ AP mode disabled - power consumption optimized");
+        
+        // Setup mDNS for the new STA connection
+        setupmDNS();
+        
+        return true;
+    } else {
+        Serial.println("\n❌ STA connection failed or timed out");
+        Serial.println("Status code: " + String(WiFi.status()));
+        return false;
+    }
+}
+
+// Function to switch back to AP mode if STA connection fails
+void switchToAPMode() {
+    Serial.println("=== SWITCHING TO AP MODE ===");
+    WiFi.disconnect(true);
+    delay(500);
+    WiFi.mode(WIFI_AP);
+    delay(1000);
+    
+    // Restart AP with same settings as setupWiFi()
+    bool apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4);
+    
+    if (apStarted) {
+        Serial.println("✅ AP mode restored");
+        Serial.println("📱 Connect to 'WeighMyBru-AP' to retry configuration");
+        Serial.println("🌐 Access: http://192.168.4.1 or http://weighmybru.local");
+        
+        // Setup mDNS for AP mode
+        setupmDNS();
+    } else {
+        Serial.println("❌ Failed to restart AP mode");
     }
 }
