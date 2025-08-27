@@ -717,24 +717,27 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         displayWeight = 0.0;
     }
     
-    // Format weight string with consistent spacing
+    // Format weight string - left justified, no extra spacing
     String weightStr;
     if (displayWeight < 0) {
         weightStr = String(displayWeight, 1);
     } else {
-        weightStr = " " + String(displayWeight, 1); // Add space for positive numbers
+        weightStr = String(displayWeight, 1); // No extra space - left justified
     }
     
-    // Top center: Large weight display (size 3) centered
+    // Left side: Large weight display (size 3) - far left, left justified
     display->setTextSize(3);
-    int16_t x1, y1;
-    uint16_t textWidth, textHeight;
-    display->getTextBounds(weightStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    int centerX = (SCREEN_WIDTH - textWidth) / 2;
-    display->setCursor(centerX, 0);
+    display->setCursor(0, 0); // Far left position
     display->print(weightStr);
     
-    // Get flow rate and format it for bottom left
+    // Right side: Timer and flow rate stacked (size 2)
+    display->setTextSize(2);
+    
+    // Get timer value and format without "s"
+    float currentTime = getTimerSeconds();
+    String timerStr = String(currentTime, 1);
+    
+    // Get flow rate and format without "g/s"
     float currentFlowRate = 0.0;
     if (flowRatePtr != nullptr) {
         currentFlowRate = flowRatePtr->getFlowRate();
@@ -746,39 +749,27 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         displayFlowRate = 0.0;
     }
     
-    // Format flow rate string (compact format)
+    // Format flow rate string without units
     String flowRateStr = "";
     if (displayFlowRate < 0) {
         flowRateStr += String(displayFlowRate, 1);
     } else {
         flowRateStr += String(displayFlowRate, 1);
     }
-    flowRateStr += "g/s";
     
-    // Get timer for bottom right
-    float currentTime = getTimerSeconds();
-    String timerStr = String(currentTime, 1) + "s";
-    
-    // Bottom line: Small text (size 1) - timer left, flow rate right
-    display->setTextSize(1);
-    
-    // Timer on bottom left
-    display->setCursor(0, 24);
+    // Position timer on top right
+    int16_t x1, y1;
+    uint16_t textWidth, textHeight;
+    display->getTextBounds(timerStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
+    int timerX = SCREEN_WIDTH - textWidth;
+    display->setCursor(timerX, 0);
     display->print(timerStr);
     
-    // Flow rate on bottom right - calculate position to right-align
+    // Position flow rate below timer on right
     display->getTextBounds(flowRateStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
     int flowRateX = SCREEN_WIDTH - textWidth;
-    // Flow rate position stays fixed - don't adjust for Bluetooth indicator
-    // since the Bluetooth dot is at the top and flow rate is at the bottom
-    display->setCursor(flowRateX, 24);
+    display->setCursor(flowRateX, 16); // Below timer
     display->print(flowRateStr);
-    
-    // Draw Bluetooth status if connected
-    drawBluetoothStatus();
-    
-    // Draw battery status
-    drawBatteryStatus();
     
     display->display();
 }
