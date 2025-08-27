@@ -294,13 +294,53 @@ void maintainWiFi() {
     if (millis() - lastMaintenance >= maintenanceInterval) {
         lastMaintenance = millis();
         
-        // Check if AP is still running
-        if (WiFi.getMode() == WIFI_OFF || WiFi.getMode() == WIFI_STA) {
-            Serial.println("WARNING: AP mode lost! Restarting AP...");
-            WiFi.mode(WIFI_AP);
-            delay(500);
-            WiFi.softAP(ap_ssid, ap_password, 6, 0, 8);
-            Serial.println("AP mode restored");
+        // Check current WiFi mode and connection health
+        wifi_mode_t currentMode = WiFi.getMode();
+        
+        if (currentMode == WIFI_STA) {
+            // We're in STA mode - check if connection is still healthy
+            if (WiFi.status() != WL_CONNECTED) {
+                Serial.println("WARNING: STA connection lost! Checking reconnection...");
+                
+                // Try to reconnect to saved credentials
+                char ssid[33] = {0};
+                char password[65] = {0};
+                loadWiFiCredentials(ssid, password, sizeof(ssid));
+                
+                if (strlen(ssid) > 0) {
+                    Serial.println("Attempting to reconnect to: " + String(ssid));
+                    WiFi.begin(ssid, password);
+                    
+                    // Wait briefly for reconnection
+                    int attempts = 0;
+                    while (WiFi.status() != WL_CONNECTED && attempts < 10) { // 5 second timeout
+                        delay(500);
+                        attempts++;
+                    }
+                    
+                    if (WiFi.status() == WL_CONNECTED) {
+                        Serial.println("STA reconnection successful");
+                    } else {
+                        Serial.println("STA reconnection failed - switching to AP mode for user access");
+                        switchToAPMode();
+                    }
+                } else {
+                    Serial.println("No stored credentials - switching to AP mode");
+                    switchToAPMode();
+                }
+            } else {
+                Serial.println("STA mode healthy - connection maintained");
+            }
+        } else if (currentMode == WIFI_AP) {
+            // We're in AP mode - just ensure it's still running properly
+            if (WiFi.softAPgetStationNum() == 0) {
+                Serial.println("AP mode active, no clients connected");
+            } else {
+                Serial.println("AP mode active, " + String(WiFi.softAPgetStationNum()) + " clients connected");
+            }
+        } else if (currentMode == WIFI_OFF) {
+            Serial.println("WARNING: WiFi is OFF! This should not happen - restarting AP mode");
+            switchToAPMode();
         }
         
         // Ensure WiFi sleep stays enabled for BLE coexistence

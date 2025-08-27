@@ -858,16 +858,15 @@ void Display::showStatusPage() {
     // Top line: Battery %, Scale icon, BLE icon
     display->setTextSize(1);
     
-    // Battery percentage (left)
+    // Battery percentage (left) - without "BAT:" prefix
     if (batteryPtr != nullptr) {
         int batteryPercent = batteryPtr->getBatteryPercentage();
         display->setCursor(0, 0);
-        display->print("BAT:");
         display->print(batteryPercent);
         display->print("%");
     } else {
         display->setCursor(0, 0);
-        display->print("BAT:N/A");
+        display->print("N/A");
     }
     
     // Scale status (center) - HX711 connected icon
@@ -886,17 +885,17 @@ void Display::showStatusPage() {
         display->drawCircle(122, 3, 2, SSD1306_WHITE);  // Empty circle
     }
     
-    // Bottom section: WiFi mode and IP address
+    // Bottom line: WiFi mode and IP address (moved to very bottom)
     display->setTextSize(1);
     
-    // Check WiFi connection status and show simplified format
+    // Check WiFi connection status and show simplified format at bottom
     if (WiFi.status() == WL_CONNECTED) {
-        display->setCursor(0, 16);
+        display->setCursor(0, 24);  // Bottom of 32-pixel display
         display->print("STA: ");
         display->print(WiFi.localIP().toString());
     } else {
         // AP mode is active
-        display->setCursor(0, 16); 
+        display->setCursor(0, 24);  // Bottom of 32-pixel display
         display->print("AP: ");
         display->print(WiFi.softAPIP().toString());
     }
