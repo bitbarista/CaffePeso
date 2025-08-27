@@ -472,7 +472,7 @@ void Display::showIPAddresses() {
         return;
     }
     
-    // First show the WeighMyBru Ready message for 3 seconds
+    // Show the WeighMyBru Ready message for 3 seconds
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
@@ -505,50 +505,7 @@ void Display::showIPAddresses() {
     display->print(line2);
     
     display->display();
-    delay(1000);
-    
-    // Then show IP addresses
-    display->clearDisplay();
-    display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
-    
-    String apIP = "AP: " + WiFi.softAPIP().toString();
-    String staIP = "";
-    
-    // Check if connected to WiFi station mode
-    if (WiFi.status() == WL_CONNECTED) {
-        staIP = "STA: " + WiFi.localIP().toString();
-    } else {
-        staIP = "STA: Not Connected";
-    }
-    
-    // Calculate text positioning for centering IP addresses
-    int16_t ipX1, ipY1;
-    uint16_t ipW1, ipH1, ipW2, ipH2;
-    
-    // Get text bounds for both IP lines
-    display->getTextBounds(apIP, 0, 0, &ipX1, &ipY1, &ipW1, &ipH1);
-    display->getTextBounds(staIP, 0, 0, &ipX1, &ipY1, &ipW2, &ipH2);
-    
-    // Calculate centered positions
-    int ipCenterX1 = (SCREEN_WIDTH - ipW1) / 2;
-    int ipCenterX2 = (SCREEN_WIDTH - ipW2) / 2;
-    
-    // Position lines to fit nicely in 32 pixels
-    int ipLine1Y = 4;   // Start a bit from top
-    int ipLine2Y = 20;  // Second line lower
-    
-    // Display AP IP - centered
-    display->setCursor(ipCenterX1, ipLine1Y);
-    display->print(apIP);
-    
-    // Display STA IP - centered
-    display->setCursor(ipCenterX2, ipLine2Y);
-    display->print(staIP);
-    
-    // Show for 3 seconds
-    display->display();
-    delay(2000);
+    delay(3000); // Show ready message for 3 seconds, then continue to normal display
 }
 
 void Display::clear() {

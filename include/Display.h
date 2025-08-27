@@ -26,7 +26,7 @@ public:
     void showTaringMessage(); // Show "Taring..." message like WeighMyBru Ready
     void showTaredMessage(); // Show "Tared!" message like WeighMyBru Ready
     void clearMessageState(); // Clear message state to return to weight display
-    void showIPAddresses(); // Show WiFi IP addresses
+    void showIPAddresses(); // Show startup ready message
     void showStatusPage(); // Show status page with battery, BLE, WiFi, and scale status
     void toggleStatusPage(); // Toggle between main display and status page
     void clear();

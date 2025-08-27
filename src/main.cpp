@@ -96,11 +96,11 @@ void setup() {
       break;
   }
   //Wait for BLE to finish intitalizing before starting WiFi
-  delay(2000); 
+  delay(1500); 
   setupWiFi();
 
   // Wait for WiFi to fully stabilize after BLE is already running
-  delay(3000);
+  delay(1500);
 
   // Initialize scale with error handling - don't block web server if HX711 fails
   Serial.println("Initializing scale...");
