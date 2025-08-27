@@ -886,22 +886,18 @@ void Display::showStatusPage() {
         display->drawCircle(122, 3, 2, SSD1306_WHITE);  // Empty circle
     }
     
-    // Bottom section: WiFi status and IP
+    // Bottom section: WiFi mode and IP address
     display->setTextSize(1);
     
-    // Check WiFi connection status
+    // Check WiFi connection status and show simplified format
     if (WiFi.status() == WL_CONNECTED) {
         display->setCursor(0, 16);
-        display->print("WiFi: STA Connected");
-        display->setCursor(0, 24);
-        display->print("IP: ");
+        display->print("STA: ");
         display->print(WiFi.localIP().toString());
     } else {
-        // Check if AP mode is active
+        // AP mode is active
         display->setCursor(0, 16); 
-        display->print("WiFi: AP Mode");
-        display->setCursor(0, 24);
-        display->print("IP: ");
+        display->print("AP: ");
         display->print(WiFi.softAPIP().toString());
     }
     
