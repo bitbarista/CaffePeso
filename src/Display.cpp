@@ -125,9 +125,17 @@ void Display::update() {
     }
     
     // Check if message duration has elapsed
-    if (showingMessage && millis() - messageStartTime > messageDuration) {
-        showingMessage = false;
-        Serial.println("Message cleared, returning to main display");
+    if (showingMessage) {
+        int effectiveDuration = messageDuration;
+        // Use shorter duration for tared message
+        if (currentMessage == "Tared message") {
+            effectiveDuration = 1000; // Half of default duration for quick feedback
+        }
+        
+        if (millis() - messageStartTime > effectiveDuration) {
+            showingMessage = false;
+            Serial.println("Message cleared, returning to main display");
+        }
     }
     
     // Show status page if active
@@ -423,7 +431,6 @@ void Display::showTaredMessage() {
     // Set message state to prevent weight display interference
     currentMessage = "Tared message";
     messageStartTime = millis();
-    messageDuration = 1000; // Shorter duration for tared message (half of default)
     showingMessage = true;
     
     // Show "Tared!" in same format as WeighMyBru Ready
