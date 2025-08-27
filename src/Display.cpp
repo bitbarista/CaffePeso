@@ -709,6 +709,10 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         return;
     }
     
+    // Declare variables used throughout function
+    int16_t x1, y1;
+    uint16_t w, h;
+    
     display->clearDisplay();
     
     // Apply deadband to prevent flickering between 0.0g and -0.0g
@@ -717,18 +721,45 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         displayWeight = 0.0;
     }
     
-    // Format weight string - left justified, no extra spacing
-    String weightStr;
-    if (displayWeight < 0) {
-        weightStr = String(displayWeight, 1);
-    } else {
-        weightStr = String(displayWeight, 1); // No extra space - left justified
+    // Split weight into integer and decimal parts for custom rendering
+    bool isNegative = displayWeight < 0;
+    float absWeight = abs(displayWeight);
+    int integerPart = (int)absWeight;
+    int decimalPart = (int)((absWeight - integerPart) * 10 + 0.5); // Round to 1 decimal
+    
+    // Draw weight with custom decimal point
+    display->setTextSize(3);
+    display->setCursor(0, 0);
+    
+    // Draw negative sign if needed
+    int currentX = 0;
+    if (isNegative) {
+        display->print("-");
+        // Calculate width of "-" in size 3
+        display->getTextBounds("-", 0, 0, &x1, &y1, &w, &h);
+        currentX += w;
     }
     
-    // Left side: Large weight display (size 3) - far left, left justified
-    display->setTextSize(3);
-    display->setCursor(0, 0); // Far left position
-    display->print(weightStr);
+    // Draw integer part in size 3
+    String intStr = String(integerPart);
+    display->setCursor(currentX, 0);
+    display->print(intStr);
+    
+    // Calculate position after integer part
+    display->getTextBounds(intStr, 0, 0, &x1, &y1, &w, &h);
+    currentX += w;
+    
+    // Draw smaller decimal point (size 1) positioned to align with baseline
+    display->setTextSize(1);
+    display->setCursor(currentX, 16); // Lower position to align with size 3 baseline
+    display->print(".");
+    display->getTextBounds(".", 0, 0, &x1, &y1, &w, &h);
+    currentX += w;
+    
+    // Draw decimal digit in size 2 for better readability
+    display->setTextSize(2);
+    display->setCursor(currentX, 8); // Positioned between size 3 and size 1
+    display->print(String(decimalPart));
     
     // Right side: Timer and flow rate stacked (size 2)
     display->setTextSize(2);
@@ -758,7 +789,6 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     }
     
     // Position timer on top right
-    int16_t x1, y1;
     uint16_t textWidth, textHeight;
     display->getTextBounds(timerStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
     int timerX = SCREEN_WIDTH - textWidth;
