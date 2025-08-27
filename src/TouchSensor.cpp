@@ -31,8 +31,13 @@ void TouchSensor::update() {
             } else {
                 // Touch ended
                 if (!longPressDetected) {
-                    // Short press - schedule delayed tare to allow scale to stabilize
-                    scheduleDelayedTare();
+                    // Check if it was a medium press for status page (500ms)
+                    if (currentTime - touchStartTime >= 500) {
+                        handleStatusPageToggle();
+                    } else {
+                        // Short press - schedule delayed tare to allow scale to stabilize
+                        scheduleDelayedTare();
+                    }
                 }
                 longPressDetected = false;
                 Serial.println("Touch ended");
@@ -155,5 +160,15 @@ void TouchSensor::checkDelayedTare() {
         } else {
             Serial.println("Error: Scale pointer is null");
         }
+    }
+}
+
+void TouchSensor::handleStatusPageToggle() {
+    Serial.println("Medium press detected - toggling status page");
+    
+    if (displayPtr != nullptr) {
+        displayPtr->toggleStatusPage();
+    } else {
+        Serial.println("Error: Display pointer is null");
     }
 }

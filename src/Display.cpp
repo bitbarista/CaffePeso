@@ -7,10 +7,10 @@
 #include <WiFi.h>
 
 Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate)
-    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr),
+    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr), wifiManagerPtr(nullptr),
       messageStartTime(0), messageDuration(2000), showingMessage(false), 
       timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false),
-      lastFlowRate(0.0) {
+      lastFlowRate(0.0), showingStatusPage(false), statusPageStartTime(0) {
     display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 }
 
@@ -118,14 +118,24 @@ void Display::update() {
         return;
     }
     
+    // Check if status page timeout has elapsed
+    if (showingStatusPage && millis() - statusPageStartTime > STATUS_PAGE_TIMEOUT) {
+        showingStatusPage = false;
+        Serial.println("Status page timeout, returning to main display");
+    }
+    
     // Check if message duration has elapsed
     if (showingMessage && millis() - messageStartTime > messageDuration) {
         showingMessage = false;
         Serial.println("Message cleared, returning to main display");
     }
     
-    // Show normal weight display when not showing message
-    if (!showingMessage && scalePtr != nullptr) {
+    // Show status page if active
+    if (showingStatusPage) {
+        showStatusPage();
+    }
+    // Show normal weight display when not showing message or status page
+    else if (!showingMessage && scalePtr != nullptr) {
         float weight = scalePtr->getCurrentWeight();
         showWeightWithFlowAndTimer(weight);
     }
@@ -574,6 +584,10 @@ void Display::setBatteryMonitor(BatteryMonitor* battery) {
     batteryPtr = battery;
 }
 
+void Display::setWiFiManager(WiFiManager* wifi) {
+    wifiManagerPtr = wifi;
+}
+
 void Display::drawBluetoothStatus() {
     // Return early if display is not connected
     if (!displayConnected) {
@@ -872,6 +886,79 @@ float Display::getTimerSeconds() const {
         return timerPausedTime / 1000.0;
     } else {
         return (millis() - timerStartTime) / 1000.0;
+    }
+}
+
+void Display::showStatusPage() {
+    // Return early if display is not connected
+    if (!displayConnected) {
+        return;
+    }
+
+    display->clearDisplay();
+    display->setTextColor(SSD1306_WHITE);
+    
+    // Top line: Battery %, Scale icon, BLE icon
+    display->setTextSize(1);
+    
+    // Battery percentage (left)
+    if (batteryPtr != nullptr) {
+        int batteryPercent = batteryPtr->getBatteryPercentage();
+        display->setCursor(0, 0);
+        display->print("BAT:");
+        display->print(batteryPercent);
+        display->print("%");
+    } else {
+        display->setCursor(0, 0);
+        display->print("BAT:N/A");
+    }
+    
+    // Scale status (center) - HX711 connected icon
+    bool scaleConnected = (scalePtr != nullptr && scalePtr->isHX711Connected());
+    display->setCursor(50, 0);
+    if (scaleConnected) {
+        display->print("[SCALE]"); // Scale connected
+    } else {
+        display->print("[----]");  // Scale disconnected
+    }
+    
+    // Bluetooth status (right)
+    if (bluetoothPtr != nullptr && bluetoothPtr->isConnected()) {
+        display->fillCircle(122, 3, 2, SSD1306_WHITE); // BLE dot
+    } else {
+        display->drawCircle(122, 3, 2, SSD1306_WHITE);  // Empty circle
+    }
+    
+    // Bottom section: WiFi status and IP
+    display->setTextSize(1);
+    
+    // Check WiFi connection status
+    if (WiFi.status() == WL_CONNECTED) {
+        display->setCursor(0, 16);
+        display->print("WiFi: STA Connected");
+        display->setCursor(0, 24);
+        display->print("IP: ");
+        display->print(WiFi.localIP().toString());
+    } else {
+        // Check if AP mode is active
+        display->setCursor(0, 16); 
+        display->print("WiFi: AP Mode");
+        display->setCursor(0, 24);
+        display->print("IP: ");
+        display->print(WiFi.softAPIP().toString());
+    }
+    
+    display->display();
+}
+
+void Display::toggleStatusPage() {
+    showingStatusPage = !showingStatusPage;
+    if (showingStatusPage) {
+        statusPageStartTime = millis();
+        showingMessage = false; // Clear any active message
+        Serial.println("Showing status page");
+    } else {
+        Serial.println("Returning to main display");
     }
 }
 

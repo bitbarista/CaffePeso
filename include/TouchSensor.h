@@ -39,6 +39,7 @@ private:
     void scheduleDelayedTare();
     void checkDelayedTare();
     void handleLongPress();
+    void handleStatusPageToggle(); // Handle status page toggle on medium press
 };
 
 #endif

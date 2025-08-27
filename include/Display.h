@@ -27,6 +27,8 @@ public:
     void showTaredMessage(); // Show "Tared!" message like WeighMyBru Ready
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show WiFi IP addresses
+    void showStatusPage(); // Show status page with battery, BLE, WiFi, and scale status
+    void toggleStatusPage(); // Toggle between main display and status page
     void clear();
     void setBrightness(uint8_t brightness);
     
@@ -38,6 +40,9 @@ public:
     
     // Battery monitor reference for battery status display
     void setBatteryMonitor(BatteryMonitor* battery);
+    
+    // WiFi manager reference for network status display  
+    void setWiFiManager(class WiFiManager* wifi);
     
     // Timer management
     void startTimer();
@@ -55,6 +60,7 @@ private:
     BluetoothScale* bluetoothPtr;
     PowerManager* powerManagerPtr;
     BatteryMonitor* batteryPtr;
+    class WiFiManager* wifiManagerPtr;
     Adafruit_SSD1306* display;
     bool displayConnected; // Track if display is actually connected
     
@@ -74,6 +80,11 @@ private:
     bool timerRunning;
     bool timerPaused;
     float lastFlowRate; // Store last flow rate for comparison
+    
+    // Status page system
+    bool showingStatusPage;
+    unsigned long statusPageStartTime;
+    static const unsigned long STATUS_PAGE_TIMEOUT = 10000; // 10 seconds timeout
     
     void drawWeight(float weight);
     void showWeightWithFlowAndTimer(float weight); // Main display showing weight, flow rate, and timer
