@@ -423,6 +423,7 @@ void Display::showTaredMessage() {
     // Set message state to prevent weight display interference
     currentMessage = "Tared message";
     messageStartTime = millis();
+    messageDuration = 1000; // Shorter duration for tared message (half of default)
     showingMessage = true;
     
     // Show "Tared!" in same format as WeighMyBru Ready
@@ -505,7 +506,7 @@ void Display::showIPAddresses() {
     display->print(line2);
     
     display->display();
-    delay(3000); // Show ready message for 3 seconds, then continue to normal display
+    delay(1000); // Show ready message for 1 second, then continue to normal display
 }
 
 void Display::clear() {
@@ -727,9 +728,10 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     int integerPart = (int)absWeight;
     int decimalPart = (int)((absWeight - integerPart) * 10 + 0.5); // Round to 1 decimal
     
-    // Draw weight with custom decimal point
+    // Draw weight with custom decimal point - positioned at left middle
     display->setTextSize(3);
-    display->setCursor(0, 0);
+    int weightY = 5; // Middle of 32-pixel screen (size 3 text is ~21px tall, so (32-21)/2 ≈ 5)
+    display->setCursor(0, weightY);
     
     // Draw negative sign if needed
     int currentX = 0;
@@ -742,7 +744,7 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     
     // Draw integer part in size 3
     String intStr = String(integerPart);
-    display->setCursor(currentX, 0);
+    display->setCursor(currentX, weightY);
     display->print(intStr);
     
     // Calculate position after integer part
@@ -751,14 +753,14 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     
     // Draw smaller decimal point (size 1) positioned to align with baseline
     display->setTextSize(1);
-    display->setCursor(currentX, 16); // Lower position to align with size 3 baseline
+    display->setCursor(currentX, weightY + 11); // Offset from weight baseline for alignment
     display->print(".");
     display->getTextBounds(".", 0, 0, &x1, &y1, &w, &h);
     currentX += w;
     
     // Draw decimal digit in size 2 for better readability
     display->setTextSize(2);
-    display->setCursor(currentX, 8); // Positioned between size 3 and size 1
+    display->setCursor(currentX, weightY + 3); // Positioned relative to weight baseline
     display->print(String(decimalPart));
     
     // Right side: Timer and flow rate stacked (size 2)
