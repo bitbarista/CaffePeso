@@ -781,7 +781,6 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     
     // Get timer value and format without "s"
     float currentTime = getTimerSeconds();
-    String timerStr = String(currentTime, 1);
     
     // Get flow rate and format without "g/s"
     float currentFlowRate = 0.0;
@@ -795,26 +794,101 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         displayFlowRate = 0.0;
     }
     
-    // Format flow rate string without units
-    String flowRateStr = "";
-    if (displayFlowRate < 0) {
-        flowRateStr += String(displayFlowRate, 1);
-    } else {
-        flowRateStr += String(displayFlowRate, 1);
+    // === CUSTOM TIMER RENDERING (like weight) ===
+    bool timerNegative = currentTime < 0;
+    float absTimer = abs(currentTime);
+    int timerInteger = (int)absTimer;
+    int timerDecimal = (int)((absTimer - timerInteger) * 10 + 0.5);
+    
+    // Handle timer carry-over
+    if (timerDecimal >= 10) {
+        timerInteger += 1;
+        timerDecimal = 0;
     }
     
-    // Position timer on top right
-    uint16_t textWidth, textHeight;
-    display->getTextBounds(timerStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    int timerX = SCREEN_WIDTH - textWidth;
-    display->setCursor(timerX, 0);
-    display->print(timerStr);
+    // Calculate timer position with "T" label at far right
+    display->setTextSize(2);
+    String timerIntStr = String(timerInteger);
+    if (timerNegative) timerIntStr = "-" + timerIntStr;
     
-    // Position flow rate below timer on right
-    display->getTextBounds(flowRateStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    int flowRateX = SCREEN_WIDTH - textWidth;
-    display->setCursor(flowRateX, 16); // Below timer
-    display->print(flowRateStr);
+    uint16_t timerIntWidth, timerDecWidth, timerH, timerLabelWidth;
+    display->getTextBounds(timerIntStr, 0, 0, &x1, &y1, &timerIntWidth, &timerH);
+    display->setTextSize(1);
+    display->getTextBounds("T", 0, 0, &x1, &y1, &timerLabelWidth, &timerH);
+    display->getTextBounds(".", 0, 0, &x1, &y1, &w, &timerH);
+    uint16_t timerDotWidth = w;
+    display->getTextBounds(String(timerDecimal), 0, 0, &x1, &y1, &timerDecWidth, &timerH);
+    
+    // Position "T" at far right, numbers to the left
+    int timerLabelX = SCREEN_WIDTH - timerLabelWidth;
+    int timerStartX = timerLabelX - timerIntWidth - timerDotWidth - timerDecWidth;
+    
+    // Draw timer integer part (size 2)
+    display->setTextSize(2);
+    display->setCursor(timerStartX, 0);
+    display->print(timerIntStr);
+    
+    // Draw timer decimal point (size 1)
+    display->setTextSize(1);
+    display->setCursor(timerStartX + timerIntWidth, 7); // Aligned with size 2 baseline
+    display->print(".");
+    
+    // Draw timer decimal digit (size 1)
+    display->setCursor(timerStartX + timerIntWidth + timerDotWidth, 7);
+    display->print(String(timerDecimal));
+    
+    // Draw "T" label at far right (size 1)
+    display->setTextSize(1);
+    display->setCursor(timerLabelX, 0); // Far right position
+    display->print("T");
+    
+    // === CUSTOM FLOW RATE RENDERING (like weight) ===
+    bool flowNegative = displayFlowRate < 0;
+    float absFlow = abs(displayFlowRate);
+    int flowInteger = (int)absFlow;
+    int flowDecimal = (int)((absFlow - flowInteger) * 10 + 0.5);
+    
+    // Handle flow rate carry-over
+    if (flowDecimal >= 10) {
+        flowInteger += 1;
+        flowDecimal = 0;
+    }
+    
+    // Calculate flow rate position with "F" label at far right
+    display->setTextSize(2);
+    String flowIntStr = String(flowInteger);
+    if (flowNegative) flowIntStr = "-" + flowIntStr;
+    
+    uint16_t flowIntWidth, flowDecWidth, flowH, flowLabelWidth;
+    display->getTextBounds(flowIntStr, 0, 0, &x1, &y1, &flowIntWidth, &flowH);
+    display->setTextSize(1);
+    display->getTextBounds("F", 0, 0, &x1, &y1, &flowLabelWidth, &flowH);
+    display->getTextBounds(".", 0, 0, &x1, &y1, &w, &flowH);
+    uint16_t flowDotWidth = w;
+    display->getTextBounds(String(flowDecimal), 0, 0, &x1, &y1, &flowDecWidth, &flowH);
+    
+    // Position "F" at far right, numbers to the left
+    int flowLabelX = SCREEN_WIDTH - flowLabelWidth;
+    int flowStartX = flowLabelX - flowIntWidth - flowDotWidth - flowDecWidth;
+    
+    // Draw flow rate integer part (size 2)
+    display->setTextSize(2);
+    display->setCursor(flowStartX, 16); // Below timer
+    display->print(flowIntStr);
+    
+    // Draw flow rate decimal point (size 1)
+    display->setTextSize(1);
+    display->setCursor(flowStartX + flowIntWidth, 23); // Aligned with size 2 baseline
+    display->print(".");
+    
+    // Draw flow rate decimal digit (size 1)
+    display->setCursor(flowStartX + flowIntWidth + flowDotWidth, 23);
+    display->print(String(flowDecimal));
+    
+    // Draw "F" label at far right (size 1)
+    display->setTextSize(1);
+    display->setCursor(flowLabelX, 16); // Far right position, below timer
+    display->print("F");
     
     display->display();
 }
