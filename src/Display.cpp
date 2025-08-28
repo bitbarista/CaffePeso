@@ -735,6 +735,12 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     int integerPart = (int)absWeight;
     int decimalPart = (int)((absWeight - integerPart) * 10 + 0.5); // Round to 1 decimal
     
+    // Handle carry-over when decimal part rounds to 10 (e.g., 4.95 -> 5.0)
+    if (decimalPart >= 10) {
+        integerPart += 1;
+        decimalPart = 0;
+    }
+    
     // Draw weight with custom decimal point - positioned at left middle
     display->setTextSize(3);
     int weightY = 5; // Middle of 32-pixel screen (size 3 text is ~21px tall, so (32-21)/2 ≈ 5)

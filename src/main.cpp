@@ -165,12 +165,14 @@ void loop() {
   static unsigned long lastWeightUpdate = 0;
   static unsigned long lastWiFiCheck = 0;
   
-  // Update weight more frequently for brewing accuracy
-  if (millis() - lastWeightUpdate >= 10) { // Update every 10ms
+  // Update weight at optimal frequency for brewing accuracy
+  if (millis() - lastWeightUpdate >= 20) { // Update every 20ms (50Hz) - still very responsive
     float weight = scale.getWeight();
     flowRate.update(weight);
     lastWeightUpdate = millis();
   }
+  
+  static unsigned long lastBLEUpdate = 0;
   
   // Check WiFi status every 30 seconds for debugging
   if (millis() - lastWiFiCheck >= 30000) {
@@ -181,8 +183,11 @@ void loop() {
   // Maintain WiFi AP stability
   maintainWiFi();
   
-  // Update Bluetooth for GaggiMate connectivity
-  bluetoothScale.update();
+  // Update Bluetooth less frequently to reduce BLE interference
+  if (millis() - lastBLEUpdate >= 50) { // Update every 50ms (20Hz) - sufficient for app responsiveness
+    bluetoothScale.update();
+    lastBLEUpdate = millis();
+  }
   
   // Update touch sensor
   touchSensor.update();
@@ -196,6 +201,6 @@ void loop() {
   // Update display
   oledDisplay.update();
   
-  // Shorter delay for more responsive weight readings
-  delay(5); // Reduced from 100ms to 5ms for brewing responsiveness
+  // Balanced delay for responsive readings without system overload
+  delay(25); // Increased from 5ms to 25ms to reduce BLE interference and system load
 }
