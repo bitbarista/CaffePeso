@@ -559,37 +559,16 @@ void Display::drawBluetoothStatus() {
         return;
     }
     
-    // Only draw if we have a bluetooth instance and it's connected
-    if (bluetoothPtr && bluetoothPtr->isConnected()) {
-        /* Option 1: Simple "BT" text - clean and readable
+    // Draw "BT" text with rectangle border when connected
+    if (bluetoothPtr) {
         display->setTextSize(1);
-        display->setCursor(115, 0);
+        display->setCursor(115, 0); // Position at top right
         display->print("BT");
-        */
         
-        // Option 2: Simple dot indicator - minimal and clean
-        display->fillCircle(122, 3, 2, SSD1306_WHITE);
-        
-        /* Option 3: Simplified Bluetooth symbol using lines - cleaner than pixels
-        int iconX = 119;
-        int iconY = 1;
-        // Vertical center line
-        display->drawLine(iconX + 2, iconY, iconX + 2, iconY + 6, SSD1306_WHITE);
-        // Upper triangle
-        display->drawLine(iconX + 2, iconY, iconX + 4, iconY + 2, SSD1306_WHITE);
-        display->drawLine(iconX + 4, iconY + 2, iconX + 2, iconY + 3, SSD1306_WHITE);
-        // Lower triangle  
-        display->drawLine(iconX + 2, iconY + 3, iconX + 4, iconY + 4, SSD1306_WHITE);
-        display->drawLine(iconX + 4, iconY + 4, iconX + 2, iconY + 6, SSD1306_WHITE);
-        // Left diagonal
-        display->drawLine(iconX, iconY + 2, iconX + 2, iconY + 4, SSD1306_WHITE);
-        */
-        
-        /* Option 4: Just letter "B" - ultra simple
-        display->setTextSize(1);
-        display->setCursor(122, 0);
-        display->print("B");
-        */
+        // If connected, draw rectangle around "BT"
+        if (bluetoothPtr->isConnected()) {
+            display->drawRect(113, -1, 16, 10, SSD1306_WHITE); // Rectangle around "BT"
+        }
     }
 }
 
@@ -979,20 +958,21 @@ void Display::showStatusPage() {
         display->print("N/A");
     }
     
-    // Scale status (center) - HX711 connected icon
+    // Scale status (center) - HX711 text with rectangle border when connected
     bool scaleConnected = (scalePtr != nullptr && scalePtr->isHX711Connected());
     display->setCursor(50, 0);
+    display->print("HX711");
     if (scaleConnected) {
-        display->print("[SCALE]"); // Scale connected
-    } else {
-        display->print("[----]");  // Scale disconnected
+        // Draw rectangle around "HX711" when connected (with proper spacing)
+        display->drawRect(48, -1, 34, 10, SSD1306_WHITE); // Rectangle around "HX711"
     }
     
-    // Bluetooth status (right)
+    // Bluetooth status (right) - BT text with rectangle border when connected
+    display->setCursor(110, 0);
+    display->print("BT");
     if (bluetoothPtr != nullptr && bluetoothPtr->isConnected()) {
-        display->fillCircle(122, 3, 2, SSD1306_WHITE); // BLE dot
-    } else {
-        display->drawCircle(122, 3, 2, SSD1306_WHITE);  // Empty circle
+        // Draw rectangle around "BT" when connected (with proper spacing)
+        display->drawRect(108, -1, 16, 10, SSD1306_WHITE); // Rectangle around "BT"
     }
     
     // Bottom line: WiFi mode and IP address (moved to very bottom)
