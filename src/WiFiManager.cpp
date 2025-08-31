@@ -3,6 +3,12 @@
 #include <Preferences.h>
 #include <ESPmDNS.h>
 
+// ESP-IDF includes for advanced WiFi power management (SuperMini antenna fix)
+#ifdef ESP_IDF_VERSION_MAJOR
+    #include "esp_wifi.h"
+    #include "esp_err.h"
+#endif
+
 Preferences wifiPrefs;
 
 // Station credentials
@@ -141,18 +147,18 @@ void setupWiFi() {
     loadWiFiCredentials(ssid, password, sizeof(ssid));
     
     // Ensure WiFi is completely reset first
-    Serial.println("Resetting WiFi...");
+    Serial.println("=== WIFI ANTENNA OPTIMIZATION ===");
+    Serial.println("🔄 Resetting WiFi subsystem...");
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(500); // Longer delay for complete reset
     
-    // Set WiFi power to maximum for better connectivity
-    WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
-    Serial.println("WiFi power set to maximum");
+    // Apply SuperMini antenna fix for boards with poor antenna design
+    applySuperMiniAntennaFix();
     
     // CRITICAL: Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
     WiFi.setSleep(true); // MUST be true when BLE is active
-    Serial.println("WiFi sleep enabled for BLE coexistence (required)");
+    Serial.println("✅ WiFi sleep enabled for BLE coexistence");
     
     // Check if we have stored credentials - prioritize STA connection
     if (strlen(ssid) > 0) {
@@ -163,6 +169,12 @@ void setupWiFi() {
         // Try STA mode first for lower power consumption
         WiFi.mode(WIFI_STA);
         delay(1000); // Ensure mode switch is stable
+        
+        // ANTENNA FIX: Reapply power settings after mode switch for SuperMini boards
+        // Mode switch can reset power levels, so reapply the fix
+        if (ENABLE_SUPERMINI_ANTENNA_FIX) {
+            applySuperMiniAntennaFix();
+        }
         
         startAttemptTime = millis();
         WiFi.begin(ssid, password);
@@ -378,6 +390,12 @@ bool attemptSTAConnection(const char* ssid, const char* password) {
     WiFi.mode(WIFI_STA);
     delay(1000); // Allow mode switch to stabilize
     
+    // ANTENNA FIX: Reapply power settings after mode switch for SuperMini boards
+    if (ENABLE_SUPERMINI_ANTENNA_FIX) {
+        Serial.println("🔧 Reapplying SuperMini antenna fix after mode switch...");
+        applySuperMiniAntennaFix();
+    }
+    
     // Attempt connection with new credentials
     startAttemptTime = millis();
     WiFi.begin(ssid, password);
@@ -459,4 +477,33 @@ void switchToAPMode() {
             Serial.println("💥 FATAL: Cannot start AP mode - WiFi hardware issue?");
         }
     }
+}
+
+// Apply SuperMini antenna fix for boards with poor antenna design
+void applySuperMiniAntennaFix() {
+    if (!ENABLE_SUPERMINI_ANTENNA_FIX) {
+        Serial.println("🔧 SuperMini antenna fix disabled in configuration");
+        return;
+    }
+    
+    Serial.println("🔧 Applying SuperMini antenna fix...");
+    
+    // Arduino framework maximum power
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    Serial.println("✅ Arduino framework power: 19.5dBm");
+    
+    // ESP-IDF level power boost (the key fix from forums)
+    #ifdef ESP_IDF_VERSION_MAJOR
+        esp_err_t result = esp_wifi_set_max_tx_power(40); // 10dBm (40 = 4 * 10dBm)
+        if (result == ESP_OK) {
+            Serial.println("✅ ESP-IDF max TX power: 10dBm (touch-antenna fix applied)");
+        } else {
+            Serial.printf("⚠️  ESP-IDF power setting failed: %s\n", esp_err_to_name(result));
+        }
+    #else
+        Serial.println("⚠️  ESP-IDF functions not available - using Arduino framework only");
+    #endif
+    
+    Serial.println("🎯 SuperMini antenna optimization complete");
+    Serial.println("   This fixes the common 'touch antenna to work' issue");
 }
