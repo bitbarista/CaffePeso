@@ -156,8 +156,9 @@ void setupWiFi() {
     
     // Check if we have stored credentials - prioritize STA connection
     if (strlen(ssid) > 0) {
-        Serial.println("Found stored credentials. Attempting STA connection first...");
-        Serial.println("Connecting to: " + String(ssid));
+        Serial.println("=== ATTEMPTING STA CONNECTION ===");
+        Serial.println("📶 Found stored credentials for: " + String(ssid));
+        Serial.println("🔄 Trying STA mode first (power optimized)...");
         
         // Try STA mode first for lower power consumption
         WiFi.mode(WIFI_STA);
@@ -168,39 +169,49 @@ void setupWiFi() {
         
         // Wait for connection with reasonable timeout
         int connectionAttempts = 0;
-        const int maxAttempts = 20; // 10 seconds total
+        const int maxAttempts = 24; // 12 seconds total - more time for reliable connection
         
+        Serial.print("Connecting");
         while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxAttempts) {
             delay(500);
             Serial.print(".");
             connectionAttempts++;
             
             // Check for immediate connection failures
-            if (WiFi.status() == WL_NO_SSID_AVAIL || WiFi.status() == WL_CONNECT_FAILED) {
-                Serial.println("\nSTA connection failed - bad credentials or network unavailable");
+            if (WiFi.status() == WL_NO_SSID_AVAIL) {
+                Serial.println("\n❌ Network '" + String(ssid) + "' not found");
+                break;
+            }
+            if (WiFi.status() == WL_CONNECT_FAILED) {
+                Serial.println("\n❌ Connection failed - likely incorrect password");
                 break;
             }
         }
         
         if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\n✅ STA connection successful!");
-            Serial.println("Connected to: " + String(ssid));
-            Serial.println("IP Address: " + WiFi.localIP().toString());
-            Serial.println("Gateway: " + WiFi.gatewayIP().toString());
-            Serial.println("DNS: " + WiFi.dnsIP().toString());
-            Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+            Serial.println("\n🎉 STA CONNECTION SUCCESSFUL!");
+            Serial.println("===========================");
+            Serial.println("✅ Connected to: " + String(ssid));
+            Serial.println("📍 IP Address: " + WiFi.localIP().toString());
+            Serial.println("🌐 Gateway: " + WiFi.gatewayIP().toString());
+            Serial.println("🔍 DNS: " + WiFi.dnsIP().toString());
+            Serial.println("📡 Signal: " + String(WiFi.RSSI()) + " dBm");
+            Serial.println("⚡ AP mode disabled - optimized for low power");
+            Serial.println("🔄 Will auto-fallback to AP if connection lost");
+            Serial.println("===========================");
             
             // Setup mDNS for STA mode
             setupmDNS();
             
-            Serial.println("⚡ Power optimized: AP mode disabled for lower consumption");
             return; // Exit early - we're connected via STA, no need for AP
         } else {
-            Serial.println("\n❌ STA connection failed or timed out");
-            Serial.println("Falling back to AP mode for configuration access");
+            Serial.println("\n❌ STA CONNECTION FAILED");
+            Serial.println("🔄 Status code: " + String(WiFi.status()));
+            Serial.println("⏭️  Falling back to AP mode for configuration...");
         }
     } else {
-        Serial.println("No stored WiFi credentials found. Starting AP mode for initial setup.");
+        Serial.println("=== NO STORED CREDENTIALS ===");
+        Serial.println("📱 No WiFi credentials found - starting AP mode for initial setup");
     }
     
     // Fallback to AP mode if STA failed or no credentials exist
@@ -289,7 +300,7 @@ void printWiFiStatus() {
 
 void maintainWiFi() {
     static unsigned long lastMaintenance = 0;
-    const unsigned long maintenanceInterval = 60000; // Every 60 seconds
+    const unsigned long maintenanceInterval = 15000; // Every 15 seconds for more responsive switching
     
     if (millis() - lastMaintenance >= maintenanceInterval) {
         lastMaintenance = millis();
@@ -300,7 +311,7 @@ void maintainWiFi() {
         if (currentMode == WIFI_STA) {
             // We're in STA mode - check if connection is still healthy
             if (WiFi.status() != WL_CONNECTED) {
-                Serial.println("WARNING: STA connection lost! Checking reconnection...");
+                Serial.println("🚨 WARNING: STA connection lost! Attempting immediate reconnection...");
                 
                 // Try to reconnect to saved credentials
                 char ssid[33] = {0};
@@ -308,38 +319,41 @@ void maintainWiFi() {
                 loadWiFiCredentials(ssid, password, sizeof(ssid));
                 
                 if (strlen(ssid) > 0) {
-                    Serial.println("Attempting to reconnect to: " + String(ssid));
+                    Serial.println("📶 Attempting to reconnect to: " + String(ssid));
                     WiFi.begin(ssid, password);
                     
-                    // Wait briefly for reconnection
+                    // Wait briefly for reconnection - reduced timeout for faster fallback
                     int attempts = 0;
-                    while (WiFi.status() != WL_CONNECTED && attempts < 10) { // 5 second timeout
+                    while (WiFi.status() != WL_CONNECTED && attempts < 6) { // 3 second timeout
                         delay(500);
+                        Serial.print(".");
                         attempts++;
                     }
                     
                     if (WiFi.status() == WL_CONNECTED) {
-                        Serial.println("STA reconnection successful");
+                        Serial.println("\n✅ STA reconnection successful");
+                        Serial.println("📍 IP: " + WiFi.localIP().toString());
                     } else {
-                        Serial.println("STA reconnection failed - switching to AP mode for user access");
+                        Serial.println("\n❌ STA reconnection failed - switching to AP mode immediately");
                         switchToAPMode();
                     }
                 } else {
-                    Serial.println("No stored credentials - switching to AP mode");
+                    Serial.println("❌ No stored credentials - switching to AP mode");
                     switchToAPMode();
                 }
             } else {
-                Serial.println("STA mode healthy - connection maintained");
+                Serial.println("✅ STA mode healthy - connection maintained");
+                Serial.println("📍 Connected to: " + WiFi.SSID() + " | IP: " + WiFi.localIP().toString() + " | RSSI: " + String(WiFi.RSSI()) + "dBm");
             }
         } else if (currentMode == WIFI_AP) {
             // We're in AP mode - just ensure it's still running properly
             if (WiFi.softAPgetStationNum() == 0) {
-                Serial.println("AP mode active, no clients connected");
+                Serial.println("📱 AP mode active - 'WeighMyBru-AP' ready for configuration");
             } else {
-                Serial.println("AP mode active, " + String(WiFi.softAPgetStationNum()) + " clients connected");
+                Serial.println("📱 AP mode active - " + String(WiFi.softAPgetStationNum()) + " clients connected");
             }
         } else if (currentMode == WIFI_OFF) {
-            Serial.println("WARNING: WiFi is OFF! This should not happen - restarting AP mode");
+            Serial.println("🚨 CRITICAL: WiFi is OFF! This should not happen - restarting AP mode");
             switchToAPMode();
         }
         
@@ -411,22 +425,38 @@ bool attemptSTAConnection(const char* ssid, const char* password) {
 // Function to switch back to AP mode if STA connection fails
 void switchToAPMode() {
     Serial.println("=== SWITCHING TO AP MODE ===");
+    Serial.println("🔄 Disconnecting from STA mode...");
     WiFi.disconnect(true);
     delay(500);
+    
+    Serial.println("🔄 Setting AP mode...");
     WiFi.mode(WIFI_AP);
-    delay(1000);
+    delay(1000); // Allow mode switch to stabilize
     
     // Restart AP with same settings as setupWiFi()
+    Serial.println("🔄 Starting AP broadcast...");
     bool apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4);
     
     if (apStarted) {
-        Serial.println("✅ AP mode restored");
-        Serial.println("📱 Connect to 'WeighMyBru-AP' to retry configuration");
-        Serial.println("🌐 Access: http://192.168.4.1 or http://weighmybru.local");
+        Serial.println("✅ AP MODE RESTORED");
+        Serial.println("==================");
+        Serial.println("📱 SSID: " + String(ap_ssid));
+        Serial.println("🌐 IP: " + WiFi.softAPIP().toString());
+        Serial.println("🔧 Config URL: http://192.168.4.1");
+        Serial.println("📡 mDNS: http://weighmybru.local");
+        Serial.println("==================");
         
         // Setup mDNS for AP mode
         setupmDNS();
     } else {
-        Serial.println("❌ Failed to restart AP mode");
+        Serial.println("❌ CRITICAL: Failed to restart AP mode!");
+        Serial.println("🔄 Retrying with minimal settings...");
+        // Try with minimal settings as fallback
+        if (WiFi.softAP(ap_ssid)) {
+            Serial.println("✅ AP started with minimal settings");
+            setupmDNS();
+        } else {
+            Serial.println("💥 FATAL: Cannot start AP mode - WiFi hardware issue?");
+        }
     }
 }

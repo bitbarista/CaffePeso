@@ -84,6 +84,38 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Upload WiFi improvements",
+			"type": "shell",
+			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--target",
+				"upload",
+				"--environment",
+				"esp32-s3-devkitc-1",
+				"--upload-port",
+				"COM17"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Upload to COM18",
+			"type": "shell",
+			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--target",
+				"upload",
+				"--environment",
+				"esp32-s3-devkitc-1",
+				"--upload-port",
+				"COM18"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
