@@ -101,7 +101,7 @@ void setup() {
 
   // Wait for WiFi to fully stabilize after BLE is already running
   delay(1500);
-
+  Serial.printf("Version: %s\n", ESP.getSdkVersion());
   // Initialize scale with error handling - don't block web server if HX711 fails
   Serial.println("Initializing scale...");
   if (!scale.begin()) {
