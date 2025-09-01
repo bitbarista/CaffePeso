@@ -48,16 +48,15 @@
     <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
-      <div class="flex items-center" style="gap: 8px;">
+      <div class="flex items-center" style="gap: 12px;">
         <!-- WiFi signal strength indicator -->
         <div id="wifiStatus" class="flex items-center" title="WiFi Signal Strength">
           <i id="wifiIcon" class="fa fa-wifi" style="font-size: 14px; color: #9ca3af;"></i>
           <span id="wifiSignalText" class="text-xs ml-1" style="color: #9ca3af;">-</span>
         </div>
         <!-- Bluetooth signal strength indicator -->
-        <div id="bluetoothSignalStatus" class="flex items-center" title="Bluetooth Signal Strength">
+        <div id="bluetoothSignalStatus" class="flex items-center" title="Bluetooth Connection Status">
           <i id="bluetoothIcon" class="fa fa-bluetooth" style="font-size: 14px; color: #9ca3af;"></i>
-          <span id="bluetoothSignalText" class="text-xs ml-1" style="color: #9ca3af;">-</span>
         </div>
         <!-- Phone-style battery indicator -->
         <div id="batteryStatus" class="flex items-center space-x-1">
@@ -366,33 +365,14 @@
     }
     
     // Update Bluetooth signal display in header
-    const bluetoothSignalText = document.getElementById('bluetoothSignalText');
     const bluetoothIcon = document.getElementById('bluetoothIcon');
     
-    if (data.bluetooth_connected && data.bluetooth_signal_strength !== undefined) {
-      const btSignalStrength = data.bluetooth_signal_strength;
-      
-      // Color code based on signal strength
-      let btColor = '#9ca3af';
-      if (btSignalStrength >= -50) {
-        btColor = '#22c55e'; // Green
-      } else if (btSignalStrength >= -70) {
-        btColor = '#f59e0b'; // Orange
-      } else if (btSignalStrength >= -80) {
-        btColor = '#ef4444'; // Red
-      }
-      
-      bluetoothSignalText.style.color = btColor;
-      if (bluetoothIcon) {
-        bluetoothIcon.style.color = btColor;
-      }
-      bluetoothSignalText.textContent = btSignalStrength + 'dBm';
+    if (data.bluetooth_connected) {
+      // Connected - make it blue
+      bluetoothIcon.style.color = '#3b82f6'; // Blue
     } else {
-      bluetoothSignalText.style.color = '#9ca3af';
-      if (bluetoothIcon) {
-        bluetoothIcon.style.color = '#9ca3af';
-      }
-      bluetoothSignalText.textContent = 'Off';
+      // Disconnected - make it grey
+      bluetoothIcon.style.color = '#9ca3af'; // Grey
     }
   }
 
