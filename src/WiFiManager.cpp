@@ -507,3 +507,69 @@ void applySuperMiniAntennaFix() {
     Serial.println("SuperMini antenna optimization complete");
     Serial.println("   This fixes the common 'touch antenna to work' issue");
 }
+
+// Get current WiFi signal strength in dBm
+int getWiFiSignalStrength() {
+    if (WiFi.status() != WL_CONNECTED) {
+        return -100; // Return very poor signal if not connected
+    }
+    return WiFi.RSSI();
+}
+
+// Get WiFi signal quality description
+String getWiFiSignalQuality() {
+    if (WiFi.status() != WL_CONNECTED) {
+        return "Disconnected";
+    }
+    
+    int rssi = WiFi.RSSI();
+    
+    if (rssi >= -30) {
+        return "Excellent";
+    } else if (rssi >= -50) {
+        return "Very Good";
+    } else if (rssi >= -60) {
+        return "Good";
+    } else if (rssi >= -70) {
+        return "Fair";
+    } else if (rssi >= -80) {
+        return "Weak";
+    } else {
+        return "Very Weak";
+    }
+}
+
+// Get detailed WiFi connection information
+String getWiFiConnectionInfo() {
+    String info = "{";
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        info += "\"connected\":true,";
+        info += "\"mode\":\"STA\",";
+        info += "\"ssid\":\"" + WiFi.SSID() + "\",";
+        info += "\"signal_strength\":" + String(WiFi.RSSI()) + ",";
+        info += "\"signal_quality\":\"" + getWiFiSignalQuality() + "\",";
+        info += "\"channel\":" + String(WiFi.channel()) + ",";
+        info += "\"tx_power\":" + String(WiFi.getTxPower()) + ",";
+        info += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+        info += "\"gateway\":\"" + WiFi.gatewayIP().toString() + "\",";
+        info += "\"dns\":\"" + WiFi.dnsIP().toString() + "\",";
+        info += "\"mac\":\"" + WiFi.macAddress() + "\"";
+    } else {
+        info += "\"connected\":false,";
+        info += "\"mode\":\"AP\",";
+        info += "\"ssid\":\"" + String(ap_ssid) + "\",";
+        info += "\"signal_strength\":null,";
+        info += "\"signal_quality\":\"N/A - AP Mode\",";
+        info += "\"channel\":" + String(WiFi.channel()) + ",";
+        info += "\"tx_power\":" + String(WiFi.getTxPower()) + ",";
+        info += "\"ip\":\"" + WiFi.softAPIP().toString() + "\",";
+        info += "\"gateway\":\"N/A\",";
+        info += "\"dns\":\"N/A\",";
+        info += "\"mac\":\"" + WiFi.macAddress() + "\",";
+        info += "\"connected_clients\":" + String(WiFi.softAPgetStationNum());
+    }
+    
+    info += "}";
+    return info;
+}

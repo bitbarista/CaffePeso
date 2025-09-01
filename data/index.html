@@ -49,9 +49,15 @@
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
       <div class="flex items-center" style="gap: 8px;">
-        <!-- Bluetooth icon -->
-        <div id="bluetoothStatus" class="flex items-center">
+        <!-- WiFi signal strength indicator -->
+        <div id="wifiStatus" class="flex items-center" title="WiFi Signal Strength">
+          <i id="wifiIcon" class="fas fa-wifi" style="font-size: 14px; color: #9ca3af;"></i>
+          <span id="wifiSignalText" class="text-xs ml-1" style="color: #9ca3af;">-</span>
+        </div>
+        <!-- Bluetooth signal strength indicator -->
+        <div id="bluetoothSignalStatus" class="flex items-center" title="Bluetooth Signal Strength">
           <span id="bluetoothIcon" style="font-size: 12px; font-weight: bold; color: #9ca3af; font-family: monospace; border: 1px solid #9ca3af; border-radius: 3px; padding: 1px 3px;">BT</span>
+          <span id="bluetoothSignalText" class="text-xs ml-1" style="color: #9ca3af;">-</span>
         </div>
         <!-- Phone-style battery indicator -->
         <div id="batteryStatus" class="flex items-center space-x-1">
@@ -122,7 +128,7 @@
     <div class="bg-black-select rounded-xl p-3 space-y-2 mt-2">
       <div class="flex justify-center space-x-2">
         <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
-        <span id="filterState" class="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">STABLE</span>
+        <span id="filterState" class="px-2 py-1 bg-blue-600 text-white rounded-full text-xs font-medium" style="min-width: 50px; text-align: center;">STABLE</span>
       </div>
     </div>
     
@@ -194,14 +200,25 @@
         // Update filter state indicator
         const filterState = document.getElementById('filterState');
         if (data.filter_state) {
-          filterState.innerText = data.filter_state;
-          // Color code based on filter state
+          // Use shorter text for better display
+          let displayText = data.filter_state;
+          if (data.filter_state === 'TRANSITIONING') {
+            displayText = 'TRANS';
+          } else if (data.filter_state === 'FILTERING') {
+            displayText = 'FILT';
+          } else if (data.filter_state === 'BREWING') {
+            displayText = 'BREW';
+          }
+          
+          filterState.innerText = displayText;
+          
+          // Color code based on filter state  
           if (data.filter_state === 'BREWING') {
-            filterState.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
+            filterState.className = 'px-2 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
           } else if (data.filter_state === 'TRANSITIONING') {
-            filterState.className = 'px-3 py-1 bg-orange-600 text-white rounded-full text-xs font-medium';
+            filterState.className = 'px-2 py-1 bg-orange-600 text-white rounded-full text-xs font-medium';
           } else {
-            filterState.className = 'px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium';
+            filterState.className = 'px-2 py-1 bg-blue-600 text-white rounded-full text-xs font-medium';
           }
         }
         
@@ -247,6 +264,9 @@
         
         // Update Bluetooth status indicator
         updateBluetoothStatus();
+        
+        // Update signal strength indicators
+        updateSignalStrength(data);
         
         // Update timer display
         if (data.timer_display) {
@@ -369,6 +389,59 @@
           bluetoothIcon.style.borderColor = '#9ca3af';
         }
       });
+  }
+
+  // Signal strength update function
+  function updateSignalStrength(data) {
+    // Update WiFi icon and signal display in header
+    const wifiIcon = document.getElementById('wifiIcon');
+    const wifiSignalText = document.getElementById('wifiSignalText');
+    
+    if (data.wifi_signal_strength !== undefined && data.wifi_signal_quality !== undefined) {
+      const signalStrength = data.wifi_signal_strength;
+      const signalQuality = data.wifi_signal_quality;
+      
+      // Color code WiFi icon based on signal strength
+      let wifiColor = '#9ca3af'; // Default grey
+      if (signalStrength >= -50) {
+        wifiColor = '#22c55e'; // Green - Excellent/Very Good
+      } else if (signalStrength >= -70) {
+        wifiColor = '#f59e0b'; // Orange - Good/Fair
+      } else if (signalStrength >= -80) {
+        wifiColor = '#ef4444'; // Red - Weak
+      }
+      
+      wifiIcon.style.color = wifiColor;
+      wifiSignalText.style.color = wifiColor;
+      wifiSignalText.textContent = signalStrength + 'dBm';
+    } else {
+      wifiIcon.style.color = '#9ca3af';
+      wifiSignalText.style.color = '#9ca3af';
+      wifiSignalText.textContent = 'Off';
+    }
+    
+    // Update Bluetooth signal display in header
+    const bluetoothSignalText = document.getElementById('bluetoothSignalText');
+    
+    if (data.bluetooth_connected && data.bluetooth_signal_strength !== undefined) {
+      const btSignalStrength = data.bluetooth_signal_strength;
+      
+      // Color code based on signal strength
+      let btColor = '#9ca3af';
+      if (btSignalStrength >= -50) {
+        btColor = '#22c55e'; // Green
+      } else if (btSignalStrength >= -70) {
+        btColor = '#f59e0b'; // Orange
+      } else if (btSignalStrength >= -80) {
+        btColor = '#ef4444'; // Red
+      }
+      
+      bluetoothSignalText.style.color = btColor;
+      bluetoothSignalText.textContent = btSignalStrength + 'dBm';
+    } else {
+      bluetoothSignalText.style.color = '#9ca3af';
+      bluetoothSignalText.textContent = 'Off';
+    }
   }
 
   // Load decimal setting once (no need to poll this frequently)
