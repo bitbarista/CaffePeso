@@ -2,6 +2,19 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "PlatformIO: Build",
+			"type": "shell",
+			"command": "pio",
+			"args": [
+				"run"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			]
+		},
+		{
 			"label": "PlatformIO: Upload",
 			"type": "shell",
 			"command": "pio",
@@ -17,131 +30,91 @@
 			]
 		},
 		{
-			"label": "PlatformIO Build",
+			"label": "PlatformIO: Upload Filesystem",
 			"type": "shell",
-			"command": "platformio run",
+			"command": "pio",
+			"args": [
+				"run",
+				"--target",
+				"uploadfs"
+			],
+			"group": "build",
+			"isBackground": false,
 			"problemMatcher": [
 				"$platformio"
-			],
-			"group": "build"
+			]
 		},
 		{
-			"label": "Build Battery Monitoring",
+			"label": "PlatformIO: Monitor",
 			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"command": "pio",
+			"args": [
+				"device",
+				"monitor"
+			],
+			"group": "test",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "PlatformIO: Clean",
+			"type": "shell",
+			"command": "pio",
+			"args": [
+				"run",
+				"--target",
+				"clean"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build for ESP32-S3",
+			"type": "shell",
+			"command": "pio",
 			"args": [
 				"run",
 				"--environment",
 				"esp32-s3-devkitc-1"
 			],
+			"group": "build",
 			"isBackground": false,
-			"group": "build"
+			"problemMatcher": [
+				"$platformio"
+			]
 		},
 		{
-			"label": "Build GPIO Fix",
+			"label": "Upload to ESP32-S3",
 			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--environment",
-				"esp32-s3-devkitc-1"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Build WiFi AP Fix",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--environment",
-				"esp32-s3-devkitc-1"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Build WiFi Fix 2",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--environment",
-				"esp32-s3-devkitc-1"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Build BLE Coexistence Fix",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--environment",
-				"esp32-s3-devkitc-1"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Upload WiFi improvements",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"command": "pio",
 			"args": [
 				"run",
 				"--target",
 				"upload",
 				"--environment",
-				"esp32-s3-devkitc-1",
-				"--upload-port",
-				"COM17"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Upload to COM18",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--target",
-				"upload",
-				"--environment",
-				"esp32-s3-devkitc-1",
-				"--upload-port",
-				"COM18"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Test antenna fix compilation",
-			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
-			"args": [
-				"run",
-				"--target",
-				"build",
-				"--environment",
 				"esp32-s3-devkitc-1"
 			],
+			"group": "build",
 			"isBackground": false,
-			"group": "build"
+			"problemMatcher": [
+				"$platformio"
+			]
 		},
 		{
-			"label": "Build antenna fix",
+			"label": "Build Antenna Fix",
 			"type": "shell",
-			"command": "C:\\Users\\robbj\\.platformio\\penv\\Scripts\\platformio.exe",
+			"command": "pio",
 			"args": [
 				"run",
 				"--environment",
 				"esp32-s3-devkitc-1"
 			],
+			"group": "build",
 			"isBackground": false,
-			"group": "build"
+			"problemMatcher": [
+				"$platformio"
+			]
 		}
 	]
 }
