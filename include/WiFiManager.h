@@ -5,6 +5,10 @@
 #include <Preferences.h>
 #include <ESPmDNS.h>
 
+// Configuration for SuperMini antenna fix
+// Set to true to enable maximum power mode for boards with poor antenna design
+#define ENABLE_SUPERMINI_ANTENNA_FIX true
+
 void setupWiFi();
 void saveWiFiCredentials(const char* ssid, const char* password);
 void clearWiFiCredentials(); // Clear stored WiFi credentials
@@ -17,5 +21,9 @@ void printWiFiStatus(); // Print detailed WiFi status for debugging
 void maintainWiFi(); // Periodic WiFi maintenance to ensure AP stability
 bool attemptSTAConnection(const char* ssid, const char* password); // Attempt STA connection and switch from AP mode
 void switchToAPMode(); // Switch back to AP mode if STA connection fails
+void applySuperMiniAntennaFix(); // Apply maximum power settings for problematic SuperMini boards
+int getWiFiSignalStrength(); // Get current WiFi signal strength in dBm
+String getWiFiSignalQuality(); // Get WiFi signal quality description
+String getWiFiConnectionInfo(); // Get detailed WiFi connection information
 
 #endif

@@ -3,6 +3,12 @@
 #include <Preferences.h>
 #include <ESPmDNS.h>
 
+// ESP-IDF includes for advanced WiFi power management (SuperMini antenna fix)
+#ifdef ESP_IDF_VERSION_MAJOR
+    #include "esp_wifi.h"
+    #include "esp_err.h"
+#endif
+
 Preferences wifiPrefs;
 
 // Station credentials
@@ -141,28 +147,34 @@ void setupWiFi() {
     loadWiFiCredentials(ssid, password, sizeof(ssid));
     
     // Ensure WiFi is completely reset first
-    Serial.println("Resetting WiFi...");
+    Serial.println("=== WIFI ANTENNA OPTIMIZATION ===");
+    Serial.println("Resetting WiFi subsystem...");
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(500); // Longer delay for complete reset
     
-    // Set WiFi power to maximum for better connectivity
-    WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
-    Serial.println("WiFi power set to maximum");
+    // Apply SuperMini antenna fix for boards with poor antenna design
+    applySuperMiniAntennaFix();
     
     // CRITICAL: Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
     WiFi.setSleep(true); // MUST be true when BLE is active
-    Serial.println("WiFi sleep enabled for BLE coexistence (required)");
+    Serial.println("WiFi sleep enabled for BLE coexistence");
     
     // Check if we have stored credentials - prioritize STA connection
     if (strlen(ssid) > 0) {
         Serial.println("=== ATTEMPTING STA CONNECTION ===");
-        Serial.println("📶 Found stored credentials for: " + String(ssid));
-        Serial.println("🔄 Trying STA mode first (power optimized)...");
+        Serial.println("Found stored credentials for: " + String(ssid));
+        Serial.println("Trying STA mode first (power optimized)...");
         
         // Try STA mode first for lower power consumption
         WiFi.mode(WIFI_STA);
         delay(1000); // Ensure mode switch is stable
+        
+        // ANTENNA FIX: Reapply power settings after mode switch for SuperMini boards
+        // Mode switch can reset power levels, so reapply the fix
+        if (ENABLE_SUPERMINI_ANTENNA_FIX) {
+            applySuperMiniAntennaFix();
+        }
         
         startAttemptTime = millis();
         WiFi.begin(ssid, password);
@@ -179,25 +191,25 @@ void setupWiFi() {
             
             // Check for immediate connection failures
             if (WiFi.status() == WL_NO_SSID_AVAIL) {
-                Serial.println("\n❌ Network '" + String(ssid) + "' not found");
+                Serial.println("\nNetwork '" + String(ssid) + "' not found");
                 break;
             }
             if (WiFi.status() == WL_CONNECT_FAILED) {
-                Serial.println("\n❌ Connection failed - likely incorrect password");
+                Serial.println("\nConnection failed - likely incorrect password");
                 break;
             }
         }
         
         if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\n🎉 STA CONNECTION SUCCESSFUL!");
+            Serial.println("\nSTA CONNECTION SUCCESSFUL!");
             Serial.println("===========================");
-            Serial.println("✅ Connected to: " + String(ssid));
-            Serial.println("📍 IP Address: " + WiFi.localIP().toString());
-            Serial.println("🌐 Gateway: " + WiFi.gatewayIP().toString());
-            Serial.println("🔍 DNS: " + WiFi.dnsIP().toString());
-            Serial.println("📡 Signal: " + String(WiFi.RSSI()) + " dBm");
-            Serial.println("⚡ AP mode disabled - optimized for low power");
-            Serial.println("🔄 Will auto-fallback to AP if connection lost");
+            Serial.println("Connected to: " + String(ssid));
+            Serial.println("IP Address: " + WiFi.localIP().toString());
+            Serial.println("Gateway: " + WiFi.gatewayIP().toString());
+            Serial.println("DNS: " + WiFi.dnsIP().toString());
+            Serial.println("Signal: " + String(WiFi.RSSI()) + " dBm");
+            Serial.println("AP mode disabled - optimized for low power");
+            Serial.println("Will auto-fallback to AP if connection lost");
             Serial.println("===========================");
             
             // Setup mDNS for STA mode
@@ -205,13 +217,13 @@ void setupWiFi() {
             
             return; // Exit early - we're connected via STA, no need for AP
         } else {
-            Serial.println("\n❌ STA CONNECTION FAILED");
-            Serial.println("🔄 Status code: " + String(WiFi.status()));
-            Serial.println("⏭️  Falling back to AP mode for configuration...");
+            Serial.println("\nSTA CONNECTION FAILED");
+            Serial.println("Status code: " + String(WiFi.status()));
+            Serial.println("Falling back to AP mode for configuration...");
         }
     } else {
         Serial.println("=== NO STORED CREDENTIALS ===");
-        Serial.println("📱 No WiFi credentials found - starting AP mode for initial setup");
+        Serial.println("No WiFi credentials found - starting AP mode for initial setup");
     }
     
     // Fallback to AP mode if STA failed or no credentials exist
@@ -230,18 +242,18 @@ void setupWiFi() {
     apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4); // Channel 6, broadcast SSID, max 4 clients
     
     if (apStarted) {
-        Serial.println("✅ AP started successfully on channel 6");
+        Serial.println("AP started successfully on channel 6");
     } else {
         Serial.println("Channel 6 failed, trying channel 1...");
         apStarted = WiFi.softAP(ap_ssid, ap_password, 1, false, 4); // Channel 1, broadcast SSID
         
         if (apStarted) {
-            Serial.println("✅ AP started successfully on channel 1");
+            Serial.println("AP started successfully on channel 1");
         } else {
             Serial.println("Channel 1 failed, trying default settings...");
             apStarted = WiFi.softAP(ap_ssid); // Simplest possible configuration
             if (apStarted) {
-                Serial.println("✅ AP started with default settings");
+                Serial.println("AP started with default settings");
             }
         }
     }
@@ -253,14 +265,14 @@ void setupWiFi() {
         Serial.println("AP MAC: " + WiFi.softAPmacAddress());
         Serial.printf("AP Channel: %d\n", WiFi.channel());
         Serial.printf("WiFi TX Power: %d dBm\n", WiFi.getTxPower());
-        Serial.println("📱 Connect to 'WeighMyBru-AP' to configure WiFi");
-        Serial.println("🌐 Access: http://192.168.4.1 or http://weighmybru.local");
+        Serial.println("Connect to 'WeighMyBru-AP' to configure WiFi");
+        Serial.println("Access: http://192.168.4.1 or http://weighmybru.local");
         Serial.println("=====================");
         
         // Setup mDNS for AP mode
         setupmDNS();
     } else {
-        Serial.println("❌ ERROR: AP failed to start - hardware or RF issue suspected");
+        Serial.println("ERROR: AP failed to start - hardware or RF issue suspected");
     }
 }
 
@@ -311,7 +323,7 @@ void maintainWiFi() {
         if (currentMode == WIFI_STA) {
             // We're in STA mode - check if connection is still healthy
             if (WiFi.status() != WL_CONNECTED) {
-                Serial.println("🚨 WARNING: STA connection lost! Attempting immediate reconnection...");
+                Serial.println("WARNING: STA connection lost! Attempting immediate reconnection...");
                 
                 // Try to reconnect to saved credentials
                 char ssid[33] = {0};
@@ -319,7 +331,7 @@ void maintainWiFi() {
                 loadWiFiCredentials(ssid, password, sizeof(ssid));
                 
                 if (strlen(ssid) > 0) {
-                    Serial.println("📶 Attempting to reconnect to: " + String(ssid));
+                    Serial.println("Attempting to reconnect to: " + String(ssid));
                     WiFi.begin(ssid, password);
                     
                     // Wait briefly for reconnection - reduced timeout for faster fallback
@@ -331,29 +343,29 @@ void maintainWiFi() {
                     }
                     
                     if (WiFi.status() == WL_CONNECTED) {
-                        Serial.println("\n✅ STA reconnection successful");
-                        Serial.println("📍 IP: " + WiFi.localIP().toString());
+                        Serial.println("\nSTA reconnection successful");
+                        Serial.println("IP: " + WiFi.localIP().toString());
                     } else {
-                        Serial.println("\n❌ STA reconnection failed - switching to AP mode immediately");
+                        Serial.println("\nSTA reconnection failed - switching to AP mode immediately");
                         switchToAPMode();
                     }
                 } else {
-                    Serial.println("❌ No stored credentials - switching to AP mode");
+                    Serial.println("No stored credentials - switching to AP mode");
                     switchToAPMode();
                 }
             } else {
-                Serial.println("✅ STA mode healthy - connection maintained");
-                Serial.println("📍 Connected to: " + WiFi.SSID() + " | IP: " + WiFi.localIP().toString() + " | RSSI: " + String(WiFi.RSSI()) + "dBm");
+                Serial.println("STA mode healthy - connection maintained");
+                Serial.println("Connected to: " + WiFi.SSID() + " | IP: " + WiFi.localIP().toString() + " | RSSI: " + String(WiFi.RSSI()) + "dBm");
             }
         } else if (currentMode == WIFI_AP) {
             // We're in AP mode - just ensure it's still running properly
             if (WiFi.softAPgetStationNum() == 0) {
-                Serial.println("📱 AP mode active - 'WeighMyBru-AP' ready for configuration");
+                Serial.println("AP mode active - 'WeighMyBru-AP' ready for configuration");
             } else {
-                Serial.println("📱 AP mode active - " + String(WiFi.softAPgetStationNum()) + " clients connected");
+                Serial.println("AP mode active - " + String(WiFi.softAPgetStationNum()) + " clients connected");
             }
         } else if (currentMode == WIFI_OFF) {
-            Serial.println("🚨 CRITICAL: WiFi is OFF! This should not happen - restarting AP mode");
+            Serial.println("CRITICAL: WiFi is OFF! This should not happen - restarting AP mode");
             switchToAPMode();
         }
         
@@ -378,6 +390,12 @@ bool attemptSTAConnection(const char* ssid, const char* password) {
     WiFi.mode(WIFI_STA);
     delay(1000); // Allow mode switch to stabilize
     
+    // ANTENNA FIX: Reapply power settings after mode switch for SuperMini boards
+    if (ENABLE_SUPERMINI_ANTENNA_FIX) {
+        Serial.println("Reapplying SuperMini antenna fix after mode switch...");
+        applySuperMiniAntennaFix();
+    }
+    
     // Attempt connection with new credentials
     startAttemptTime = millis();
     WiFi.begin(ssid, password);
@@ -394,29 +412,29 @@ bool attemptSTAConnection(const char* ssid, const char* password) {
         
         // Check for immediate connection failures
         if (WiFi.status() == WL_NO_SSID_AVAIL) {
-            Serial.println("\n❌ SSID not found");
+            Serial.println("\nSSID not found");
             return false;
         }
         if (WiFi.status() == WL_CONNECT_FAILED) {
-            Serial.println("\n❌ Connection failed - likely wrong password");
+            Serial.println("\nConnection failed - likely wrong password");
             return false;
         }
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n🎉 STA CONNECTION SUCCESSFUL!");
-        Serial.println("✅ Connected to: " + String(ssid));
-        Serial.println("📍 IP Address: " + WiFi.localIP().toString());
-        Serial.println("🔗 Gateway: " + WiFi.gatewayIP().toString());
-        Serial.println("📡 RSSI: " + String(WiFi.RSSI()) + " dBm");
-        Serial.println("⚡ AP mode disabled - power consumption optimized");
+        Serial.println("\nSTA CONNECTION SUCCESSFUL!");
+        Serial.println("Connected to: " + String(ssid));
+        Serial.println("IP Address: " + WiFi.localIP().toString());
+        Serial.println("Gateway: " + WiFi.gatewayIP().toString());
+        Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+        Serial.println("AP mode disabled - power consumption optimized");
         
         // Setup mDNS for the new STA connection
         setupmDNS();
         
         return true;
     } else {
-        Serial.println("\n❌ STA connection failed or timed out");
+        Serial.println("\nSTA connection failed or timed out");
         Serial.println("Status code: " + String(WiFi.status()));
         return false;
     }
@@ -425,38 +443,133 @@ bool attemptSTAConnection(const char* ssid, const char* password) {
 // Function to switch back to AP mode if STA connection fails
 void switchToAPMode() {
     Serial.println("=== SWITCHING TO AP MODE ===");
-    Serial.println("🔄 Disconnecting from STA mode...");
+    Serial.println("Disconnecting from STA mode...");
     WiFi.disconnect(true);
     delay(500);
     
-    Serial.println("🔄 Setting AP mode...");
+    Serial.println("Setting AP mode...");
     WiFi.mode(WIFI_AP);
     delay(1000); // Allow mode switch to stabilize
     
     // Restart AP with same settings as setupWiFi()
-    Serial.println("🔄 Starting AP broadcast...");
+    Serial.println("Starting AP broadcast...");
     bool apStarted = WiFi.softAP(ap_ssid, ap_password, 6, false, 4);
     
     if (apStarted) {
-        Serial.println("✅ AP MODE RESTORED");
+        Serial.println("AP MODE RESTORED");
         Serial.println("==================");
-        Serial.println("📱 SSID: " + String(ap_ssid));
-        Serial.println("🌐 IP: " + WiFi.softAPIP().toString());
-        Serial.println("🔧 Config URL: http://192.168.4.1");
-        Serial.println("📡 mDNS: http://weighmybru.local");
+        Serial.println("SSID: " + String(ap_ssid));
+        Serial.println("IP: " + WiFi.softAPIP().toString());
+        Serial.println("Config URL: http://192.168.4.1");
+        Serial.println("mDNS: http://weighmybru.local");
         Serial.println("==================");
         
         // Setup mDNS for AP mode
         setupmDNS();
     } else {
-        Serial.println("❌ CRITICAL: Failed to restart AP mode!");
-        Serial.println("🔄 Retrying with minimal settings...");
+        Serial.println("CRITICAL: Failed to restart AP mode!");
+        Serial.println("Retrying with minimal settings...");
         // Try with minimal settings as fallback
         if (WiFi.softAP(ap_ssid)) {
-            Serial.println("✅ AP started with minimal settings");
+            Serial.println("AP started with minimal settings");
             setupmDNS();
         } else {
-            Serial.println("💥 FATAL: Cannot start AP mode - WiFi hardware issue?");
+            Serial.println("FATAL: Cannot start AP mode - WiFi hardware issue?");
         }
     }
+}
+
+// Apply SuperMini antenna fix for boards with poor antenna design
+void applySuperMiniAntennaFix() {
+    if (!ENABLE_SUPERMINI_ANTENNA_FIX) {
+        Serial.println("SuperMini antenna fix disabled in configuration");
+        return;
+    }
+    
+    Serial.println("Applying SuperMini antenna fix...");
+    
+    // Arduino framework maximum power
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    Serial.println("Arduino framework power: 19.5dBm");
+    
+    // ESP-IDF level power boost (the key fix from forums)
+    #ifdef ESP_IDF_VERSION_MAJOR
+        esp_err_t result = esp_wifi_set_max_tx_power(40); // 10dBm (40 = 4 * 10dBm)
+        if (result == ESP_OK) {
+            Serial.println("ESP-IDF max TX power: 10dBm (touch-antenna fix applied)");
+        } else {
+            Serial.printf("ESP-IDF power setting failed: %s\n", esp_err_to_name(result));
+        }
+    #else
+        Serial.println("ESP-IDF functions not available - using Arduino framework only");
+    #endif
+    
+    Serial.println("SuperMini antenna optimization complete");
+    Serial.println("   This fixes the common 'touch antenna to work' issue");
+}
+
+// Get current WiFi signal strength in dBm
+int getWiFiSignalStrength() {
+    if (WiFi.status() != WL_CONNECTED) {
+        return -100; // Return very poor signal if not connected
+    }
+    return WiFi.RSSI();
+}
+
+// Get WiFi signal quality description
+String getWiFiSignalQuality() {
+    if (WiFi.status() != WL_CONNECTED) {
+        return "Disconnected";
+    }
+    
+    int rssi = WiFi.RSSI();
+    
+    if (rssi >= -30) {
+        return "Excellent";
+    } else if (rssi >= -50) {
+        return "Very Good";
+    } else if (rssi >= -60) {
+        return "Good";
+    } else if (rssi >= -70) {
+        return "Fair";
+    } else if (rssi >= -80) {
+        return "Weak";
+    } else {
+        return "Very Weak";
+    }
+}
+
+// Get detailed WiFi connection information
+String getWiFiConnectionInfo() {
+    String info = "{";
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        info += "\"connected\":true,";
+        info += "\"mode\":\"STA\",";
+        info += "\"ssid\":\"" + WiFi.SSID() + "\",";
+        info += "\"signal_strength\":" + String(WiFi.RSSI()) + ",";
+        info += "\"signal_quality\":\"" + getWiFiSignalQuality() + "\",";
+        info += "\"channel\":" + String(WiFi.channel()) + ",";
+        info += "\"tx_power\":" + String(WiFi.getTxPower()) + ",";
+        info += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+        info += "\"gateway\":\"" + WiFi.gatewayIP().toString() + "\",";
+        info += "\"dns\":\"" + WiFi.dnsIP().toString() + "\",";
+        info += "\"mac\":\"" + WiFi.macAddress() + "\"";
+    } else {
+        info += "\"connected\":false,";
+        info += "\"mode\":\"AP\",";
+        info += "\"ssid\":\"" + String(ap_ssid) + "\",";
+        info += "\"signal_strength\":null,";
+        info += "\"signal_quality\":\"N/A - AP Mode\",";
+        info += "\"channel\":" + String(WiFi.channel()) + ",";
+        info += "\"tx_power\":" + String(WiFi.getTxPower()) + ",";
+        info += "\"ip\":\"" + WiFi.softAPIP().toString() + "\",";
+        info += "\"gateway\":\"N/A\",";
+        info += "\"dns\":\"N/A\",";
+        info += "\"mac\":\"" + WiFi.macAddress() + "\",";
+        info += "\"connected_clients\":" + String(WiFi.softAPgetStationNum());
+    }
+    
+    info += "}";
+    return info;
 }

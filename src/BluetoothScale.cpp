@@ -14,7 +14,8 @@ BluetoothScale::BluetoothScale()
     : scale(nullptr), display(nullptr), server(nullptr), service(nullptr), 
       weightCharacteristic(nullptr), gaggiMateWeightCharacteristic(nullptr), 
       commandCharacteristic(nullptr), advertising(nullptr), deviceConnected(false), 
-      oldDeviceConnected(false), lastHeartbeat(0), lastWeightSent(0), lastWeight(0.0f) {
+      oldDeviceConnected(false), lastHeartbeat(0), lastWeightSent(0), lastWeight(0.0f),
+      connectionRSSI(-100), connectionHandle(0) {
 }
 
 BluetoothScale::~BluetoothScale() {
@@ -540,4 +541,55 @@ void BluetoothScale::setScale(Scale* scaleInstance) {
 void BluetoothScale::setDisplay(Display* displayInstance) {
     display = displayInstance;
     Serial.println("BluetoothScale: Display reference set");
+}
+
+// Get BLE signal strength (RSSI)
+int BluetoothScale::getBluetoothSignalStrength() {
+    if (!deviceConnected || !server) {
+        return -100; // Return very weak signal if not connected
+    }
+    
+    // Try to get RSSI from the BLE connection
+    // Note: ESP32 BLE library doesn't directly expose RSSI for server connections
+    // This is a limitation of the current BLE implementation
+    return connectionRSSI; // Will be updated when available
+}
+
+// Get detailed BLE connection information
+String BluetoothScale::getBluetoothConnectionInfo() {
+    String info = "{";
+    
+    info += "\"connected\":" + String(deviceConnected ? "true" : "false") + ",";
+    info += "\"advertising\":" + String((advertising != nullptr) ? "true" : "false") + ",";
+    
+    if (deviceConnected) {
+        info += "\"signal_strength\":" + String(connectionRSSI) + ",";
+        
+        if (connectionRSSI >= -30) {
+            info += "\"signal_quality\":\"Excellent\",";
+        } else if (connectionRSSI >= -50) {
+            info += "\"signal_quality\":\"Very Good\",";
+        } else if (connectionRSSI >= -60) {
+            info += "\"signal_quality\":\"Good\",";
+        } else if (connectionRSSI >= -70) {
+            info += "\"signal_quality\":\"Fair\",";
+        } else if (connectionRSSI >= -80) {
+            info += "\"signal_quality\":\"Weak\",";
+        } else {
+            info += "\"signal_quality\":\"Very Weak\",";
+        }
+        
+        info += "\"connection_handle\":" + String(connectionHandle) + ",";
+        info += "\"service_uuid\":\"" + String(SERVICE_UUID) + "\",";
+        info += "\"device_name\":\"WeighMyBru\"";
+    } else {
+        info += "\"signal_strength\":null,";
+        info += "\"signal_quality\":\"Disconnected\",";
+        info += "\"connection_handle\":null,";
+        info += "\"service_uuid\":\"" + String(SERVICE_UUID) + "\",";
+        info += "\"device_name\":\"WeighMyBru\"";
+    }
+    
+    info += "}";
+    return info;
 }

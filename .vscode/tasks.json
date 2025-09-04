@@ -100,6 +100,21 @@
 			"problemMatcher": [
 				"$platformio"
 			]
+		},
+		{
+			"label": "Build Antenna Fix",
+			"type": "shell",
+			"command": "pio",
+			"args": [
+				"run",
+				"--environment",
+				"esp32-s3-devkitc-1"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			]
 		}
 	]
 }

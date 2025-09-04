@@ -35,6 +35,8 @@ public:
     void sendWeight(float weight);
     void handleTareCommand();
     void handleTimerCommand(BeanConquerorCommand command);
+    int getBluetoothSignalStrength(); // Get BLE signal strength (RSSI)
+    String getBluetoothConnectionInfo(); // Get detailed BLE connection information
     
     // BLE Server callbacks
     void onConnect(BLEServer* pServer) override;
@@ -58,6 +60,8 @@ private:
     uint32_t lastHeartbeat;
     uint32_t lastWeightSent;
     float lastWeight;
+    int8_t connectionRSSI; // Store RSSI value for connected device
+    uint16_t connectionHandle; // Store connection handle for RSSI queries
     
     // WeighMyBru protocol constants
     static const uint8_t PRODUCT_NUMBER = 0x03;

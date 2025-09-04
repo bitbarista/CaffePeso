@@ -48,14 +48,21 @@
     <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
-      <div class="flex items-center" style="gap: 8px;">
-        <!-- Bluetooth icon -->
-        <div id="bluetoothStatus" class="flex items-center">
-          <span id="bluetoothIcon" style="font-size: 12px; font-weight: bold; color: #9ca3af; font-family: monospace; border: 1px solid #9ca3af; border-radius: 3px; padding: 1px 3px;">BT</span>
+      <div class="flex items-center" style="gap: 12px;">
+        <!-- WiFi signal strength indicator -->
+        <div id="wifiStatus" class="flex items-center" title="WiFi Signal Strength">
+          <i id="wifiIcon" class="fa fa-wifi" style="font-size: 14px; color: #9ca3af;"></i>
+          <span id="wifiSignalText" class="text-xs ml-1" style="color: #9ca3af;">-</span>
+        </div>
+        <!-- Bluetooth signal strength indicator -->
+        <div id="bluetoothSignalStatus" class="flex items-center" title="Bluetooth Connection Status">
+          <i id="bluetoothIcon" class="fa fa-bluetooth" style="font-size: 14px; color: #9ca3af;"></i>
         </div>
         <!-- Phone-style battery indicator -->
         <div id="batteryStatus" class="flex items-center space-x-1">
-          <!-- Battery icon -->
+          <!-- Battery icon with Font Awesome as backup -->
+          <i class="fa fa-battery-three-quarters" id="batteryIconFA" style="font-size: 14px; color: #22c55e; display: none;"></i>
+          <!-- Custom SVG battery icon (primary) -->
           <svg class="w-6 h-3" viewBox="0 0 24 12" fill="none">
             <!-- Battery body -->
             <rect x="1" y="2" width="20" height="8" rx="1" stroke="currentColor" stroke-width="1" fill="none"/>
@@ -101,28 +108,31 @@
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-2 gap-2 mt-2">
-      <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">Tare</button>
-      <button id="brewModeBtn" onclick="toggleBrewMode()" class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold">Brew Mode</button>
+      <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">
+        Tare
+      </button>
+      <button id="brewModeBtn" onclick="toggleBrewMode()" class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold">
+        <i class="fa fa-coffee mr-1"></i>Brew Mode
+      </button>
     </div>
     
     <!-- Timer Control Buttons -->
     <div class="grid grid-cols-3 gap-2 mt-2">
       <button onclick="startTimer()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm">
-        Start
+        <i class="fa fa-play mr-1"></i>Start
       </button>
       <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm">
-        Stop
+        <i class="fa fa-stop mr-1"></i>Stop
       </button>
       <button onclick="resetTimer()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg text-sm">
-        Reset
+        <i class="fa fa-undo mr-1"></i>Reset
       </button>
     </div>
     
-    <!-- Scale Status and Filter State Container -->
+    <!-- Scale Status Container -->
     <div class="bg-black-select rounded-xl p-3 space-y-2 mt-2">
       <div class="flex justify-center space-x-2">
         <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
-        <span id="filterState" class="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">STABLE</span>
       </div>
     </div>
     
@@ -191,20 +201,6 @@
           scaleStatus.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
         }
         
-        // Update filter state indicator
-        const filterState = document.getElementById('filterState');
-        if (data.filter_state) {
-          filterState.innerText = data.filter_state;
-          // Color code based on filter state
-          if (data.filter_state === 'BREWING') {
-            filterState.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
-          } else if (data.filter_state === 'TRANSITIONING') {
-            filterState.className = 'px-3 py-1 bg-orange-600 text-white rounded-full text-xs font-medium';
-          } else {
-            filterState.className = 'px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium';
-          }
-        }
-        
         // Update battery status indicator
         if (data.battery_percentage !== undefined) {
           const batteryPercentage = document.getElementById('batteryPercentage');
@@ -245,8 +241,8 @@
           segment4.style.fill = activeSegments >= 4 ? batteryColor : 'rgba(107, 114, 128, 0.5)';
         }
         
-        // Update Bluetooth status indicator
-        updateBluetoothStatus();
+        // Update signal strength indicators
+        updateSignalStrength(data);
         
         // Update timer display
         if (data.timer_display) {
@@ -339,36 +335,45 @@
   setInterval(smartUpdate, 200);
   updateWeight();
 
-  // Bluetooth status update function
-  function updateBluetoothStatus() {
-    fetch('/api/bluetooth/status')
-      .then(response => response.json())
-      .then(data => {
-        console.log("Bluetooth status response:", data); // Debug log
-        const bluetoothIcon = document.getElementById('bluetoothIcon');
-        if (bluetoothIcon) {
-          if (data.connected === true) {
-            console.log("Bluetooth CONNECTED - Setting icon to blue"); // Debug log
-            bluetoothIcon.style.color = '#3b82f6'; // Blue color when connected
-            bluetoothIcon.style.borderColor = '#3b82f6'; // Blue border when connected
-          } else {
-            console.log("Bluetooth DISCONNECTED - Setting icon to grey"); // Debug log
-            bluetoothIcon.style.color = '#9ca3af'; // Grey color when disconnected
-            bluetoothIcon.style.borderColor = '#9ca3af'; // Grey border when disconnected
-          }
-        } else {
-          console.error("Bluetooth icon element not found!");
-        }
-      })
-      .catch(err => {
-        console.error("Bluetooth status fetch error:", err);
-        // Default to grey on error
-        const bluetoothIcon = document.getElementById('bluetoothIcon');
-        if (bluetoothIcon) {
-          bluetoothIcon.style.color = '#9ca3af';
-          bluetoothIcon.style.borderColor = '#9ca3af';
-        }
-      });
+  // Signal strength update function
+  function updateSignalStrength(data) {
+    // Update WiFi icon and signal display in header
+    const wifiIcon = document.getElementById('wifiIcon');
+    const wifiSignalText = document.getElementById('wifiSignalText');
+    
+    if (data.wifi_signal_strength !== undefined && data.wifi_signal_quality !== undefined) {
+      const signalStrength = data.wifi_signal_strength;
+      const signalQuality = data.wifi_signal_quality;
+      
+      // Color code WiFi icon based on signal strength
+      let wifiColor = '#9ca3af'; // Default grey
+      if (signalStrength >= -50) {
+        wifiColor = '#22c55e'; // Green - Excellent/Very Good
+      } else if (signalStrength >= -70) {
+        wifiColor = '#f59e0b'; // Orange - Good/Fair
+      } else if (signalStrength >= -80) {
+        wifiColor = '#ef4444'; // Red - Weak
+      }
+      
+      wifiIcon.style.color = wifiColor;
+      wifiSignalText.style.color = wifiColor;
+      wifiSignalText.textContent = signalStrength + 'dBm';
+    } else {
+      wifiIcon.style.color = '#9ca3af';
+      wifiSignalText.style.color = '#9ca3af';
+      wifiSignalText.textContent = 'Off';
+    }
+    
+    // Update Bluetooth signal display in header
+    const bluetoothIcon = document.getElementById('bluetoothIcon');
+    
+    if (data.bluetooth_connected) {
+      // Connected - make it blue
+      bluetoothIcon.style.color = '#3b82f6'; // Blue
+    } else {
+      // Disconnected - make it grey
+      bluetoothIcon.style.color = '#9ca3af'; // Grey
+    }
   }
 
   // Load decimal setting once (no need to poll this frequently)

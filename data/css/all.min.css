@@ -4,7 +4,7 @@
  * Copyright 2023 Fonticons, Inc.
  */
 
-/* Font face declarations */
+/* Font face declarations - Updated to use Fontello font */
 @font-face{
   font-family:"Font Awesome 6 Free";
   font-style:normal;
@@ -39,11 +39,11 @@
   font-weight: 900;
 }
 
-/* Icon definitions for your specific icons */
+/* Icon definitions using Fontello Unicode values */
 .fa-tachometer:before,
 .fa-tachometer-alt:before,
 .fa-dashboard:before {
-  content: "\f625";
+  content: "\f0e4";
 }
 
 .fa-balance-scale:before,
@@ -53,175 +53,46 @@
 
 .fa-cogs:before,
 .fa-gears:before {
-  content: "\f085";
+  content: "\e800";
 }
 
 .fa-upload:before {
-  content: "\f093";
+  content: "\e801";
 }
 
 .fa-home:before,
 .fa-house:before {
-  content: "\f015";
-}
-
-.fa-cog:before,
-.fa-gear:before {
-  content: "\f013";
+  content: "\e805";
 }
 
 .fa-wifi:before {
   content: "\f1eb";
 }
 
-/* Additional utility icons */
+.fa-bluetooth:before {
+  content: "\f293";
+}
+
+.fa-coffee:before {
+  content: "\f0f4";
+}
+
+.fa-play:before {
+  content: "\e802";
+}
+
+.fa-stop:before {
+  content: "\e803";
+}
+
+.fa-undo:before {
+  content: "\e804";
+}
+
 .fa-check:before {
-  content: "\f00c";
+  content: "\e806";
 }
 
-.fa-times:before,
-.fa-close:before {
-  content: "\f00d";
+.fa-battery-three-quarters:before {
+  content: "\f241";
 }
-
-.fa-save:before,
-.fa-floppy-disk:before {
-  content: "\f0c7";
-}
-
-.fa-edit:before,
-.fa-pen-to-square:before {
-  content: "\f044";
-}
-
-.fa-trash:before {
-  content: "\f1f8";
-}
-
-.fa-plus:before {
-  content: "\f067";
-}
-
-.fa-minus:before {
-  content: "\f068";
-}
-
-.fa-search:before,
-.fa-magnifying-glass:before {
-  content: "\f002";
-}
-
-.fa-user:before {
-  content: "\f007";
-}
-
-.fa-lock:before {
-  content: "\f023";
-}
-
-.fa-unlock:before {
-  content: "\f09c";
-}
-
-.fa-eye:before {
-  content: "\f06e";
-}
-
-.fa-eye-slash:before {
-  content: "\f070";
-}
-
-.fa-power-off:before {
-  content: "\f011";
-}
-
-.fa-refresh:before,
-.fa-arrows-rotate:before {
-  content: "\f021";
-}
-
-.fa-download:before {
-  content: "\f019";
-}
-
-.fa-cloud:before {
-  content: "\f0c2";
-}
-
-.fa-signal:before {
-  content: "\f012";
-}
-
-.fa-battery:before,
-.fa-battery-full:before {
-  content: "\f240";
-}
-
-.fa-info:before,
-.fa-info-circle:before {
-  content: "\f05a";
-}
-
-.fa-warning:before,
-.fa-exclamation-triangle:before {
-  content: "\f071";
-}
-
-.fa-exclamation:before {
-  content: "\f12a";
-}
-
-.fa-question:before,
-.fa-question-circle:before {
-  content: "\f059";
-}
-
-.fa-arrow-up:before {
-  content: "\f062";
-}
-
-.fa-arrow-down:before {
-  content: "\f063";
-}
-
-.fa-arrow-left:before {
-  content: "\f060";
-}
-
-.fa-arrow-right:before {
-  content: "\f061";
-}
-
-.fa-bars:before,
-.fa-navicon:before {
-  content: "\f0c9";
-}
-.fa-check:before{content:"\f00c"}
-.fa-times:before{content:"\f00d"}
-.fa-save:before{content:"\f0c7"}
-.fa-edit:before{content:"\f044"}
-.fa-trash:before{content:"\f1f8"}
-.fa-plus:before{content:"\f067"}
-.fa-minus:before{content:"\f068"}
-.fa-search:before{content:"\f002"}
-.fa-user:before{content:"\f007"}
-.fa-lock:before{content:"\f023"}
-.fa-unlock:before{content:"\f09c"}
-.fa-eye:before{content:"\f06e"}
-.fa-eye-slash:before{content:"\f070"}
-.fa-power-off:before{content:"\f011"}
-.fa-refresh:before{content:"\f021"}
-.fa-download:before{content:"\f019"}
-.fa-cloud:before{content:"\f0c2"}
-.fa-signal:before{content:"\f012"}
-.fa-battery:before{content:"\f240"}
-.fa-info:before{content:"\f129"}
-.fa-warning:before{content:"\f071"}
-.fa-exclamation:before{content:"\f12a"}
-.fa-question:before{content:"\003f"}
-.fa-arrow-up:before{content:"\f062"}
-.fa-arrow-down:before{content:"\f063"}
-.fa-arrow-left:before{content:"\f060"}
-.fa-arrow-right:before{content:"\f061"}
-.fa-bars:before{content:"\f0c9"}
-.fa-menu:before{content:"\f0c9"}

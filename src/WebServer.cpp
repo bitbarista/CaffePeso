@@ -121,7 +121,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   getStoredSSID();            // This will cache WiFi credentials
 
   // Register API route first
-  server.on("/api/dashboard", HTTP_GET, [&scale, &flowRate, &display, &battery](AsyncWebServerRequest *request) {
+  server.on("/api/dashboard", HTTP_GET, [&scale, &flowRate, &display, &battery, &bluetoothScale](AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"weight\":" + String(scale.getCurrentWeight(), 2) + ",";
     json += "\"flowrate\":" + String(flowRate.getFlowRate(), 1) + ",";
@@ -163,6 +163,12 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += ",\"battery_segments\":" + String(battery.getBatterySegments());
     json += ",\"battery_low\":" + String(battery.isLowBattery() ? "true" : "false");
     json += ",\"battery_critical\":" + String(battery.isCriticalBattery() ? "true" : "false");
+    
+    // Add signal strength information
+    json += ",\"wifi_signal_strength\":" + String(getWiFiSignalStrength());
+    json += ",\"wifi_signal_quality\":\"" + getWiFiSignalQuality() + "\"";
+    json += ",\"bluetooth_connected\":" + String(bluetoothScale.isConnected() ? "true" : "false");
+    json += ",\"bluetooth_signal_strength\":" + String(bluetoothScale.getBluetoothSignalStrength());
     
     json += "}";
     request->send(200, "application/json", json);
@@ -394,6 +400,20 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   server.on("/api/wifi-creds", HTTP_DELETE, [](AsyncWebServerRequest *request) {
     clearWiFiCredentials();
     request->send(200, "text/plain", "WiFi credentials cleared. Reboot to apply changes.");
+  });
+
+  // Signal strength endpoint for WiFi and Bluetooth monitoring
+  server.on("/api/signal-strength", HTTP_GET, [&bluetoothScale](AsyncWebServerRequest *request) {
+    String json = "{";
+    
+    // WiFi signal strength
+    json += "\"wifi\":" + getWiFiConnectionInfo() + ",";
+    
+    // Bluetooth signal strength
+    json += "\"bluetooth\":" + bluetoothScale.getBluetoothConnectionInfo();
+    
+    json += "}";
+    request->send(200, "application/json", json);
   });
 
   server.on("/api/decimal-setting", HTTP_GET, [](AsyncWebServerRequest *request) {
