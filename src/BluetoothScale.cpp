@@ -146,9 +146,7 @@ void BluetoothScale::initializeBLE() {
     
     Serial.println("BluetoothScale: GaggiMate characteristic created successfully");
     
-    // Add Client Characteristic Configuration Descriptor for notifications
-    gaggiMateWeightCharacteristic->createDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, 2);
-    Serial.println("BluetoothScale: GaggiMate descriptor added");
+    // Note: NimBLE automatically creates 0x2902 descriptors for characteristics with NOTIFY/INDICATE properties
     
     // Create Weight Characteristic for Bean Conqueror (simple float format) - New UUID
     weightCharacteristic = service->createCharacteristic(
@@ -165,9 +163,7 @@ void BluetoothScale::initializeBLE() {
     
     Serial.println("BluetoothScale: Bean Conqueror characteristic created successfully");
     
-    // Add Client Characteristic Configuration Descriptor for notifications
-    weightCharacteristic->createDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, 2);
-    Serial.println("BluetoothScale: Bean Conqueror descriptor added");
+    // Note: NimBLE automatically creates 0x2902 descriptors for characteristics with NOTIFY/INDICATE properties
     
     // Create Command Characteristic (for receiving commands)
     commandCharacteristic = service->createCharacteristic(
@@ -196,7 +192,13 @@ void BluetoothScale::initializeBLE() {
     }
     
     advertising->addServiceUUID(SERVICE_UUID);
-    advertising->setScanResponse(false);
+    
+    // Enable scan response to allow full device name in advertising
+    advertising->setScanResponse(true);
+    
+    // Explicitly set the advertising name to ensure full "WeighMyBru" appears
+    advertising->setName("WeighMyBru");
+    
     advertising->setMinPreferred(0x0);
     
     Serial.println("BluetoothScale: BLE initialization completed successfully");
