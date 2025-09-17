@@ -147,7 +147,7 @@ void BluetoothScale::initializeBLE() {
     Serial.println("BluetoothScale: GaggiMate characteristic created successfully");
     
     // Add Client Characteristic Configuration Descriptor for notifications
-    gaggiMateWeightCharacteristic->addDescriptor(new NimBLEDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE));
+    gaggiMateWeightCharacteristic->createDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, 2);
     Serial.println("BluetoothScale: GaggiMate descriptor added");
     
     // Create Weight Characteristic for Bean Conqueror (simple float format) - New UUID
@@ -166,7 +166,7 @@ void BluetoothScale::initializeBLE() {
     Serial.println("BluetoothScale: Bean Conqueror characteristic created successfully");
     
     // Add Client Characteristic Configuration Descriptor for notifications
-    weightCharacteristic->addDescriptor(new NimBLEDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE));
+    weightCharacteristic->createDescriptor("2902", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, 2);
     Serial.println("BluetoothScale: Bean Conqueror descriptor added");
     
     // Create Command Characteristic (for receiving commands)
