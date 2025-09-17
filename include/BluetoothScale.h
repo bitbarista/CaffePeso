@@ -3,7 +3,6 @@
 #include <NimBLEDevice.h>
 #include <NimBLEServer.h>
 #include <NimBLEUtils.h>
-#include <NimBLE2902.h>
 #include "Scale.h"
 
 class Display; // Forward declaration
