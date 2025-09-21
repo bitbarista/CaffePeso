@@ -109,6 +109,22 @@ AsyncWebServer server(80);
 
 void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery) {
   if (!LittleFS.begin()) {
+    Serial.println();
+    Serial.println("=====================================");
+    Serial.println("FILESYSTEM NOT FOUND!");
+    Serial.println("=====================================");
+    Serial.println("The LittleFS filesystem failed to mount.");
+    Serial.println("This means the web interface files are missing.");
+    Serial.println();
+    Serial.println("To fix this, please run:");
+    Serial.println("  pio run -t uploadfs");
+    Serial.println();
+    Serial.println("Or in PlatformIO IDE:");
+    Serial.println("  Project Tasks → Platform → Upload Filesystem Image");
+    Serial.println();
+    Serial.println("The scale will continue to work, but the web interface will be unavailable.");
+    Serial.println("=====================================");
+    Serial.println();
     return;
   }
 
