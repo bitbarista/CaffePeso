@@ -469,6 +469,57 @@ void Display::showTaredMessage() {
     display->display();
 }
 
+void Display::showWiFiStatusMessage(bool isEnabled) {
+    // Return early if display is not connected
+    if (!displayConnected) {
+        return;
+    }
+    
+    // Set message state to prevent weight display interference
+    currentMessage = isEnabled ? "WiFi enabling" : "WiFi disabling";
+    messageStartTime = millis();
+    showingMessage = true;
+    
+    // Show WiFi status in same format as WeighMyBru Ready
+    display->clearDisplay();
+    display->setTextSize(2);
+    display->setTextColor(SSD1306_WHITE);
+    
+    String line1, line2;
+    if (isEnabled) {
+        line1 = "Turning";
+        line2 = "WiFi On";
+    } else {
+        line1 = "Turning";
+        line2 = "WiFi Off";
+    }
+    
+    int16_t x1, y1;
+    uint16_t w1, h1, w2, h2;
+    
+    // Get text bounds for both lines
+    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
+    display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
+    
+    // Calculate centered positions
+    int centerX1 = (SCREEN_WIDTH - w1) / 2;
+    int centerX2 = (SCREEN_WIDTH - w2) / 2;
+    
+    // Position lines to fit in 32 pixels
+    int line1Y = 0;  // Start at top
+    int line2Y = 16; // Second line at pixel 16
+    
+    // Display first line
+    display->setCursor(centerX1, line1Y);
+    display->print(line1);
+    
+    // Display second line
+    display->setCursor(centerX2, line2Y);
+    display->print(line2);
+    
+    display->display();
+}
+
 void Display::clearMessageState() {
     showingMessage = false;
     currentMessage = "";

@@ -648,5 +648,23 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(LittleFS, "/webfonts/fa-regular-400.woff2", "font/woff2");
   });
 
-  server.begin();
+  // Only start the web server if WiFi is enabled
+  if (isWiFiEnabled()) {
+    server.begin();
+    Serial.println("Web server started - accessible via WiFi");
+  } else {
+    Serial.println("Web server NOT started - WiFi is disabled for battery saving");
+  }
+}
+
+void startWebServer() {
+  if (isWiFiEnabled()) {
+    server.begin();
+    Serial.println("Web server started");
+  }
+}
+
+void stopWebServer() {
+  server.end();
+  Serial.println("Web server stopped");
 }

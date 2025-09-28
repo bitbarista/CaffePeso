@@ -37,11 +37,8 @@
       <!-- WiFi Power Management -->
       <div class="mb-6 p-4 bg-black-hover rounded">
         <h3 class="text-lg font-semibold mb-3">WiFi Power Management</h3>
-        <div class="flex items-center mb-3">
-          <input type="checkbox" id="wifiEnabled" class="mr-3 w-4 h-4">
-          <label for="wifiEnabled" class="text-sm">Enable WiFi (disable to save battery)</label>
-        </div>
-        <button type="button" onclick="toggleWiFi()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mr-2">Toggle WiFi</button>
+        <p class="text-sm text-gray-400 mb-3">Turn off WiFi to save battery. To turn WiFi back on, hold the touch sensor for 3 seconds.</p>
+        <button type="button" onclick="turnOffWiFi()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded mr-2">Turn Off WiFi</button>
         <span id="wifiStatus" class="text-gray-400"></span>
       </div>
       
@@ -161,16 +158,20 @@
     });
 
     // WiFi Power Management Functions
-    async function toggleWiFi() {
-      try {
-        const response = await fetch('/api/wifi-toggle', { method: 'POST' });
-        const result = await response.text();
-        document.getElementById('message').textContent = result;
-        // Refresh WiFi status after toggle
-        setTimeout(loadWiFiStatus, 1000);
-      } catch (error) {
-        console.error('Error toggling WiFi:', error);
-        document.getElementById('message').textContent = 'Error toggling WiFi';
+    async function turnOffWiFi() {
+      if (confirm('Turn off WiFi? You will need to hold the touch sensor for 3 seconds to turn it back on.')) {
+        try {
+          const response = await fetch('/api/wifi-enable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'enabled=false'
+          });
+          const result = await response.text();
+          document.getElementById('message').textContent = result + ' - WiFi is now off. Hold touch sensor for 3 seconds to turn back on.';
+        } catch (error) {
+          console.error('Error turning off WiFi:', error);
+          document.getElementById('message').textContent = 'Error turning off WiFi';
+        }
       }
     }
 
@@ -178,33 +179,14 @@
       try {
         const response = await fetch('/api/wifi-status');
         const status = await response.json();
-        document.getElementById('wifiEnabled').checked = status.enabled;
         document.getElementById('wifiStatus').textContent = status.enabled ? 
-          (status.connected ? `Connected: ${status.ssid}` : 'Enabled - AP Mode') : 
-          'Disabled (Battery Saving)';
+          (status.connected ? `Connected: ${status.ssid}` : 'WiFi Enabled - AP Mode') : 
+          'WiFi is Off';
       } catch (error) {
         console.error('Error loading WiFi status:', error);
         document.getElementById('wifiStatus').textContent = 'Status unavailable';
       }
     }
-
-    // Handle WiFi enable/disable checkbox
-    document.getElementById('wifiEnabled').addEventListener('change', async function(e) {
-      try {
-        const enabled = e.target.checked;
-        const response = await fetch('/api/wifi-enable', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `enabled=${enabled}`
-        });
-        const result = await response.text();
-        document.getElementById('message').textContent = result;
-        setTimeout(loadWiFiStatus, 1000);
-      } catch (error) {
-        console.error('Error setting WiFi state:', error);
-        document.getElementById('message').textContent = 'Error setting WiFi state';
-      }
-    });
 
     // Clear WiFi credentials
     async function clearWiFiCredentials() {

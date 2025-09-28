@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
+#include "WebServer.h"  // For web server control
 
 // ESP-IDF includes for advanced WiFi power management (SuperMini antenna fix)
 #ifdef ESP_IDF_VERSION_MAJOR
@@ -641,6 +642,7 @@ void enableWiFi() {
             Serial.println("Attempting to reconnect to saved network...");
             if (attemptSTAConnection(cachedSSID.c_str(), cachedPassword.c_str())) {
                 Serial.println("WiFi reconnected to STA mode");
+                startWebServer(); // Start web server when WiFi is enabled
                 return;
             }
         }
@@ -648,6 +650,7 @@ void enableWiFi() {
         // Fall back to AP mode if STA connection fails
         Serial.println("Starting WiFi in AP mode...");
         switchToAPMode();
+        startWebServer(); // Start web server when WiFi is enabled
     }
     
     Serial.println("WiFi enabled");
@@ -655,6 +658,9 @@ void enableWiFi() {
 
 void disableWiFi() {
     Serial.println("Disabling WiFi to save battery...");
+    
+    // Stop web server first to prevent TCP/IP stack issues
+    stopWebServer();
     
     // Save current mode before disabling
     previousWiFiMode = WiFi.getMode();

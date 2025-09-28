@@ -25,19 +25,27 @@ void TouchSensor::update() {
     if (currentTouchState != lastTouchState) {
         if (currentTime - lastTouchTime > debounceDelay) {
             if (currentTouchState) {
-                // Touch started - record start time for long press detection
+                // Touch started - record start time
                 touchStartTime = currentTime;
                 longPressDetected = false;
                 Serial.println("Touch started");
             } else {
                 // Touch ended
+                unsigned long pressDuration = currentTime - touchStartTime;
+                
                 if (!longPressDetected) {
-                    // Check if it was a medium press for status page (500ms)
-                    if (currentTime - touchStartTime >= 500) {
+                    if (pressDuration >= WIFI_TOGGLE_DURATION) {
+                        // Very long press (5+ seconds) - WiFi toggle
+                        handleWiFiToggle();
+                        Serial.println("Very long press detected - WiFi toggle");
+                    } else if (pressDuration >= 500) {
+                        // Medium press (500ms+) - Status page toggle
                         handleStatusPageToggle();
+                        Serial.println("Medium press detected - status page toggle");
                     } else {
-                        // Short press - schedule delayed tare to allow scale to stabilize
+                        // Short press - Tare
                         scheduleDelayedTare();
+                        Serial.println("Short press detected - tare");
                     }
                 }
                 longPressDetected = false;
@@ -48,12 +56,12 @@ void TouchSensor::update() {
         }
     }
     
-    // Check for long press (WiFi toggle) while touch is still active
+    // Check for very long press (WiFi toggle) while touch is still active
     if (currentTouchState && !longPressDetected && touchStartTime > 0) {
         if (currentTime - touchStartTime >= WIFI_TOGGLE_DURATION) {
             longPressDetected = true;
             handleWiFiToggle();
-            Serial.println("Long press detected - WiFi toggle");
+            Serial.println("Very long press detected (during hold) - WiFi toggle");
         }
     }
     
@@ -191,10 +199,10 @@ void TouchSensor::handleWiFiToggle() {
     
     // Show feedback on display
     if (displayPtr != nullptr) {
-        // Create a temporary message to show WiFi status
-        String message = isWiFiEnabled() ? "WiFi ON" : "WiFi OFF";
-        displayPtr->showMessage(message);
-        Serial.printf("WiFi toggled: %s\n", message.c_str());
+        // Show WiFi status using the same format as WeighMyBru Ready
+        bool enabled = isWiFiEnabled();
+        displayPtr->showWiFiStatusMessage(enabled);
+        Serial.printf("WiFi toggled: %s\n", enabled ? "ON" : "OFF");
     } else {
         Serial.println("Error: Display pointer is null");
     }

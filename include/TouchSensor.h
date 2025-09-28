@@ -34,14 +34,14 @@ private:
     bool delayedTarePending;
     unsigned long delayedTareTime;
     static const unsigned long TARE_DELAY = 1500; // 1.5 seconds delay after touch release
-    static const unsigned long WIFI_TOGGLE_DURATION = 3000; // 3 seconds for WiFi toggle
+    static const unsigned long WIFI_TOGGLE_DURATION = 5000; // 5 seconds for WiFi toggle (longer than status page)
     
     void handleTouch();
     void scheduleDelayedTare();
     void checkDelayedTare();
     void handleLongPress();
     void handleStatusPageToggle(); // Handle status page toggle on medium press
-    void handleWiFiToggle(); // Handle WiFi toggle on long press (3 seconds)
+    void handleWiFiToggle(); // Handle WiFi toggle on long press (5 seconds)
 };
 
 #endif

@@ -68,7 +68,7 @@ void PowerManager::update() {
                         displayPtr->showSleepCancelledMessage();
                     }
                 } else if (!cancelledRecently) {
-                    // Always handle timer control since we have unified mode
+                    // Handle timer control
                     touchStartTime = currentTime;
                     longPressDetected = false;
                     Serial.println("Timer control touch started");
@@ -76,7 +76,8 @@ void PowerManager::update() {
             } else {
                 // Touch ended
                 if (!sleepCountdownActive && !longPressDetected && !cancelledRecently) {
-                    // Always handle timer control in unified mode
+                    // Handle timer control
+                    Serial.println("Timer control executed");
                     handleTimerControl();
                 }
                 // Don't reset longPressDetected here if countdown is active
@@ -89,10 +90,11 @@ void PowerManager::update() {
         }
     }
     
-    // Check for long press (1 second) - works in all modes for sleep functionality
+    // Check for long press (1 second) for sleep functionality
     if (currentSleepTouchState && !longPressDetected && !sleepCountdownActive && !cancelledRecently) {
         if (currentTime - touchStartTime >= 1000) {
             longPressDetected = true;
+            Serial.println("Sleep control executed");
             handleSleepTouch();
         }
     }
