@@ -40,23 +40,40 @@ GaggiMate now fully supports WeighMyBru scale.
 
 ## Installation
 
-Installation instructions are currently under development, for now follow the [link](https://031devstudios.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions.
+Installation instructions are currently under development, for now follow the [link](https://031devstudios.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [youtube](https://www.youtube.com/watch?v=O5SP40Liuq0)
 
 ```
   this project requires VSCode with PlatformIO extension installed
-```
+```## Bill Of Materials (BOM)
 
-## Bill Of Materials (BOM)
+| Qty |           Item                      | Amazon Link | Aliexpress Link |
+| --- | ----------------------------------- | -----------------------| --------------- |
+|  1  | 500g Mini Loadcell (I-shaped)       | https://a.co/d/6kvxZ0H |  |
+|  1  | HX711                               | https://a.co/d/3KiYRkA |  |
+|  1  | ESP32-S3-Supermini Board            | https://a.co/d/6289vbS |  |
+|  2  | Capacitive Tocuh Pads               | https://a.co/d/014di6l |  |
+|  1  | 0.91" SSD1306 OLED Display          | https://a.co/d/9UClWku |  |
+|  1  | 800mAh Li-ion Battery               | https://a.co/d/gbr1Yft |  |
+|  1  | JST-PH 2.0 Male Connector           | https://a.co/d/3BZGuHW |  |
+|  1  | Slide Switch                        | https://a.co/d/9KRqMyF |  |
+|  1  | Hookup Wire (Various Colors)        | https://a.co/d/1Fs8os9 |  |
+|  2  | M3x5x4 Heat Set Inserts             | https://a.co/d/bnQD7Iu |  |
+|  16 | M1.7x4 Self Tapping Screws          | https://a.co/d/1np5Nes |  |
+|  4  | M3x12 Button Head Screws            | https://a.co/d/iqM3d6E |  |
+|  2  | 100K ohm 1% 1/4w resistors          | https://a.co/d/3R0YmGM |  |
+|  4  | Self-Adhesive Rubber Feet           | https://a.co/d/0q9TRmR |  |
+|  1  | Double Sided Tape (To hold Battery) | https://a.co/d/gM5SWwH |  |
 
-| Qty |           Item                | 
-| --- | ----------------------------- |  
-|  1  | 500g Mini Loadcell (I-shaped) |  
-|  1  | HX711                         |
-|  1  | ESP32-S3-Supermini Board      |
-|  2  | Capacitive Tocuh Pads         |
-|  1  | 0.91" SSD1306 OLED Display    |
-|  1  | 800mAh Li-ion Battery         |
-|  1  | JST-PH 2.0 Male Connector     |
-|  1  | Slide Switch                  |
-|  1  | Various Wires                 |
-|  1  | Various Fasteners             |
+
+
+##           Printed Parts (Found in CAD Folder)
+
+| Qty |           Item                    | 
+| --- | ----------------------------------|  
+|  1  | Bottom*                           |  
+|  1  | Top                               |
+|  1  | ESP32 Clamp                       |
+|  1  | Screen Clamp                      |
+|  4  | washers (Used for HX711)          |
+
+\* Bottom has 2 options - The supported option has engineered supports, while the standard option requires you to slice with your own supports.
