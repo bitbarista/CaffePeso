@@ -431,9 +431,18 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   });
 
   server.on("/api/wifi-toggle", HTTP_POST, [](AsyncWebServerRequest *request) {
-    toggleWiFi();
-    String response = isWiFiEnabled() ? "WiFi enabled" : "WiFi disabled for battery saving";
-    request->send(200, "text/plain", response);
+    bool currentlyEnabled = isWiFiEnabled() && WiFi.getMode() != WIFI_OFF;
+    
+    if (currentlyEnabled) {
+      // Send response before disabling WiFi
+      request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
+      // Add delay to allow response to be sent, then disable WiFi
+      delay(100);
+      disableWiFi();
+    } else {
+      enableWiFi();
+      request->send(200, "text/plain", "WiFi enabled");
+    }
   });
 
   server.on("/api/wifi-enable", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -443,8 +452,11 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
         enableWiFi();
         request->send(200, "text/plain", "WiFi enabled");
       } else {
+        // Send response before disabling WiFi
+        request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
+        // Add delay to allow response to be sent, then disable WiFi
+        delay(100);
         disableWiFi();
-        request->send(200, "text/plain", "WiFi disabled for battery saving");
       }
     } else {
       request->send(400, "text/plain", "Missing enabled parameter");

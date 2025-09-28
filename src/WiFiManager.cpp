@@ -662,8 +662,27 @@ void disableWiFi() {
     // Save the disabled state
     saveWiFiEnabledState(false);
     
-    // Disconnect and turn off WiFi
-    WiFi.disconnect(true);
+    // Gracefully close active connections before disabling WiFi
+    Serial.println("Closing active connections...");
+    
+    // Give time for current HTTP responses to complete
+    delay(100);
+    
+    // Properly disconnect based on current mode
+    if (previousWiFiMode == WIFI_STA || previousWiFiMode == WIFI_AP_STA) {
+        Serial.println("Disconnecting from STA...");
+        WiFi.disconnect(true);
+    }
+    
+    if (previousWiFiMode == WIFI_AP || previousWiFiMode == WIFI_AP_STA) {
+        Serial.println("Stopping AP mode...");
+        WiFi.softAPdisconnect(true);
+    }
+    
+    // Additional delay to ensure cleanup
+    delay(200);
+    
+    // Now safely turn off WiFi
     WiFi.mode(WIFI_OFF);
     
     Serial.println("WiFi disabled - battery saving mode active");
