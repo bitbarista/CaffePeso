@@ -17,6 +17,7 @@ This scale was designed to be used in conjunction with GaggiMate, but can also b
 <img src="docs/assets/dashboard.jpg" alt="WeighMyBru Dashboard" width="250" />
 <img src="docs/assets/weighmybru.jpg" alt="WeighMyBru Dashboard" width="700" />
 </p>
+
 ## Documentation
 
 The documentation is currently being worked on. 
@@ -40,11 +41,12 @@ GaggiMate now fully supports WeighMyBru scale.
 
 ## Installation
 
-Installation instructions are currently under development, for now follow the [link](https://031devstudios.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [youtube](https://www.youtube.com/watch?v=O5SP40Liuq0)
+Installation instructions are currently under development, for now follow the [link](https://031devstudios.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [YouTube](https://www.youtube.com/watch?v=O5SP40Liuq0)
 
 ```
   this project requires VSCode with PlatformIO extension installed
-```## Bill Of Materials (BOM)
+```
+## Bill Of Materials (BOM)
 
 | Qty |           Item                      | Amazon Link | Aliexpress Link |
 | --- | ----------------------------------- | -----------------------| --------------- |
@@ -66,7 +68,7 @@ Installation instructions are currently under development, for now follow the [l
 
 
 
-##           Printed Parts (Found in CAD Folder)
+## Printed Parts (Found in CAD Folder)
 
 | Qty |           Item                    | 
 | --- | ----------------------------------|  
