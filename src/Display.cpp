@@ -5,6 +5,7 @@
 #include "PowerManager.h"
 #include "BatteryMonitor.h"
 #include <WiFi.h>
+#include "WiFiManager.h"
 
 Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate)
     : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr), wifiManagerPtr(nullptr),
@@ -978,8 +979,11 @@ void Display::showStatusPage() {
     // Bottom line: WiFi mode and IP address (moved to very bottom)
     display->setTextSize(1);
     
-    // Check WiFi connection status and show simplified format at bottom
-    if (WiFi.status() == WL_CONNECTED) {
+    // Check WiFi power state first
+    if (!isWiFiEnabled()) {
+        display->setCursor(0, 24);  // Bottom of 32-pixel display
+        display->print("WiFi: OFF");
+    } else if (WiFi.status() == WL_CONNECTED) {
         display->setCursor(0, 24);  // Bottom of 32-pixel display
         display->print("STA: ");
         display->print(WiFi.localIP().toString());

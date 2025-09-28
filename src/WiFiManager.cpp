@@ -26,6 +26,11 @@ const unsigned long CACHE_TIMEOUT = 300000; // 5 minutes cache timeout
 const char* ap_ssid = "WeighMyBru-AP";
 const char* ap_password = "";
 
+// WiFi Power Management State
+static bool wifiEnabled = true; // WiFi enabled by default
+static bool wifiEnabledCached = false;
+static wifi_mode_t previousWiFiMode = WIFI_OFF; // Store previous mode when disabling WiFi
+
 unsigned long startAttemptTime = 0;
 const unsigned long timeout = 10000; // 10 seconds
 
@@ -142,6 +147,13 @@ String getStoredPassword() {
 }
 
 void setupWiFi() {
+    // Check if WiFi should be enabled
+    if (!loadWiFiEnabledState()) {
+        Serial.println("WiFi is disabled - skipping WiFi setup for battery saving");
+        WiFi.mode(WIFI_OFF);
+        return;
+    }
+    
     char ssid[33] = {0};
     char password[65] = {0};
     loadWiFiCredentials(ssid, password, sizeof(ssid));
@@ -311,6 +323,11 @@ void printWiFiStatus() {
 }
 
 void maintainWiFi() {
+    // Skip maintenance if WiFi is disabled
+    if (!isWiFiEnabled()) {
+        return;
+    }
+    
     static unsigned long lastMaintenance = 0;
     const unsigned long maintenanceInterval = 15000; // Every 15 seconds for more responsive switching
     
@@ -572,4 +589,90 @@ String getWiFiConnectionInfo() {
     
     info += "}";
     return info;
+}
+
+// WiFi Power Management Functions
+
+bool loadWiFiEnabledState() {
+    if (wifiEnabledCached) {
+        return wifiEnabled;
+    }
+    
+    if (wifiPrefs.begin("wifi", true)) {
+        wifiEnabled = wifiPrefs.getBool("enabled", true); // Default to enabled
+        wifiPrefs.end();
+        wifiEnabledCached = true;
+        Serial.printf("WiFi enabled state loaded: %s\n", wifiEnabled ? "ON" : "OFF");
+    } else {
+        Serial.println("ERROR: Failed to load WiFi enabled state");
+        wifiEnabled = true; // Default to enabled on error
+    }
+    
+    return wifiEnabled;
+}
+
+void saveWiFiEnabledState(bool enabled) {
+    if (wifiPrefs.begin("wifi", false)) {
+        wifiPrefs.putBool("enabled", enabled);
+        wifiPrefs.end();
+        wifiEnabled = enabled;
+        wifiEnabledCached = true;
+        Serial.printf("WiFi enabled state saved: %s\n", enabled ? "ON" : "OFF");
+    } else {
+        Serial.println("ERROR: Failed to save WiFi enabled state");
+    }
+}
+
+bool isWiFiEnabled() {
+    loadWiFiEnabledState();
+    return wifiEnabled;
+}
+
+void enableWiFi() {
+    Serial.println("Enabling WiFi...");
+    
+    // Save the enabled state
+    saveWiFiEnabledState(true);
+    
+    // If WiFi was previously off, restore it
+    if (WiFi.getMode() == WIFI_OFF) {
+        // Try to restore to STA mode first if we have credentials
+        if (loadWiFiCredentialsFromEEPROM() && !cachedSSID.isEmpty()) {
+            Serial.println("Attempting to reconnect to saved network...");
+            if (attemptSTAConnection(cachedSSID.c_str(), cachedPassword.c_str())) {
+                Serial.println("WiFi reconnected to STA mode");
+                return;
+            }
+        }
+        
+        // Fall back to AP mode if STA connection fails
+        Serial.println("Starting WiFi in AP mode...");
+        switchToAPMode();
+    }
+    
+    Serial.println("WiFi enabled");
+}
+
+void disableWiFi() {
+    Serial.println("Disabling WiFi to save battery...");
+    
+    // Save current mode before disabling
+    previousWiFiMode = WiFi.getMode();
+    
+    // Save the disabled state
+    saveWiFiEnabledState(false);
+    
+    // Disconnect and turn off WiFi
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    
+    Serial.println("WiFi disabled - battery saving mode active");
+}
+
+void toggleWiFi() {
+    if (isWiFiEnabled() && WiFi.getMode() != WIFI_OFF) {
+        disableWiFi();
+    } else {
+        enableWiFi();
+    }
 }

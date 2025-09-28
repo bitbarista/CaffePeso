@@ -418,6 +418,39 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "WiFi credentials cleared. Reboot to apply changes.");
   });
 
+  // WiFi Power Management endpoints
+  server.on("/api/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"enabled\":" + String(isWiFiEnabled() ? "true" : "false") + ",";
+    json += "\"connected\":" + String((WiFi.status() == WL_CONNECTED) ? "true" : "false");
+    if (WiFi.status() == WL_CONNECTED) {
+      json += ",\"ssid\":\"" + WiFi.SSID() + "\"";
+    }
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/wifi-toggle", HTTP_POST, [](AsyncWebServerRequest *request) {
+    toggleWiFi();
+    String response = isWiFiEnabled() ? "WiFi enabled" : "WiFi disabled for battery saving";
+    request->send(200, "text/plain", response);
+  });
+
+  server.on("/api/wifi-enable", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("enabled", true)) {
+      bool enabled = request->getParam("enabled", true)->value() == "true";
+      if (enabled) {
+        enableWiFi();
+        request->send(200, "text/plain", "WiFi enabled");
+      } else {
+        disableWiFi();
+        request->send(200, "text/plain", "WiFi disabled for battery saving");
+      }
+    } else {
+      request->send(400, "text/plain", "Missing enabled parameter");
+    }
+  });
+
   // Signal strength endpoint for WiFi and Bluetooth monitoring
   server.on("/api/signal-strength", HTTP_GET, [&bluetoothScale](AsyncWebServerRequest *request) {
     String json = "{";

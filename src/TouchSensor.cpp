@@ -2,6 +2,7 @@
 #include "Scale.h"
 #include "Display.h"
 #include "FlowRate.h"
+#include "WiFiManager.h"
 
 TouchSensor::TouchSensor(uint8_t touchPin, Scale* scale) 
     : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), flowRatePtr(nullptr), touchThreshold(30000), 
@@ -44,6 +45,15 @@ void TouchSensor::update() {
             }
             lastTouchState = currentTouchState;
             lastTouchTime = currentTime;
+        }
+    }
+    
+    // Check for long press (WiFi toggle) while touch is still active
+    if (currentTouchState && !longPressDetected && touchStartTime > 0) {
+        if (currentTime - touchStartTime >= WIFI_TOGGLE_DURATION) {
+            longPressDetected = true;
+            handleWiFiToggle();
+            Serial.println("Long press detected - WiFi toggle");
         }
     }
     
@@ -168,6 +178,23 @@ void TouchSensor::handleStatusPageToggle() {
     
     if (displayPtr != nullptr) {
         displayPtr->toggleStatusPage();
+    } else {
+        Serial.println("Error: Display pointer is null");
+    }
+}
+
+void TouchSensor::handleWiFiToggle() {
+    Serial.println("Long press detected - toggling WiFi power");
+    
+    // Toggle WiFi power state
+    toggleWiFi();
+    
+    // Show feedback on display
+    if (displayPtr != nullptr) {
+        // Create a temporary message to show WiFi status
+        String message = isWiFiEnabled() ? "WiFi ON" : "WiFi OFF";
+        displayPtr->showMessage(message);
+        Serial.printf("WiFi toggled: %s\n", message.c_str());
     } else {
         Serial.println("Error: Display pointer is null");
     }

@@ -33,6 +33,18 @@
     <h1 class="text-3xl text-white font-bold mb-4">Settings</h1>
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <h2 class="text-2xl font-semibold mb-4">WiFi Configuration</h2>
+      
+      <!-- WiFi Power Management -->
+      <div class="mb-6 p-4 bg-black-hover rounded">
+        <h3 class="text-lg font-semibold mb-3">WiFi Power Management</h3>
+        <div class="flex items-center mb-3">
+          <input type="checkbox" id="wifiEnabled" class="mr-3 w-4 h-4">
+          <label for="wifiEnabled" class="text-sm">Enable WiFi (disable to save battery)</label>
+        </div>
+        <button type="button" onclick="toggleWiFi()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mr-2">Toggle WiFi</button>
+        <span id="wifiStatus" class="text-gray-400"></span>
+      </div>
+      
       <form id="wifiForm" class="mb-6">
         <label for="ssid" class="block mb-2">SSID:</label>
         <input type="text" id="ssid" name="ssid" required class="w-full px-3 py-2 mb-4 rounded text-black" />
@@ -148,6 +160,52 @@
       document.getElementById('message').textContent = result;
     });
 
+    // WiFi Power Management Functions
+    async function toggleWiFi() {
+      try {
+        const response = await fetch('/api/wifi-toggle', { method: 'POST' });
+        const result = await response.text();
+        document.getElementById('message').textContent = result;
+        // Refresh WiFi status after toggle
+        setTimeout(loadWiFiStatus, 1000);
+      } catch (error) {
+        console.error('Error toggling WiFi:', error);
+        document.getElementById('message').textContent = 'Error toggling WiFi';
+      }
+    }
+
+    async function loadWiFiStatus() {
+      try {
+        const response = await fetch('/api/wifi-status');
+        const status = await response.json();
+        document.getElementById('wifiEnabled').checked = status.enabled;
+        document.getElementById('wifiStatus').textContent = status.enabled ? 
+          (status.connected ? `Connected: ${status.ssid}` : 'Enabled - AP Mode') : 
+          'Disabled (Battery Saving)';
+      } catch (error) {
+        console.error('Error loading WiFi status:', error);
+        document.getElementById('wifiStatus').textContent = 'Status unavailable';
+      }
+    }
+
+    // Handle WiFi enable/disable checkbox
+    document.getElementById('wifiEnabled').addEventListener('change', async function(e) {
+      try {
+        const enabled = e.target.checked;
+        const response = await fetch('/api/wifi-enable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `enabled=${enabled}`
+        });
+        const result = await response.text();
+        document.getElementById('message').textContent = result;
+        setTimeout(loadWiFiStatus, 1000);
+      } catch (error) {
+        console.error('Error setting WiFi state:', error);
+        document.getElementById('message').textContent = 'Error setting WiFi state';
+      }
+    });
+
     // Clear WiFi credentials
     async function clearWiFiCredentials() {
       if (confirm('Clear stored WiFi credentials? This will restart AP-only mode.')) {
@@ -221,6 +279,9 @@
         document.getElementById('filterForm').dispatchEvent(new Event('submit'));
       }
     }
+
+    // Initialize WiFi status on page load
+    loadWiFiStatus();
 </script>
 </body>
 </html>
