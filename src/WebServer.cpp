@@ -418,6 +418,51 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "WiFi credentials cleared. Reboot to apply changes.");
   });
 
+  // WiFi Power Management endpoints
+  server.on("/api/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"enabled\":" + String(isWiFiEnabled() ? "true" : "false") + ",";
+    json += "\"connected\":" + String((WiFi.status() == WL_CONNECTED) ? "true" : "false");
+    if (WiFi.status() == WL_CONNECTED) {
+      json += ",\"ssid\":\"" + WiFi.SSID() + "\"";
+    }
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/wifi-toggle", HTTP_POST, [](AsyncWebServerRequest *request) {
+    bool currentlyEnabled = isWiFiEnabled() && WiFi.getMode() != WIFI_OFF;
+    
+    if (currentlyEnabled) {
+      // Send response before disabling WiFi
+      request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
+      // Add delay to allow response to be sent, then disable WiFi
+      delay(100);
+      disableWiFi();
+    } else {
+      enableWiFi();
+      request->send(200, "text/plain", "WiFi enabled");
+    }
+  });
+
+  server.on("/api/wifi-enable", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("enabled", true)) {
+      bool enabled = request->getParam("enabled", true)->value() == "true";
+      if (enabled) {
+        enableWiFi();
+        request->send(200, "text/plain", "WiFi enabled");
+      } else {
+        // Send response before disabling WiFi
+        request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
+        // Add delay to allow response to be sent, then disable WiFi
+        delay(100);
+        disableWiFi();
+      }
+    } else {
+      request->send(400, "text/plain", "Missing enabled parameter");
+    }
+  });
+
   // Signal strength endpoint for WiFi and Bluetooth monitoring
   server.on("/api/signal-strength", HTTP_GET, [&bluetoothScale](AsyncWebServerRequest *request) {
     String json = "{";
@@ -603,5 +648,23 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(LittleFS, "/webfonts/fa-regular-400.woff2", "font/woff2");
   });
 
-  server.begin();
+  // Only start the web server if WiFi is enabled
+  if (isWiFiEnabled()) {
+    server.begin();
+    Serial.println("Web server started - accessible via WiFi");
+  } else {
+    Serial.println("Web server NOT started - WiFi is disabled for battery saving");
+  }
+}
+
+void startWebServer() {
+  if (isWiFiEnabled()) {
+    server.begin();
+    Serial.println("Web server started");
+  }
+}
+
+void stopWebServer() {
+  server.end();
+  Serial.println("Web server stopped");
 }

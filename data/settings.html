@@ -33,6 +33,15 @@
     <h1 class="text-3xl text-white font-bold mb-4">Settings</h1>
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <h2 class="text-2xl font-semibold mb-4">WiFi Configuration</h2>
+      
+      <!-- WiFi Power Management -->
+      <div class="mb-6 p-4 bg-black-hover rounded">
+        <h3 class="text-lg font-semibold mb-3">WiFi Power Management</h3>
+        <p class="text-sm text-gray-400 mb-3">Turn off WiFi to save battery. To turn WiFi back on, hold the touch sensor for 3 seconds.</p>
+        <button type="button" onclick="turnOffWiFi()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded mr-2">Turn Off WiFi</button>
+        <span id="wifiStatus" class="text-gray-400"></span>
+      </div>
+      
       <form id="wifiForm" class="mb-6">
         <label for="ssid" class="block mb-2">SSID:</label>
         <input type="text" id="ssid" name="ssid" required class="w-full px-3 py-2 mb-4 rounded text-black" />
@@ -148,6 +157,37 @@
       document.getElementById('message').textContent = result;
     });
 
+    // WiFi Power Management Functions
+    async function turnOffWiFi() {
+      if (confirm('Turn off WiFi? You will need to hold the touch sensor for 3 seconds to turn it back on.')) {
+        try {
+          const response = await fetch('/api/wifi-enable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'enabled=false'
+          });
+          const result = await response.text();
+          document.getElementById('message').textContent = result + ' - WiFi is now off. Hold touch sensor for 3 seconds to turn back on.';
+        } catch (error) {
+          console.error('Error turning off WiFi:', error);
+          document.getElementById('message').textContent = 'Error turning off WiFi';
+        }
+      }
+    }
+
+    async function loadWiFiStatus() {
+      try {
+        const response = await fetch('/api/wifi-status');
+        const status = await response.json();
+        document.getElementById('wifiStatus').textContent = status.enabled ? 
+          (status.connected ? `Connected: ${status.ssid}` : 'WiFi Enabled - AP Mode') : 
+          'WiFi is Off';
+      } catch (error) {
+        console.error('Error loading WiFi status:', error);
+        document.getElementById('wifiStatus').textContent = 'Status unavailable';
+      }
+    }
+
     // Clear WiFi credentials
     async function clearWiFiCredentials() {
       if (confirm('Clear stored WiFi credentials? This will restart AP-only mode.')) {
@@ -221,6 +261,9 @@
         document.getElementById('filterForm').dispatchEvent(new Event('submit'));
       }
     }
+
+    // Initialize WiFi status on page load
+    loadWiFiStatus();
 </script>
 </body>
 </html>
