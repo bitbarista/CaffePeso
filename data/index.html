@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
+  <script src="/chart.min.js"></script>
   <link rel="stylesheet" href="/css/all.min.css">
 </head>
 <body class="bg-black-background text-white font-sans flex items-center justify-center min-h-screen">
@@ -79,9 +80,9 @@
       </div>
     </div>
 
-    <!-- Graph Placeholder -->
-    <div class="h-32 bg-gray-700 rounded-lg mt-2 flex items-center justify-center text-gray-400 text-sm">
-      Flow Rate Graph Placeholder
+    <!-- Real-time Weight & Flow Rate Graph -->
+    <div class="h-32 bg-gray-700 rounded-lg mt-2 p-2">
+      <canvas id="weightFlowChart" style="max-height: 112px;"></canvas>
     </div>
 
     <!-- Metrics Grid -->
@@ -144,6 +145,171 @@
 
 <script>
   let decimalPlaces = 1;
+  
+  // Chart.js configuration and data
+  let weightFlowChart;
+  let chartData = {
+    weight: [],
+    flowrate: [],
+    time: []
+  };
+  let maxDataPoints = 100; // Keep last 100 data points (10 seconds at 10Hz)
+  
+  // Initialize Chart.js when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('weightFlowChart').getContext('2d');
+    
+    weightFlowChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [], // Time labels
+        datasets: [{
+          label: 'Weight (g)',
+          data: [],
+          borderColor: '#22c55e', // Green for weight
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y',
+          pointRadius: 0, // No points for smoother look
+          tension: 0.1 // Slight curve for smooth line
+        }, {
+          label: 'Flow Rate (g/s)',
+          data: [],
+          borderColor: '#3b82f6', // Blue for flow rate
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          fill: false,
+          yAxisID: 'y1',
+          pointRadius: 0, // No points for smoother look
+          tension: 0.1 // Slight curve for smooth line
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#d1d5db', // Light gray text
+              font: {
+                size: 10
+              },
+              usePointStyle: true,
+              pointStyle: 'line'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#374151',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: false
+            },
+            grid: {
+              color: '#374151'
+            },
+            ticks: {
+              color: '#9ca3af',
+              font: {
+                size: 9
+              },
+              maxTicksLimit: 6
+            }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Weight (g)',
+              color: '#22c55e',
+              font: {
+                size: 10
+              }
+            },
+            grid: {
+              color: '#374151'
+            },
+            ticks: {
+              color: '#22c55e',
+              font: {
+                size: 9
+              }
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Flow Rate (g/s)',
+              color: '#3b82f6',  
+              font: {
+                size: 10
+              }
+            },
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              color: '#3b82f6',
+              font: {
+                size: 9
+              }
+            }
+          }
+        },
+        animation: {
+          duration: 0 // Disable animations for real-time updates
+        }
+      }
+    });
+  });
+  
+  // Function to add data to chart
+  function addChartData(weight, flowrate, timestamp) {
+    const timeLabel = new Date(timestamp).toLocaleTimeString('en-US', { 
+      hour12: false, 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+    
+    // Add new data
+    chartData.weight.push(weight);
+    chartData.flowrate.push(flowrate);
+    chartData.time.push(timeLabel);
+    
+    // Remove old data if we have too many points
+    if (chartData.weight.length > maxDataPoints) {
+      chartData.weight.shift();
+      chartData.flowrate.shift();
+      chartData.time.shift();
+    }
+    
+    // Update chart
+    if (weightFlowChart) {
+      weightFlowChart.data.labels = [...chartData.time];
+      weightFlowChart.data.datasets[0].data = [...chartData.weight];
+      weightFlowChart.data.datasets[1].data = [...chartData.flowrate];
+      weightFlowChart.update('none'); // No animation for smooth real-time updates
+    }
+  }
 
   function tareScale() {
     fetch('/api/tare', { method: 'POST' })
@@ -190,6 +356,9 @@
         
         document.getElementById('weight').innerText = weight.toFixed(decimalPlaces);
         document.getElementById('flowrate').innerText = flowrate.toFixed(1);
+        
+        // Add data to real-time chart
+        addChartData(weight, flowrate, Date.now());
         
         // Update scale connection status
         const scaleStatus = document.getElementById('scaleStatus');

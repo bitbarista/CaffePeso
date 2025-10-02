@@ -115,6 +115,16 @@
 			"problemMatcher": [
 				"$platformio"
 			]
+		},
+		{
+			"label": "Build Dashboard Graph",
+			"type": "shell",
+			"command": "platformio run",
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
 		}
 	]
 }
