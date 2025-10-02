@@ -83,6 +83,9 @@
     <!-- Real-time Weight & Flow Rate Graph -->
     <div class="h-32 bg-gray-700 rounded-lg mt-2 p-2">
       <canvas id="weightFlowChart" style="max-height: 112px;"></canvas>
+      <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-8">
+        Chart loading...
+      </div>
     </div>
 
     <!-- Metrics Grid -->
@@ -156,10 +159,26 @@
   let maxDataPoints = 100; // Keep last 100 data points (10 seconds at 10Hz)
   
   // Initialize Chart.js when page loads
-  document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('weightFlowChart').getContext('2d');
+  function initializeChart() {
+    console.log('Initializing chart...');
     
-    weightFlowChart = new Chart(ctx, {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js not loaded!');
+      return;
+    }
+    
+    const canvas = document.getElementById('weightFlowChart');
+    if (!canvas) {
+      console.error('Chart canvas not found!');
+      return;
+    }
+    
+    console.log('Canvas found, creating chart...');
+    const ctx = canvas.getContext('2d');
+    
+    try {
+      weightFlowChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: [], // Time labels
@@ -280,34 +299,69 @@
         }
       }
     });
-  });
+    
+    console.log('Chart created successfully!');
+    } catch (error) {
+      console.error('Error creating chart:', error);
+    }
+  }
+  
+  // Try to initialize chart when DOM is ready
+  document.addEventListener('DOMContentLoaded', initializeChart);
+  
+  // Fallback: try again after a short delay if first attempt fails
+  setTimeout(function() {
+    if (!weightFlowChart) {
+      console.log('Chart not initialized, trying again...');
+      initializeChart();
+    }
+  }, 1000);
+  
+  // Show error if chart still not working after 3 seconds
+  setTimeout(function() {
+    if (!weightFlowChart) {
+      console.error('Chart failed to initialize after multiple attempts');
+      const errorDiv = document.getElementById('chartError');
+      if (errorDiv) {
+        errorDiv.textContent = 'Chart loading failed. Check console for errors.';
+        errorDiv.classList.remove('hidden');
+        document.getElementById('weightFlowChart').style.display = 'none';
+      }
+    }
+  }, 3000);
   
   // Function to add data to chart
   function addChartData(weight, flowrate, timestamp) {
-    const timeLabel = new Date(timestamp).toLocaleTimeString('en-US', { 
-      hour12: false, 
-      minute: '2-digit', 
-      second: '2-digit' 
-    });
-    
-    // Add new data
-    chartData.weight.push(weight);
-    chartData.flowrate.push(flowrate);
-    chartData.time.push(timeLabel);
-    
-    // Remove old data if we have too many points
-    if (chartData.weight.length > maxDataPoints) {
-      chartData.weight.shift();
-      chartData.flowrate.shift();
-      chartData.time.shift();
-    }
-    
-    // Update chart
-    if (weightFlowChart) {
-      weightFlowChart.data.labels = [...chartData.time];
-      weightFlowChart.data.datasets[0].data = [...chartData.weight];
-      weightFlowChart.data.datasets[1].data = [...chartData.flowrate];
-      weightFlowChart.update('none'); // No animation for smooth real-time updates
+    try {
+      const timeLabel = new Date(timestamp).toLocaleTimeString('en-US', { 
+        hour12: false, 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+      
+      // Add new data
+      chartData.weight.push(weight);
+      chartData.flowrate.push(flowrate);
+      chartData.time.push(timeLabel);
+      
+      // Remove old data if we have too many points
+      if (chartData.weight.length > maxDataPoints) {
+        chartData.weight.shift();
+        chartData.flowrate.shift();
+        chartData.time.shift();
+      }
+      
+      // Update chart
+      if (weightFlowChart) {
+        weightFlowChart.data.labels = [...chartData.time];
+        weightFlowChart.data.datasets[0].data = [...chartData.weight];
+        weightFlowChart.data.datasets[1].data = [...chartData.flowrate];
+        weightFlowChart.update('none'); // No animation for smooth real-time updates
+      } else {
+        console.log('Chart not initialized yet, data:', weight, flowrate);
+      }
+    } catch (error) {
+      console.error('Error updating chart data:', error);
     }
   }
 
