@@ -44,8 +44,8 @@
     </nav>
   </div>
 
-  <!-- Main Content - Centered Card Layout -->
-  <div class="w-[375px] bg-black-select rounded-xl p-4 space-y-4 md:ml-64 mt-16 md:mt-0">
+  <!-- Main Content - Expanded Layout for Large Graph -->
+  <div class="w-[90vw] max-w-4xl bg-black-select rounded-xl p-4 space-y-4 md:ml-64 mt-16 md:mt-0">
     <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
@@ -80,33 +80,33 @@
       </div>
     </div>
 
-    <!-- Real-time Weight & Flow Rate Graph - Prominent Container -->
-    <div class="bg-gray-800 rounded-xl p-4 border border-gray-600">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-white">Brewing Profile</h2>
-        <div class="text-xs text-gray-400">Real-time Weight & Flow Rate</div>
+    <!-- Real-time Weight & Flow Rate Graph - Large Prominent Container -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-600">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-white">Brewing Profile</h2>
+        <div class="text-sm text-gray-400">Real-time Weight & Flow Rate</div>
       </div>
-      <div class="h-48 bg-gray-900 rounded-lg p-3">
+      <div class="h-80 bg-gray-900 rounded-lg p-4">
         <canvas id="weightFlowChart" style="width: 100%; height: 100%;"></canvas>
-        <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-16">
+        <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-32">
           Chart loading...
         </div>
       </div>
     </div>
 
-    <!-- Metrics Grid -->
-    <div class="grid grid-cols-3 text-center text-lg font-medium mt-2">
+    <!-- Compact Metrics Grid -->
+    <div class="grid grid-cols-3 text-center text-base font-medium">
       <div>
-        <div id="weight" class="text-3xl font-bold">0.0</div>
-        <div class="text-sm text-gray-300">Weight<br/><span class="text-xs">g</span></div>
+        <div id="weight" class="text-2xl font-bold">0.0</div>
+        <div class="text-xs text-gray-300">Weight<br/><span class="text-xs">g</span></div>
       </div>
       <div>
-        <div id="flowrate" class="text-3xl font-bold">0.000</div>
-        <div class="text-sm text-gray-300">Flow Rate<br/><span class="text-xs">g/s</span></div>
+        <div id="flowrate" class="text-2xl font-bold">0.000</div>
+        <div class="text-xs text-gray-300">Flow Rate<br/><span class="text-xs">g/s</span></div>
       </div>
       <div>
-        <div id="timer" class="text-3xl font-bold">0:00.000</div>
-        <div class="text-sm text-gray-300">Time</div>
+        <div id="timer" class="text-2xl font-bold">0:00.000</div>
+        <div class="text-xs text-gray-300">Time</div>
       </div>
     </div>
 
@@ -224,11 +224,12 @@
             labels: {
               color: '#d1d5db', // Light gray text
               font: {
-                size: 12
+                size: 14,
+                weight: 'bold'
               },
               usePointStyle: true,
               pointStyle: 'line',
-              padding: 15
+              padding: 20
             }
           },
           tooltip: {
@@ -251,9 +252,9 @@
             ticks: {
               color: '#9ca3af',
               font: {
-                size: 11
+                size: 12
               },
-              maxTicksLimit: 8
+              maxTicksLimit: 10
             }
           },
           y: {
@@ -265,7 +266,8 @@
               text: 'Weight (g)',
               color: '#22c55e',
               font: {
-                size: 10
+                size: 14,
+                weight: 'bold'
               }
             },
             grid: {
@@ -274,7 +276,8 @@
             ticks: {
               color: '#22c55e',
               font: {
-                size: 11
+                size: 12,
+                weight: 'bold'
               }
             }
           },
@@ -287,7 +290,8 @@
               text: 'Flow Rate (g/s)',
               color: '#3b82f6',  
               font: {
-                size: 10
+                size: 14,
+                weight: 'bold'
               }
             },
             grid: {
@@ -296,7 +300,8 @@
             ticks: {
               color: '#3b82f6',
               font: {
-                size: 11
+                size: 12,
+                weight: 'bold'
               }
             }
           }
