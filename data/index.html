@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
-  <script src="/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.min.js"></script>
   <link rel="stylesheet" href="/css/all.min.css">
 </head>
 <body class="bg-black-background text-white font-sans flex items-center justify-center min-h-screen">
@@ -550,12 +550,12 @@
       .catch(err => console.error("Smart update error:", err));
   }
 
-  // Start with normal updates, then use smart detection
-  let updateTimer = setInterval(updateWeight, 200); // Initial 200ms (5/sec)
-  document.getElementById('updateStatus').textContent = 'Auto Mode: Normal Updates (5/sec)';
+  // Start with slower updates to reduce ESP32 load
+  let updateTimer = setInterval(updateWeight, 1000); // Initial 1000ms (1/sec) for debugging
+  document.getElementById('updateStatus').textContent = 'Debug Mode: Slow Updates (1/sec)';
   
   // Run smart detection every 200ms to adjust update frequency
-  setInterval(smartUpdate, 200);
+  // setInterval(smartUpdate, 200); // Temporarily disabled for debugging
   updateWeight();
 
   // Signal strength update function
