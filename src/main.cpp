@@ -97,6 +97,12 @@ void setup() {
   }
   //Wait for BLE to finish intitalizing before starting WiFi
   delay(1500); 
+  
+  // ALWAYS enable WiFi power management for optimal battery life
+  // This works regardless of WiFi mode (STA/AP/OFF) and should be set early
+  WiFi.setSleep(true);
+  Serial.println("WiFi power management enabled for battery optimization");
+  
   setupWiFi();
 
   // Wait for WiFi to fully stabilize after BLE is already running

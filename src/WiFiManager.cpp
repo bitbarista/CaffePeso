@@ -169,10 +169,6 @@ void setupWiFi() {
     // Apply SuperMini antenna fix for boards with poor antenna design
     applySuperMiniAntennaFix();
     
-    // CRITICAL: Enable WiFi sleep mode for BLE coexistence (required when both WiFi and BLE are active)
-    WiFi.setSleep(true); // MUST be true when BLE is active
-    Serial.println("WiFi sleep enabled for BLE coexistence");
-    
     // Check if we have stored credentials - prioritize STA connection
     if (strlen(ssid) > 0) {
         Serial.println("=== ATTEMPTING STA CONNECTION ===");
