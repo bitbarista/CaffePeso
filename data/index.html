@@ -80,11 +80,17 @@
       </div>
     </div>
 
-    <!-- Real-time Weight & Flow Rate Graph -->
-    <div class="h-32 bg-gray-700 rounded-lg mt-2 p-2">
-      <canvas id="weightFlowChart" style="max-height: 112px;"></canvas>
-      <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-8">
-        Chart loading...
+    <!-- Real-time Weight & Flow Rate Graph - Prominent Container -->
+    <div class="bg-gray-800 rounded-xl p-4 border border-gray-600">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-white">Brewing Profile</h2>
+        <div class="text-xs text-gray-400">Real-time Weight & Flow Rate</div>
+      </div>
+      <div class="h-48 bg-gray-900 rounded-lg p-3">
+        <canvas id="weightFlowChart" style="width: 100%; height: 100%;"></canvas>
+        <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-16">
+          Chart loading...
+        </div>
       </div>
     </div>
 
@@ -218,10 +224,11 @@
             labels: {
               color: '#d1d5db', // Light gray text
               font: {
-                size: 10
+                size: 12
               },
               usePointStyle: true,
-              pointStyle: 'line'
+              pointStyle: 'line',
+              padding: 15
             }
           },
           tooltip: {
@@ -244,9 +251,9 @@
             ticks: {
               color: '#9ca3af',
               font: {
-                size: 9
+                size: 11
               },
-              maxTicksLimit: 6
+              maxTicksLimit: 8
             }
           },
           y: {
@@ -267,7 +274,7 @@
             ticks: {
               color: '#22c55e',
               font: {
-                size: 9
+                size: 11
               }
             }
           },
@@ -289,7 +296,7 @@
             ticks: {
               color: '#3b82f6',
               font: {
-                size: 9
+                size: 11
               }
             }
           }
