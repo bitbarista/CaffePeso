@@ -9,8 +9,64 @@
   <script src="/js/alpine.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  
+  <!-- RESPONSIVE LAYOUT CSS -->
+  <style>
+    /* Desktop: Your exact pixel control (768px and up) */
+    @media (min-width: 768px) {
+      .graph-container-responsive {
+        width: 700px !important;
+        height: 300px !important;
+        margin: 20px auto 0 auto !important;
+      }
+      .dashboard-container-responsive {
+        width: 700px !important;
+        margin: 0 auto !important;
+      }
+      .graph-canvas-responsive {
+        width: 660px !important;
+        height: 260px !important;
+      }
+    }
+    
+    /* Tablet: Compact but readable (481px - 767px) */
+    @media (max-width: 767px) and (min-width: 481px) {
+      .graph-container-responsive {
+        width: 350px !important;
+        height: 220px !important;
+        margin: 20px auto 0 auto !important;
+      }
+      .dashboard-container-responsive {
+        width: 90% !important;
+        margin: 0 auto !important;
+      }
+      .graph-canvas-responsive {
+        width: 310px !important;
+        height: 180px !important;
+      }
+    }
+    
+    /* Mobile: Optimized for small screens (480px and below) */
+    @media (max-width: 480px) {
+      .graph-container-responsive {
+        width: 95% !important;
+        height: 200px !important;
+        margin: 20px auto 0 auto !important;
+        padding: 15px !important;
+      }
+      .dashboard-container-responsive {
+        width: 95% !important;
+        margin: 0 auto !important;
+        padding: 15px !important;
+      }
+      .graph-canvas-responsive {
+        width: 280px !important;
+        height: 170px !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-black-background text-white font-sans flex items-center justify-center min-h-screen">
+<body class="bg-black-background text-white font-sans min-h-screen">
 
   <!-- Mobile Navigation (Hidden by default, shown on mobile) -->
   <div @click.away="open = false" class="md:hidden fixed top-0 left-0 right-0 z-50 bg-black-discord" x-data="{ open: false }">
@@ -44,18 +100,25 @@
     </nav>
   </div>
 
-  <!-- Real-time Weight & Flow Rate Graph - Full Width Independent Container -->
-  <div class="w-[99.5vw] max-w-none bg-gray-800 rounded-xl p-2 border border-gray-600 md:ml-64 mt-16 md:mt-4">
-    <div class="h-[80vh] bg-gray-900 rounded-lg p-1">
-      <canvas id="weightFlowChart" style="width: 100% !important; height: 100% !important; min-height: 600px !important; display: block !important;"></canvas>
-      <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-32">
-        Chart loading...
+  <!-- Content Layout - Graph Above Main Container -->
+  <div class="flex flex-col space-y-4 pt-4">
+    <!-- GRAPH CONTAINER - RESPONSIVE DESIGN -->
+    <!-- Desktop: 400px×250px | Tablet: 350px×220px | Mobile: 95%×200px -->
+    <div style="width: 400px; height: 250px; padding: 20px; margin: 20px auto 0 280px;" class="graph-container-responsive bg-black-select rounded-xl">
+      <div style="width: 100%; height: 100%;" class="bg-gray-900 rounded-lg">
+        <!-- GRAPH CANVAS - RESPONSIVE SIZING -->
+        <!-- Desktop: 360×210px | Tablet: 310×180px | Mobile: 280×170px -->
+        <canvas id="weightFlowChart" width="360" height="210" class="graph-canvas-responsive" style="display: block !important; margin: auto; border: none !important; outline: none !important;"></canvas>
+        <div id="chartError" class="hidden text-center text-gray-400 text-sm pt-32">
+          Chart loading...
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- Main Content - Expanded Layout for Large Graph -->
-  <div class="w-[95vw] max-w-6xl bg-black-select rounded-xl p-4 space-y-4 md:ml-64 mt-4 md:mt-4">
+<br>
+<br>
+    <!-- DASHBOARD CONTAINER - RESPONSIVE DESIGN -->
+    <!-- Desktop: 700px | Tablet: 90% | Mobile: 95% -->
+    <div style="width: 700px; padding: 20px; margin: 0 auto 0 280px;" class="dashboard-container-responsive bg-black-select rounded-xl space-y-4">
     <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
@@ -147,6 +210,7 @@
       <div id="updateStatus" class="text-xs text-gray-400"></div>
     </div>
   </div>
+  </div>
 
 <script>
   let decimalPlaces = 1;
@@ -158,7 +222,7 @@
     flowrate: [],
     time: []
   };
-  let maxDataPoints = 150; // Keep last 150 data points (15 seconds at 10Hz)
+  let maxDataPoints = 1200; // Keep last 1200 data points (2 minutes at 10Hz)
   
   // Initialize Chart.js when page loads
   function initializeChart() {
@@ -207,11 +271,10 @@
         }]
       },
       options: {
-        responsive: true,
+        responsive: false,
         maintainAspectRatio: false,
-        aspectRatio: 0.5,
         layout: {
-          padding: 10
+          padding: 5
         },
         interaction: {
           intersect: false,
@@ -312,12 +375,40 @@
       }
     });
     
-    // Force chart to use maximum size
+    // Responsive canvas sizing function
+    function updateCanvasSize() {
+      const canvas = document.getElementById('weightFlowChart');
+      if (!canvas) return;
+      
+      const screenWidth = window.innerWidth;
+      
+      if (screenWidth >= 768) {
+        // Desktop: Your exact pixel control
+        canvas.width = 360;
+        canvas.height = 210;
+      } else if (screenWidth >= 481) {
+        // Tablet: Compact but readable
+        canvas.width = 310;
+        canvas.height = 180;
+      } else {
+        // Mobile: Optimized for small screens
+        canvas.width = 280;
+        canvas.height = 170;
+      }
+      
+      // Force chart to resize
+      if (weightFlowChart) {
+        weightFlowChart.resize();
+      }
+    }
+    
+    // Force chart to use container size and setup responsive behavior
     if (weightFlowChart) {
       setTimeout(() => {
-        weightFlowChart.canvas.style.height = '100%';
-        weightFlowChart.canvas.style.width = '100%';
-        weightFlowChart.resize();
+        updateCanvasSize();
+        
+        // Listen for window resize events
+        window.addEventListener('resize', updateCanvasSize);
       }, 100);
     }
     
