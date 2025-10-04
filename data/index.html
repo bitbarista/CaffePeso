@@ -244,6 +244,9 @@
   };
   let maxDataPoints = 1200; // Keep last 1200 data points (2 minutes at 10Hz)
   
+  // Graph recording control - follows timer state
+  let isGraphRecording = false;
+  
   // Initialize Chart.js when page loads
   function initializeChart() {
     console.log('Initializing chart...');
@@ -467,8 +470,34 @@
     }
   }, 3000);
   
+  // Function to clear chart data
+  function clearChartData() {
+    try {
+      // Clear all data arrays
+      chartData.weight = [];
+      chartData.flowrate = [];
+      chartData.time = [];
+      
+      // Update chart to show empty state
+      if (weightFlowChart) {
+        weightFlowChart.data.labels = [];
+        weightFlowChart.data.datasets[0].data = [];
+        weightFlowChart.data.datasets[1].data = [];
+        weightFlowChart.update('none');
+        console.log('Chart data cleared');
+      }
+    } catch (error) {
+      console.error('Error clearing chart data:', error);
+    }
+  }
+  
   // Function to add data to chart
   function addChartData(weight, flowrate, timestamp) {
+    // Only add data to chart if graph is recording (timer is running)
+    if (!isGraphRecording) {
+      return; // Exit early if not recording
+    }
+    
     try {
       const timeLabel = new Date(timestamp).toLocaleTimeString('en-US', { 
         hour12: false, 
@@ -516,21 +545,37 @@
   function startTimer() {
     fetch('/api/timer/start', { method: 'POST' })
       .then(response => response.text())
-      .then(data => console.log("Timer started:", data))
+      .then(data => {
+        console.log("Timer started:", data);
+        // Start graph recording when timer starts
+        isGraphRecording = true;
+        console.log("Graph recording started");
+      })
       .catch(err => console.error("Timer start failed:", err));
   }
 
   function stopTimer() {
     fetch('/api/timer/stop', { method: 'POST' })
       .then(response => response.text())
-      .then(data => console.log("Timer stopped:", data))
+      .then(data => {
+        console.log("Timer stopped:", data);
+        // Stop graph recording when timer stops
+        isGraphRecording = false;
+        console.log("Graph recording stopped");
+      })
       .catch(err => console.error("Timer stop failed:", err));
   }
 
   function resetTimer() {
     fetch('/api/timer/reset', { method: 'POST' })
       .then(response => response.text())
-      .then(data => console.log("Timer reset:", data))
+      .then(data => {
+        console.log("Timer reset:", data);
+        // Reset graph when timer resets
+        isGraphRecording = false;
+        clearChartData();
+        console.log("Graph cleared and recording stopped");
+      })
       .catch(err => console.error("Timer reset failed:", err));
   }
 
@@ -608,6 +653,15 @@
         if (data.timer_display) {
           document.getElementById('timer').innerText = data.timer_display;
           document.getElementById('timerStatus').innerText = data.timer_running ? 'Running' : 'Stopped';
+          
+          // Sync graph recording state with server timer state
+          const previousRecordingState = isGraphRecording;
+          isGraphRecording = data.timer_running;
+          
+          // If timer state changed, log it
+          if (previousRecordingState !== isGraphRecording) {
+            console.log(`Graph recording ${isGraphRecording ? 'started' : 'stopped'} (synced with server timer)`);
+          }
           
           // Color code timer based on status
           const timerElement = document.getElementById('timer');
