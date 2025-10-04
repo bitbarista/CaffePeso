@@ -34,7 +34,7 @@
       .graph-container-responsive {
         width: 350px !important;
         height: 220px !important;
-        margin: 20px auto 0 auto !important;
+        margin: 80px auto 0 auto !important; /* Extra top margin for mobile nav */
       }
       .dashboard-container-responsive {
         width: 90% !important;
@@ -50,8 +50,8 @@
     @media (max-width: 480px) {
       .graph-container-responsive {
         width: 95% !important;
-        height: 200px !important;
-        margin: 20px auto 0 auto !important;
+        height: 250px !important; /* Taller for portrait */
+        margin: 80px auto 0 auto !important; /* Extra top margin for mobile nav */
         padding: 15px !important;
       }
       .dashboard-container-responsive {
@@ -59,9 +59,29 @@
         margin: 0 auto !important;
         padding: 15px !important;
       }
+      /* Mobile Portrait - Canvas uses percentage of container */
       .graph-canvas-responsive {
-        width: 280px !important;
-        height: 170px !important;
+        width: calc(100% - 20px) !important;
+        max-width: 280px !important;
+        height: 210px !important; /* Taller canvas for portrait */
+      }
+    }
+    
+    /* Mobile Landscape: Wider canvas for landscape */
+    @media (max-width: 480px) and (orientation: landscape),
+           (max-height: 480px) and (orientation: landscape) {
+      .graph-container-responsive {
+        width: 90% !important;
+        height: 200px !important; /* Even taller for better landscape viewing */
+        margin: 70px auto 0 auto !important; /* Top margin for mobile nav in landscape */
+      }
+      .graph-canvas-responsive {
+        width: calc(100% - 20px) !important;
+        max-width: 420px !important;
+        height: 160px !important; /* Taller canvas for landscape */
+      }
+      .dashboard-container-responsive {
+        padding: 10px !important; /* Reduced padding to save space */
       }
     }
   </style>
@@ -375,30 +395,17 @@
       }
     });
     
-    // Responsive canvas sizing function
+    // Responsive canvas sizing function - simplified to work with CSS
     function updateCanvasSize() {
       const canvas = document.getElementById('weightFlowChart');
       if (!canvas) return;
       
       const screenWidth = window.innerWidth;
       
-      if (screenWidth >= 768) {
-        // Desktop: Your exact pixel control
-        canvas.width = 360;
-        canvas.height = 210;
-      } else if (screenWidth >= 481) {
-        // Tablet: Compact but readable
-        canvas.width = 310;
-        canvas.height = 180;
-      } else {
-        // Mobile: Optimized for small screens
-        canvas.width = 280;
-        canvas.height = 170;
-      }
-      
-      // Force chart to resize
+      // Force chart to resize and let CSS handle the container sizing
       if (weightFlowChart) {
         weightFlowChart.resize();
+        console.log('Chart resized for screen width:', screenWidth);
       }
     }
     
@@ -407,8 +414,26 @@
       setTimeout(() => {
         updateCanvasSize();
         
-        // Listen for window resize events
-        window.addEventListener('resize', updateCanvasSize);
+        // Listen for multiple resize and orientation events
+        window.addEventListener('resize', () => {
+          console.log('Window resize detected');
+          setTimeout(updateCanvasSize, 100); // Small delay for orientation changes
+        });
+        
+        // Listen specifically for orientation changes
+        window.addEventListener('orientationchange', () => {
+          console.log('Orientation change detected');
+          setTimeout(updateCanvasSize, 200); // Longer delay for orientation
+        });
+        
+        // Screen orientation API if available
+        if (screen.orientation) {
+          screen.orientation.addEventListener('change', () => {
+            console.log('Screen orientation API change detected');
+            setTimeout(updateCanvasSize, 200);
+          });
+        }
+        
       }, 100);
     }
     
