@@ -2,8 +2,10 @@
 <img src="https://raw.githubusercontent.com/031devstudios/weighmybru/refs/heads/master/docs/assets/logo.png" alt="WeighMyBru Dashboard" width="500" height="745"/>
 </p>
 
-<p align="center">  <b>The smart coffee scale that doesn't break the bank!</b></p>
+<p align="center">  <b>The smart coffee scale that doesn't break the bank!<br>https://weighmybru.com</p>
 <br>
+
+
 
 [![](https://dcbadge.limes.pink/api/server/HYp4TSEjSf)](https://discord.gg/HYp4TSEjSf)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge)](LICENSE)
@@ -20,9 +22,9 @@ This scale was designed to be used in conjunction with GaggiMate, but can also b
 
 ## Documentation
 
-The documentation is currently being worked on. 
+The documentation, build video guide, flashing software etc. can be found on the website. 
 
-[WeighMyBru Docs](https://031devstudios.github.io/weighmybru-docs/)
+[WeighMyBru Guides](https://weighmybru.com/guides/)
 
 ## Features
 
@@ -76,6 +78,6 @@ Installation instructions are currently under development, for now follow the [l
 |  1  | Top                               |
 |  1  | ESP32 Clamp                       |
 |  1  | Screen Clamp                      |
-|  4  | washers (Used for HX711)          |
+|  4  | M2 Washers (Used for HX711)       |
 
 \* Bottom has 2 options - The supported option has engineered supports, while the standard option requires you to slice with your own supports.
