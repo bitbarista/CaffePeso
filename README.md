@@ -68,6 +68,25 @@ Installation instructions are currently under development, for now follow the [l
 ```
   this project requires VSCode with PlatformIO extension installed
 ```
+
+### Important: Filesystem Upload Required
+
+After uploading the firmware, you **must also upload the filesystem** for the web interface to work:
+
+```bash
+# Upload filesystem (required for web interface)
+pio run -t uploadfs
+
+# Or use the specific environment for your board
+pio run -e esp32s3-supermini -t uploadfs  # For ESP32-S3 Supermini
+pio run -e esp32s3-xiao -t uploadfs       # For XIAO ESP32S3
+```
+
+**Without the filesystem upload:**
+- The device will function normally for scale operations
+- The web interface will be unavailable
+- You'll see a clear message explaining how to fix this issue
+
 ## Bill Of Materials (BOM)
 
 | Qty |           Item                      | Amazon Link | Aliexpress Link |
