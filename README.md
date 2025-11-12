@@ -1,5 +1,5 @@
 <p align="center">
-<img src="docs/assets/weighmybru-logo.png" alt="WeighMyBru Dashboard" width="500" height="745"/>
+<img src="docs/assets/Weighmybru-logo.png" alt="WeighMyBru Dashboard" width="500" height="745"/>
 </p>
 
 <p align="center">  <b>The smart coffee scale that doesn't break the bank!<br>https://weighmybru.com</p>
