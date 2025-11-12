@@ -13,15 +13,16 @@
 #include "Display.h"
 #include "PowerManager.h"
 #include "BatteryMonitor.h"
+#include "BoardConfig.h"
 
-// Pins and calibration
-uint8_t dataPin = 5;   // HX711 Data pin (moved from 12)
-uint8_t clockPin = 6;  // HX711 Clock pin (moved from 11)
-uint8_t touchPin = 4;  // T0 - Confirmed working touch pin for tare
-uint8_t sleepTouchPin = 3;  // GPIO3 - Digital touch sensor for sleep functionality
-uint8_t batteryPin = 7;    // GPIO7 - Battery voltage monitoring (ADC1_CH6) - Safe GPIO
-uint8_t sdaPin = 8;    // I2C Data pin for display (moved from 5)
-uint8_t sclPin = 9;    // I2C Clock pin for display (moved from 6)
+// Board-specific pin configuration
+uint8_t dataPin = HX711_DATA_PIN;     // HX711 Data pin
+uint8_t clockPin = HX711_CLOCK_PIN;   // HX711 Clock pin  
+uint8_t touchPin = TOUCH_TARE_PIN;    // Touch sensor for tare
+uint8_t sleepTouchPin = TOUCH_SLEEP_PIN;  // Touch sensor for sleep functionality
+uint8_t batteryPin = BATTERY_PIN;     // Battery voltage monitoring
+uint8_t sdaPin = I2C_SDA_PIN;         // I2C Data pin for display
+uint8_t sclPin = I2C_SCL_PIN;         // I2C Clock pin for display
 float calibrationFactor = 4195.712891;
 Scale scale(dataPin, clockPin, calibrationFactor);
 FlowRate flowRate;
@@ -33,6 +34,13 @@ BatteryMonitor batteryMonitor(batteryPin);
 
 void setup() {
   Serial.begin(115200);
+  
+  // Board identification 
+  Serial.println("=================================");
+  Serial.printf("WeighMyBru² - %s\n", BOARD_NAME);
+  Serial.printf("Board: %s\n", BOARD_DESCRIPTION);
+  Serial.printf("Flash Size: %dMB\n", FLASH_SIZE_MB);
+  Serial.println("=================================");
   
   // Link scale and flow rate for tare operation coordination
   scale.setFlowRatePtr(&flowRate);

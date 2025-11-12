@@ -35,6 +35,26 @@ The documentation, build video guide, flashing software etc. can be found on the
 - Adjustable decimal point readings
 - Different modes for to cater for espresso and pour-overs
 
+## Dual Board Support
+
+WeighMyBru² now supports **two ESP32-S3 development boards**, giving you flexibility to choose based on your needs:
+
+### 🔧 ESP32-S3-DevKitC-1 (SuperMini)
+- **Standard development board** - breadboard friendly
+- **4MB Flash** - sufficient for all features
+- **Lower cost** - budget-friendly option
+- **Build Command**: `pio run -e esp32s3-supermini`
+
+### 🚀 XIAO ESP32S3 by Seeed Studio  
+- **Ultra-compact** - only 21x17.8mm
+- **8MB Flash** - extra storage space
+- **Premium design** - perfect for embedded projects
+- **Build Command**: `pio run -e esp32s3-xiao`
+
+Both boards use **identical pin assignments** and deliver the same excellent WeighMyBru² experience. Choose based on your size requirements and budget preferences.
+
+📖 **[Complete Board Comparison Guide](BOARD_SUPPORT.md)**
+
 ## GaggiMate
 
 GaggiMate now fully supports WeighMyBru scale.
