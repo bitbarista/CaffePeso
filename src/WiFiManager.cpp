@@ -23,6 +23,12 @@ static bool credentialsCached = false;
 static unsigned long lastCacheTime = 0;
 const unsigned long CACHE_TIMEOUT = 300000; // 5 minutes cache timeout
 
+// Filesystem status tracking
+static bool filesystemAvailable = false;
+static bool filesystemChecked = false;
+static unsigned long lastFilesystemError = 0;
+const unsigned long FILESYSTEM_ERROR_COOLDOWN = 30000; // Show error message every 30 seconds max
+
 // AP credentials
 const char* ap_ssid = "WeighMyBru-AP";
 const char* ap_password = "";
@@ -35,9 +41,64 @@ static wifi_mode_t previousWiFiMode = WIFI_OFF; // Store previous mode when disa
 unsigned long startAttemptTime = 0;
 const unsigned long timeout = 10000; // 10 seconds
 
+void checkFilesystemStatus() {
+    if (filesystemChecked) {
+        return; // Already checked
+    }
+    
+    // Test if filesystem/NVS is available
+    Preferences testPrefs;
+    if (testPrefs.begin("test", false)) {
+        testPrefs.end();
+        filesystemAvailable = true;
+        Serial.println("✓ Filesystem/NVS is available");
+    } else {
+        filesystemAvailable = false;
+        Serial.println("=================================");
+        Serial.println("⚠️  FILESYSTEM NOT AVAILABLE");
+        Serial.println("=================================");
+        Serial.println("The device filesystem has not been");
+        Serial.println("uploaded to the ESP32.");
+        Serial.println("");
+        Serial.println("To fix this, run:");
+        Serial.println("pio run -t uploadfs");
+        Serial.println("or upload filesystem via PlatformIO");
+        Serial.println("");
+        Serial.println("Device will work in AP mode until");
+        Serial.println("filesystem is uploaded.");
+        Serial.println("=================================");
+    }
+    filesystemChecked = true;
+}
+
+void showFilesystemErrorIfNeeded() {
+    if (filesystemAvailable) {
+        return; // No error to show
+    }
+    
+    unsigned long now = millis();
+    if (now - lastFilesystemError > FILESYSTEM_ERROR_COOLDOWN) {
+        Serial.println("⚠️  Filesystem not available - run 'pio run -t uploadfs'");
+        lastFilesystemError = now;
+    }
+}
+
 void saveWiFiCredentials(const char* ssid, const char* password) {
     Serial.println("Saving WiFi credentials...");
     unsigned long startTime = millis();
+    
+    checkFilesystemStatus();
+    
+    if (!filesystemAvailable) {
+        // Update cache even if we can't save to NVS
+        cachedSSID = String(ssid);
+        cachedPassword = String(password);
+        credentialsCached = true;
+        lastCacheTime = millis();
+        
+        Serial.println("INFO: WiFi credentials cached (filesystem unavailable for permanent storage)");
+        return;
+    }
     
     if (wifiPrefs.begin("wifi", false)) {
         wifiPrefs.putString("ssid", ssid);
@@ -52,7 +113,12 @@ void saveWiFiCredentials(const char* ssid, const char* password) {
         
         Serial.printf("WiFi credentials saved in %lu ms\n", millis() - startTime);
     } else {
-        Serial.println("ERROR: Failed to open WiFi preferences for writing");
+        showFilesystemErrorIfNeeded();
+        // Still update cache for this session
+        cachedSSID = String(ssid);
+        cachedPassword = String(password);
+        credentialsCached = true;
+        lastCacheTime = millis();
     }
 }
 
@@ -78,6 +144,17 @@ bool loadWiFiCredentialsFromEEPROM() {
     // Check if cache is still valid first (no serial output for speed)
     if (credentialsCached && (millis() - lastCacheTime < CACHE_TIMEOUT)) {
         return true;
+    }
+    
+    checkFilesystemStatus();
+    
+    if (!filesystemAvailable) {
+        // Use empty defaults if filesystem unavailable
+        cachedSSID = "";
+        cachedPassword = "";
+        credentialsCached = true;
+        lastCacheTime = millis();
+        return false;
     }
     
     unsigned long startTime = millis();
@@ -107,12 +184,12 @@ bool loadWiFiCredentialsFromEEPROM() {
         Serial.printf("WiFi: %s in %lums\n", success ? "OK" : "TIMEOUT", millis() - startTime);
         return success;
     } else {
+        showFilesystemErrorIfNeeded();
         // Use empty defaults if EEPROM fails
         cachedSSID = "";
         cachedPassword = "";
         credentialsCached = true;
         lastCacheTime = millis();
-        Serial.println("WiFi: EEPROM FAIL");
         return false;
     }
 }
@@ -595,20 +672,40 @@ bool loadWiFiEnabledState() {
         return wifiEnabled;
     }
     
+    // Check filesystem status first
+    checkFilesystemStatus();
+    
+    if (!filesystemAvailable) {
+        showFilesystemErrorIfNeeded();
+        wifiEnabled = true; // Default to enabled when filesystem unavailable
+        wifiEnabledCached = true;
+        return wifiEnabled;
+    }
+    
     if (wifiPrefs.begin("wifi", true)) {
         wifiEnabled = wifiPrefs.getBool("enabled", true); // Default to enabled
         wifiPrefs.end();
         wifiEnabledCached = true;
         Serial.printf("WiFi enabled state loaded: %s\n", wifiEnabled ? "ON" : "OFF");
     } else {
-        Serial.println("ERROR: Failed to load WiFi enabled state");
+        showFilesystemErrorIfNeeded();
         wifiEnabled = true; // Default to enabled on error
+        wifiEnabledCached = true;
     }
     
     return wifiEnabled;
 }
 
 void saveWiFiEnabledState(bool enabled) {
+    checkFilesystemStatus();
+    
+    if (!filesystemAvailable) {
+        // Can't save when filesystem unavailable, but update in-memory state
+        wifiEnabled = enabled;
+        wifiEnabledCached = true;
+        return;
+    }
+    
     if (wifiPrefs.begin("wifi", false)) {
         wifiPrefs.putBool("enabled", enabled);
         wifiPrefs.end();
@@ -616,7 +713,10 @@ void saveWiFiEnabledState(bool enabled) {
         wifiEnabledCached = true;
         Serial.printf("WiFi enabled state saved: %s\n", enabled ? "ON" : "OFF");
     } else {
-        Serial.println("ERROR: Failed to save WiFi enabled state");
+        showFilesystemErrorIfNeeded();
+        // Still update in-memory state
+        wifiEnabled = enabled;
+        wifiEnabledCached = true;
     }
 }
 
