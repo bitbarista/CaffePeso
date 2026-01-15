@@ -193,10 +193,8 @@ void BluetoothScale::initializeBLE() {
     
     advertising->addServiceUUID(SERVICE_UUID);
     
-    // Enable scan response to allow full device name in advertising
-    advertising->setScanResponse(true);
-    
-    // Explicitly set the advertising name to ensure full "WeighMyBru" appears
+    // Set device name directly in advertising packet to prevent double callbacks in GaggiMate
+    // This ensures single discovery event with complete device information
     advertising->setName("WeighMyBru");
     
     advertising->setMinPreferred(0x0);
