@@ -193,11 +193,10 @@ void BluetoothScale::initializeBLE() {
     
     advertising->addServiceUUID(SERVICE_UUID);
     
-    // Set device name directly in advertising packet to prevent double callbacks in GaggiMate
-    // This ensures single discovery event with complete device information
-    advertising->setName("WeighMyBru");
-    
-    advertising->setMinPreferred(0x0);
+    // Set proper connection interval preferences to avoid packet rejection
+    // and ensure reliable discovery on all ESP32-S3 variants
+    advertising->setMinPreferred(0x06);  // 7.5 ms minimum interval
+    advertising->setMaxPreferred(0x12);  // 22.5 ms maximum interval
     
     Serial.println("BluetoothScale: BLE initialization completed successfully");
 }
