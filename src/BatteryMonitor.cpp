@@ -94,7 +94,7 @@ int BatteryMonitor::getBatteryPercentage() {
         // 5% to 0% range
         percentage = (int)((voltage - BATTERY_EMPTY) / (BATTERY_CRITICAL - BATTERY_EMPTY) * 5);
     } else {
-        percentage = 0;  // Below protection circuit threshold
+        percentage = 0;  // Below 3.2V threshold
     }
     
     return constrain(percentage, 0, 100);
@@ -112,9 +112,9 @@ String BatteryMonitor::getBatteryStatus() {
     } else if (voltage >= BATTERY_LOW) {
         return "Low";         // 3.6V+ - Consider charging
     } else if (voltage >= BATTERY_CRITICAL) {
-        return "Critical";    // 3.5V+ - Charge immediately
+        return "Critical";    // 3.4V+ - Charge immediately
     } else {
-        return "Empty";       // <3.5V - Conservative empty threshold
+        return "Empty";       // <3.4V - Below critical threshold
     }
 }
 

@@ -187,6 +187,30 @@ void setup() {
   // Initialize battery monitor
   batteryMonitor.begin();
 
+  // Check for low battery - prevent boot if voltage too low
+  float batteryVoltage = batteryMonitor.getBatteryVoltage();
+  if (batteryVoltage < 3.2f && batteryVoltage > 0.1f) { // > 0.1f to avoid false readings
+    Serial.printf("CRITICAL: Battery voltage too low (%.2fV) - entering sleep\n", batteryVoltage);
+    
+    // Show simple battery low message on display
+    if (oledDisplay.isConnected()) {
+      String msg = "Bat Low " + String(batteryVoltage, 1) + "V";
+      oledDisplay.showMessage(msg, 3000);
+    }
+    
+    delay(3000); // Show message for 3 seconds
+    
+    // Force clear any display state and sleep immediately
+    if (oledDisplay.isConnected()) {
+      oledDisplay.clear();
+    }
+    
+    Serial.println("Forcing deep sleep now...");
+    esp_deep_sleep_start();
+  }
+  
+  Serial.printf("Battery voltage OK (%.2fV) - continuing boot\n", batteryVoltage);
+
   // Show IP addresses and welcome message if display is available
   delay(100); // Small delay to ensure WiFi is fully initialized
   if (oledDisplay.isConnected()) {

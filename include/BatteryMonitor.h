@@ -38,8 +38,8 @@ private:
     static constexpr float BATTERY_GOOD = 4.0f;      // ~75% - Reliable ESP32 operation
     static constexpr float BATTERY_NOMINAL = 3.8f;   // ~50% - Normal operation
     static constexpr float BATTERY_LOW = 3.6f;       // ~25% - Consider charging soon
-    static constexpr float BATTERY_CRITICAL = 3.5f;  // ~5%  - Charge immediately
-    static constexpr float BATTERY_EMPTY = 3.5f;     // 0%   - Conservative empty threshold
+    static constexpr float BATTERY_CRITICAL = 3.4f;  // ~5%  - Charge immediately
+    static constexpr float BATTERY_EMPTY = 3.2f;     // 0%   - Lower discharge threshold
     
     // Hardware configuration
     static constexpr float VOLTAGE_DIVIDER_RATIO = 2.0f;  // 100k + 100k resistors
