@@ -34,11 +34,23 @@
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <h2 class="text-2xl font-semibold mb-4">Firmware & Software Updates</h2>
       <ul class="list-disc list-inside text-lg mb-4">
-        <li>Current version: 2.2.0</li>
+        <li>Current version: <span id="firmware-version">Loading...</span></li>
+        <li>Hardcoded version: 2.2.0</li>
       </ul>
       <p class="text-base text-gray-200">Check back here for the latest updates to your WeighMyBru device. OTA coming soon.</p>
     </div>
   </main>
 </div>
+<script>
+// Fetch actual firmware version from API
+fetch('/api/dashboard')
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById('firmware-version').textContent = data.device_version || 'Unknown';
+  })
+  .catch(err => {
+    document.getElementById('firmware-version').textContent = 'Error loading';
+  });
+</script>
 </body>
 </html>
