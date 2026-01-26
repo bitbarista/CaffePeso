@@ -3,7 +3,7 @@
 
 // Manual version control (update these for releases)
 #define WEIGHMYBRU_VERSION_MAJOR 2
-#define WEIGHMYBRU_VERSION_MINOR 1
+#define WEIGHMYBRU_VERSION_MINOR 2
 #define WEIGHMYBRU_VERSION_PATCH 0
 #define WEIGHMYBRU_VERSION_PRERELEASE  // "", "beta", "rc1", etc.
 
