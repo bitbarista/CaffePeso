@@ -1,0 +1,3 @@
+Deployment test - January 26, 2026 21:44 UTC
+This file confirms that GitHub pushes are reaching Cloudflare.
+Version check: v2.2.0 should be showing in ESP32 Web Tools.
