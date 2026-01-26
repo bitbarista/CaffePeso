@@ -192,10 +192,9 @@ void setup() {
   if (batteryVoltage < 3.2f && batteryVoltage > 0.1f) { // > 0.1f to avoid false readings
     Serial.printf("CRITICAL: Battery voltage too low (%.2fV) - entering sleep\n", batteryVoltage);
     
-    // Show simple battery low message on display
+    // Show battery low message on display with large, centered formatting
     if (oledDisplay.isConnected()) {
-      String msg = "Bat Low " + String(batteryVoltage, 1) + "V";
-      oledDisplay.showMessage(msg, 3000);
+      oledDisplay.showBatteryLowMessage(batteryVoltage, 3000);
     }
     
     delay(3000); // Show message for 3 seconds

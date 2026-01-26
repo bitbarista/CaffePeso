@@ -19,6 +19,7 @@ public:
     void update();
     void showWeight(float weight);
     void showMessage(const String& message, int duration = 2000);
+    void showBatteryLowMessage(float voltage, int duration = 3000);
     void showSleepCountdown(int seconds); // Show sleep countdown in large format
     void showSleepMessage(); // Show initial sleep message with big/small text format
     void showGoingToSleepMessage(); // Show "Touch To / Wake Up" message like WeighMyBru Ready
