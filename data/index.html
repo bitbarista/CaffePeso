@@ -36,6 +36,13 @@
       }
     }
     
+    /* Push content below the fixed mobile nav bar */
+    @media (max-width: 767px) {
+      .content-wrapper {
+        padding-top: 60px;
+      }
+    }
+
     /* Mobile: all screens under 768px (phones + tablets in portrait) */
     @media (max-width: 767px) {
       .graph-container-responsive {
@@ -113,7 +120,7 @@
   </div>
 
   <!-- Content Layout - Graph Above Main Container -->
-  <div class="flex flex-col space-y-4 pt-24 md:pt-4">
+  <div class="flex flex-col space-y-4 content-wrapper">
     <!-- GRAPH CONTAINER - RESPONSIVE DESIGN -->
     <!-- Desktop: 400px×250px | Tablet: 350px×220px | Mobile: 95%×200px -->
     <div style="width: 400px; height: 250px; padding: 20px; margin: 20px auto 0 280px;" class="graph-container-responsive bg-black-select rounded-xl">
