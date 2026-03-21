@@ -41,7 +41,7 @@ private:
     unsigned long debounceDelay;
     unsigned long sleepCountdownStart;
     bool sleepCountdownActive;
-    bool longPressDetected;
+    int holdLevel; // 0=none, 1=status fired, 2=wifi fired, 3=sleep fired
     bool cancelledRecently;
     unsigned long cancelTime;
     unsigned long lastActivityTime;
@@ -61,11 +61,9 @@ private:
     void handleSleepTouch();
     void showSleepCountdown(int seconds);
     void handleStatusPage();
-    void handleWiFiToggle();
 
     static const unsigned long HOLD_STATUS_MS = 1000; // hold for status page
-    static const unsigned long HOLD_WIFI_MS   = 3000; // hold for WiFi toggle
-    static const unsigned long HOLD_SLEEP_MS  = 5000; // hold for sleep
+    static const unsigned long HOLD_SLEEP_MS  = 3000; // hold for sleep
 };
 
 #endif

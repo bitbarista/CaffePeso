@@ -15,7 +15,20 @@
   <script src="/js/alpine.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
   <link rel="stylesheet" href="/css/all.min.css">
-  
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+    .caffepeso-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1rem, 2.5vmin, 1.8rem);
+      font-weight: 700;
+      font-style: italic;
+      color: #f5e9dc;
+      text-decoration: none;
+    }
+  </style>
+
   <!-- RESPONSIVE LAYOUT CSS -->
   <style>
     html, body { overflow-x: hidden; max-width: 100%; }
@@ -28,7 +41,7 @@
       }
       .dashboard-container-responsive {
         width: 700px !important;
-        margin: 0 auto !important;
+        margin: 8px auto 0 auto !important;
       }
       .graph-canvas-responsive {
         width: 660px !important;
@@ -53,7 +66,7 @@
       }
       .dashboard-container-responsive {
         width: 95% !important;
-        margin: 0 auto !important;
+        margin: 8px auto 0 auto !important;
         padding: 12px !important;
       }
       .graph-canvas-responsive {
@@ -81,6 +94,8 @@
   </style>
   <style>
     #toast { transition: opacity 0.3s ease; }
+    #shotTable th, #shotTable td { text-align: right; padding: 4px 6px; }
+    #shotTable th:first-child, #shotTable td:first-child { text-align: left; }
   </style>
 </head>
 <body class="bg-black-background text-white font-sans min-h-screen">
@@ -90,7 +105,7 @@
   <!-- Mobile Navigation (Hidden by default, shown on mobile) -->
   <div @click.away="open = false" class="md:hidden fixed top-0 left-0 right-0 z-50 bg-black-discord" x-data="{ open: false }">
     <div class="flex justify-between items-center px-4 py-3">
-      <a href="#" class="text-lg font-semibold tracking-widest text-green-600 uppercase">CaffePeso</a>
+      <a href="#" class="caffepeso-title">CaffePeso</a>
       <button class="focus:outline-none" @click="open = !open">
         <svg fill="currentColor" viewBox="0 0 20 20" class="w-6 h-6">
           <path x-show="!open" fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" clip-rule="evenodd"></path>
@@ -109,7 +124,7 @@
   <!-- Desktop Navigation (Fixed sidebar) -->
   <div class="hidden md:flex md:flex-col md:w-64 md:fixed md:left-0 md:top-0 md:h-full bg-black-discord">
     <div class="px-8 py-4">
-      <a href="#" class="text-lg font-semibold tracking-widest text-green-600 uppercase">CaffePeso</a>
+      <a href="#" class="caffepeso-title">CaffePeso</a>
     </div>
     <nav class="flex-grow px-4 pb-4">
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg" href="/"><i class="fa fa-tachometer mr-2" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
@@ -120,7 +135,7 @@
   </div>
 
   <!-- Content Layout - Graph Above Main Container -->
-  <div class="flex flex-col space-y-4 content-wrapper">
+  <div class="flex flex-col content-wrapper">
     <!-- GRAPH CONTAINER - RESPONSIVE DESIGN -->
     <!-- Desktop: 400px×250px | Tablet: 350px×220px | Mobile: 95%×200px -->
     <div style="width: 400px; height: 250px; padding: 20px; margin: 20px auto 0 280px;" class="graph-container-responsive bg-black-select rounded-xl">
@@ -133,11 +148,9 @@
         </div>
       </div>
     </div>
-<br>
-<br>
     <!-- DASHBOARD CONTAINER - RESPONSIVE DESIGN -->
     <!-- Desktop: 700px | Tablet: 90% | Mobile: 95% -->
-    <div style="width: 700px; padding: 20px; margin: 0 auto 0 280px;" class="dashboard-container-responsive bg-black-select rounded-xl space-y-4">
+    <div style="width: 700px; padding: 20px; margin: 8px auto 0 280px;" class="dashboard-container-responsive bg-black-select rounded-xl space-y-4">
     <!-- Header with Title and Icons -->
     <div class="flex justify-between items-center">
       <h1 class="text-xl font-semibold">Dashboard</h1>
@@ -150,6 +163,10 @@
         <!-- Bluetooth signal strength indicator -->
         <div id="bluetoothSignalStatus" class="flex items-center" title="Bluetooth Connection Status">
           <i id="bluetoothIcon" class="fa fa-bluetooth" style="font-size: 14px; color: #9ca3af;"></i>
+        </div>
+        <!-- Scale connection status -->
+        <div class="flex items-center" title="Scale Status">
+          <i id="scaleStatus" class="fa fa-balance-scale" style="font-size: 14px; color: #22c55e;"></i>
         </div>
         <!-- Phone-style battery indicator -->
         <div id="batteryStatus" class="flex items-center space-x-1">
@@ -218,13 +235,6 @@
       </button>
     </div>
     
-    <!-- Scale Status Container -->
-    <div class="bg-black-select rounded-xl p-3 space-y-2 mt-2">
-      <div class="flex justify-center space-x-2">
-        <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
-      </div>
-    </div>
-
     <!-- Shot History -->
     <div class="mt-4">
       <div class="flex justify-between items-center mb-2">
@@ -251,6 +261,7 @@
     <!-- Status -->
     <div class="text-center">
     </div>
+    <p class="text-center text-xs mt-2 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
   </div>
   </div>
 
@@ -645,11 +656,11 @@
         // Update scale connection status
         const scaleStatus = document.getElementById('scaleStatus');
         if (data.scale_connected) {
-          scaleStatus.innerText = 'HX711 Connected';
-          scaleStatus.className = 'px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium';
+          scaleStatus.style.color = '#22c55e';
+          scaleStatus.parentElement.title = 'Scale Connected';
         } else {
-          scaleStatus.innerText = 'HX711 Disconnected';
-          scaleStatus.className = 'px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium';
+          scaleStatus.style.color = '#ef4444';
+          scaleStatus.parentElement.title = 'Scale Disconnected';
         }
         
         // Update battery status indicator

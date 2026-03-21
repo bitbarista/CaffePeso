@@ -22,7 +22,7 @@ For hardware build guides and video walkthroughs, see the [original project](htt
 
 ## Features
 
-- Web interface via Wi-Fi
+- Web interface via Wi-Fi (always-on; device sleeps to save power)
 - Bluetooth connectivity to GaggiMate
 - Calibration via web interface
 - Real-time flow rate display
@@ -32,6 +32,7 @@ For hardware build guides and video walkthroughs, see the [original project](htt
 - **Auto-re-arm** — scale recognises your cup and arms itself on the next shot
 - **Target yield alert** — OLED flashes and web UI turns amber when approaching your target ratio
 - **Shot history** — last 10 shots (dose, yield, time, ratio) stored in non-volatile memory
+- **Single-button timer control** — tap to start / pause / reset; hold for status page or sleep
 
 
 ## GaggiMate
@@ -53,13 +54,18 @@ For hardware assembly and wiring, see the [original project's guides](https://gi
 After uploading the firmware, you **must also upload the filesystem** for the web interface to work:
 
 ```bash
-# Upload filesystem (required for web interface)
-pio run -t uploadfs
+# Upload firmware (default environment: esp32s3-supermini)
+pio run --target upload
 
-# Or use the specific environment for your board
-pio run -e esp32s3-supermini -t uploadfs  # For ESP32-S3 Supermini
-pio run -e esp32s3-xiao -t uploadfs       # For XIAO ESP32S3
+# Upload filesystem (required for web interface)
+pio run --target uploadfs
+
+# For XIAO ESP32S3 explicitly:
+pio run -e esp32s3-xiao --target upload
+pio run -e esp32s3-xiao --target uploadfs
 ```
+
+> **Important:** Always flash firmware and filesystem using the same environment. Flashing the wrong board environment (e.g. xiao firmware onto a supermini) causes a boot crash due to flash size mismatch (4 MB vs 8 MB).
 
 **Without the filesystem upload:**
 - The device will function normally for scale operations
@@ -103,9 +109,12 @@ The enclosure design is identical to the original project. See the [original Wei
 This project is a derivative of [WeighMyBru](https://github.com/031devstudios/weighmybru2) by 031devstudios, licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 Additions in this fork:
+- CaffePeso branding — dark warm-brown web UI theme, Playfair Display italic title, OLED splash renamed
 - Armed auto-start: hold tare to arm timer; auto-triggers on first drip; auto-re-arms when same cup detected
 - Target yield alert: configurable brew ratio target; OLED flashes and web UI turns amber at approach
 - Cup weight persistence across reboots
 - Shot history: last 10 shots stored in NVS, displayed in web UI
+- Power button redesigned: tap cycles timer (start → pause → reset); hold 1 s shows status page; hold 3 s sleeps
+- Wi-Fi always-on: toggle removed; device sleeps to save power instead
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).

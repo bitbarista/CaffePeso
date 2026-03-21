@@ -12,9 +12,6 @@
 
 Preferences preferences;
 
-// Deferred WiFi disable — set from async callback, actioned in loop() via checkPendingWiFiDisable()
-static volatile bool wifiDisablePending = false;
-static unsigned long wifiDisableTime = 0;
 
 // Deferred restart — set after OTA completes, actioned in loop()
 static volatile bool restartPending = false;
@@ -641,49 +638,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "WiFi credentials cleared. Reboot to apply changes.");
   });
 
-  // WiFi Power Management endpoints
-  server.on("/api/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{";
-    json += "\"enabled\":" + String(isWiFiEnabled() ? "true" : "false") + ",";
-    json += "\"connected\":" + String((WiFi.status() == WL_CONNECTED) ? "true" : "false");
-    if (WiFi.status() == WL_CONNECTED) {
-      json += ",\"ssid\":\"" + WiFi.SSID() + "\"";
-    }
-    json += "}";
-    request->send(200, "application/json", json);
-  });
-
-  server.on("/api/wifi-toggle", HTTP_POST, [](AsyncWebServerRequest *request) {
-    bool currentlyEnabled = isWiFiEnabled() && WiFi.getMode() != WIFI_OFF;
-
-    if (currentlyEnabled) {
-      request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
-      // Defer actual disable to loop() so the response can be fully transmitted first
-      wifiDisablePending = true;
-      wifiDisableTime = millis();
-    } else {
-      enableWiFi();
-      request->send(200, "text/plain", "WiFi enabled");
-    }
-  });
-
-  server.on("/api/wifi-enable", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("enabled", true)) {
-      bool enabled = request->getParam("enabled", true)->value() == "true";
-      if (enabled) {
-        enableWiFi();
-        request->send(200, "text/plain", "WiFi enabled");
-      } else {
-        request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
-        // Defer actual disable to loop() so the response can be fully transmitted first
-        wifiDisablePending = true;
-        wifiDisableTime = millis();
-      }
-    } else {
-      request->send(400, "text/plain", "Missing enabled parameter");
-    }
-  });
-
   // WiFi Network Scanning
   server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     String scanResult = scanWiFiNetworks();
@@ -1071,20 +1025,13 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  // Only start the web server if WiFi is enabled
-  if (isWiFiEnabled()) {
-    server.begin();
-    Serial.println("Web server started - accessible via WiFi");
-  } else {
-    Serial.println("Web server NOT started - WiFi is disabled for battery saving");
-  }
+  server.begin();
+  Serial.println("Web server started - accessible via WiFi");
 }
 
 void startWebServer() {
-  if (isWiFiEnabled()) {
-    server.begin();
-    Serial.println("Web server started");
-  }
+  server.begin();
+  Serial.println("Web server started");
 }
 
 void stopWebServer() {
@@ -1093,11 +1040,6 @@ void stopWebServer() {
 }
 
 void checkPendingWiFiDisable() {
-  // Disable WiFi ~200ms after the response was queued, giving TCP time to flush
-  if (wifiDisablePending && (millis() - wifiDisableTime >= 200)) {
-    wifiDisablePending = false;
-    disableWiFi();
-  }
   // Restart after OTA ~500ms after response was queued
   if (restartPending && (millis() - restartTime >= 500)) {
     restartPending = false;

@@ -226,23 +226,6 @@ void setup() {
 
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager);
   
-  // CRITICAL: After full initialization, check if WiFi should be disabled
-  // This exactly replicates the tare button scenario: WiFi started, then disabled
-  Serial.println("=== POST-INITIALIZATION WiFi STATE CHECK ===");
-  if (!loadWiFiEnabledState()) {
-    Serial.println("WiFi should be disabled - applying clean shutdown like tare button");
-    Serial.println("(WiFi was initialized first, now disabling cleanly)");
-    
-    // Small delay to ensure all systems are stable (like tare button timing)
-    delay(100);
-    
-    // Now call disableWiFi() exactly like tare button does
-    disableWiFi();
-    
-    Serial.println("WiFi cleanly disabled - 0.05A power consumption expected");
-  } else {
-    Serial.println("WiFi should remain enabled - no action needed");
-  }
 }
 
 void loop() {
