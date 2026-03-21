@@ -1,7 +1,7 @@
 {
   "name": "WeighMyBru² ESP32-S3 Supermini",
   "version": "2.2.0",
-  "funding_url": "https://github.com/031devstudios/weighmybru2",
+  "funding_url": "https://github.com/bitbarista/weighmybru2",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

@@ -13,11 +13,11 @@ void BatteryMonitor::begin() {
     analogReadResolution(12);  // Use 12-bit resolution (0-4095)
     analogSetAttenuation(ADC_11db);  // 0-3.3V range for better accuracy
     
-    // Load calibration from preferences
+    // Load calibration scale from preferences
     preferences.begin("battery", false);
     loadCalibration();
     preferences.end();
-    
+
     // Take initial reading
     update();
     
@@ -47,22 +47,17 @@ void BatteryMonitor::update() {
 
 float BatteryMonitor::readRawVoltage() {
     // Take multiple readings for accuracy
-    int totalReading = 0;
+    uint32_t totalMillivolts = 0;
     const int samples = 10;
-    
+
     for (int i = 0; i < samples; i++) {
-        totalReading += analogRead(batteryPin);
+        totalMillivolts += analogReadMilliVolts(batteryPin);
         delayMicroseconds(100);  // Small delay between readings
     }
-    
-    int avgReading = totalReading / samples;
-    
-    // Convert ADC reading to voltage
-    float voltage = ((float)avgReading / ADC_RESOLUTION) * ADC_REFERENCE * VOLTAGE_DIVIDER_RATIO;
-    
-    // Apply calibration offset
-    voltage += calibrationOffset;
-    
+
+    // Convert factory-calibrated millivolts to battery voltage via divider ratio and scale correction
+    float voltage = (totalMillivolts / (float)samples / 1000.0f) * VOLTAGE_DIVIDER_RATIO * calibrationScale;
+
     return voltage;
 }
 
@@ -128,6 +123,29 @@ bool BatteryMonitor::isLowBattery() {
     return getBatteryVoltage() < BATTERY_LOW;
 }
 
+void BatteryMonitor::calibrateVoltage(float actualVoltage) {
+    // Compute scale factor from unscaled reading so we don't compound corrections
+    float unscaled = readRawVoltage() / calibrationScale;
+    if (unscaled > 0.1f) {
+        calibrationScale = actualVoltage / unscaled;
+        preferences.begin("battery", false);
+        saveCalibration();
+        preferences.end();
+        Serial.printf("Battery calibrated: scale = %.4f (measured %.3fV, actual %.3fV)\n",
+                      calibrationScale, unscaled, actualVoltage);
+    }
+}
+
+void BatteryMonitor::loadCalibration() {
+    calibrationScale = preferences.getFloat("cal_scale", 1.0f);
+    Serial.printf("Battery calibration loaded: scale = %.4f\n", calibrationScale);
+}
+
+void BatteryMonitor::saveCalibration() {
+    preferences.putFloat("cal_scale", calibrationScale);
+    Serial.println("Battery calibration saved");
+}
+
 bool BatteryMonitor::isCriticalBattery() {
     return getBatteryVoltage() < BATTERY_CRITICAL;
 }
@@ -147,24 +165,3 @@ int BatteryMonitor::getBatterySegments() {
     }
 }
 
-void BatteryMonitor::calibrateVoltage(float actualVoltage) {
-    float measuredVoltage = readRawVoltage() - calibrationOffset;  // Get uncalibrated reading
-    calibrationOffset = actualVoltage - measuredVoltage;
-    
-    // Save calibration
-    preferences.begin("battery", false);
-    saveCalibration();
-    preferences.end();
-    
-    Serial.printf("Battery calibrated: offset = %.3fV\n", calibrationOffset);
-}
-
-void BatteryMonitor::loadCalibration() {
-    calibrationOffset = preferences.getFloat("cal_offset", 0.0f);
-    Serial.printf("Battery calibration loaded: offset = %.3fV\n", calibrationOffset);
-}
-
-void BatteryMonitor::saveCalibration() {
-    preferences.putFloat("cal_offset", calibrationOffset);
-    Serial.println("Battery calibration saved");
-}

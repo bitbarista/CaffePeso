@@ -224,7 +224,7 @@ void setup() {
   // Link flow rate to touch sensor for averaging reset on tare
   touchSensor.setFlowRate(&flowRate);
 
-  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor);
+  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager);
   
   // CRITICAL: After full initialization, check if WiFi should be disabled
   // This exactly replicates the tare button scenario: WiFi started, then disabled
@@ -255,6 +255,13 @@ void loop() {
     float weight = scale.getWeight();
     flowRate.update(weight);
     lastWeightUpdate = millis();
+
+    // Reset inactivity timer on significant weight change (>0.5g)
+    static float lastActivityWeight = 0.0f;
+    if (fabs(weight - lastActivityWeight) > 0.5f) {
+      powerManager.notifyActivity();
+      lastActivityWeight = weight;
+    }
   }
   
   static unsigned long lastBLEUpdate = 0;
@@ -267,6 +274,8 @@ void loop() {
   
   // Maintain WiFi AP stability
   maintainWiFi();
+  checkPendingWiFiDisable();
+  checkPendingShotSave(oledDisplay, scale);
   
   // Update Bluetooth less frequently to reduce BLE interference and power usage
   if (millis() - lastBLEUpdate >= 100) { // Reduced from 50ms to 100ms (10Hz from 20Hz)

@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  <style>
+    html, body { overflow-x: hidden; max-width: 100%; }
+    @media (max-width: 767px) {
+      main { padding: 12px !important; }
+      .bg-black-select { max-width: 100% !important; box-sizing: border-box; }
+    }
+    #progressBar { transition: width 0.2s; }
+  </style>
 </head>
 <body class="bg-black-background text-white">
 
@@ -29,28 +37,166 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg dark-mode:bg-gray-700 dark-mode:hover:bg-black-discord dark-mode:focus:bg-black-select dark-mode:focus:text-stone-50 dark-mode:hover:text-stone-50 dark-mode:text-gray-500 hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:black-select focus:outline-none focus:shadow-outline" href="/updates.html"><i class="fa fa-upload mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
-  <main class="flex-grow overflow-y-auto p-8">
+  <main class="flex-grow overflow-y-auto p-4 md:p-8">
     <h1 class="text-3xl text-white font-bold mb-4">Updates</h1>
-    <div class="bg-black-select p-6 rounded shadow max-w-xl">
-      <h2 class="text-2xl font-semibold mb-4">Firmware & Software Updates</h2>
-      <ul class="list-disc list-inside text-lg mb-4">
-        <li>Current version: <span id="firmware-version">Loading...</span></li>
-        <li>Hardcoded version: 2.2.0</li>
-      </ul>
-      <p class="text-base text-gray-200">Check back here for the latest updates to your WeighMyBru device. OTA coming soon.</p>
+
+    <!-- Version Info -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-3">Device Version</h2>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="text-gray-400">Firmware Version:</div>
+        <div id="firmware-version" class="text-green-400 font-mono">Loading...</div>
+        <div class="text-gray-400">Board:</div>
+        <div id="firmware-board" class="font-mono">Loading...</div>
+        <div class="text-gray-400">Build Date:</div>
+        <div id="firmware-date" class="font-mono">Loading...</div>
+      </div>
     </div>
+
+    <!-- OTA Firmware Update -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-3"><i class="fa fa-microchip mr-2" style="color: rgb(71, 168, 100);"></i>Firmware Update (OTA)</h2>
+
+      <div class="bg-black-background p-4 rounded mb-4">
+        <h4 class="font-semibold mb-2 text-yellow-400"><i class="fa fa-exclamation-triangle mr-1"></i> Before updating:</h4>
+        <ol class="list-decimal list-inside text-sm space-y-1 text-gray-300">
+          <li>Do <strong>not</strong> power off or close this page during upload</li>
+          <li>The device will reboot automatically when complete</li>
+          <li>Select the <code class="bg-black-hover px-1 rounded">.bin</code> firmware file built by PlatformIO</li>
+        </ol>
+      </div>
+
+      <div id="otaMessage" class="text-green-400 mb-2 hidden"></div>
+      <div id="otaError" class="text-red-400 mb-2 hidden"></div>
+
+      <input type="file" id="firmwareFile" accept=".bin" class="block w-full text-sm text-gray-300 mb-4
+        file:mr-4 file:py-2 file:px-4 file:rounded file:border-0
+        file:text-sm file:font-semibold file:bg-gray-600 file:text-white
+        hover:file:bg-gray-500 cursor-pointer" />
+
+      <!-- Progress bar -->
+      <div id="progressContainer" class="hidden mb-4">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-gray-400">Uploading...</span>
+          <span id="progressPct" class="text-gray-400">0%</span>
+        </div>
+        <div class="w-full bg-gray-700 rounded-full h-3">
+          <div id="progressBar" class="bg-green-500 h-3 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <button id="uploadBtn" onclick="startOTA()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">
+        <i class="fa fa-upload mr-2"></i>Upload Firmware
+      </button>
+    </div>
+
   </main>
 </div>
 <script>
-// Fetch actual firmware version from API
 fetch('/api/dashboard')
-  .then(response => response.json())
+  .then(r => r.json())
   .then(data => {
     document.getElementById('firmware-version').textContent = data.device_version || 'Unknown';
+    document.getElementById('firmware-board').textContent = data.device_board || 'Unknown';
+    document.getElementById('firmware-date').textContent = data.device_build_date || 'Unknown';
   })
-  .catch(err => {
+  .catch(() => {
     document.getElementById('firmware-version').textContent = 'Error loading';
   });
+
+function startOTA() {
+  const fileInput = document.getElementById('firmwareFile');
+  const file = fileInput.files[0];
+  if (!file) {
+    showError('Please select a .bin firmware file first.');
+    return;
+  }
+  if (!file.name.endsWith('.bin')) {
+    showError('File must be a .bin firmware file.');
+    return;
+  }
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  document.getElementById('otaMessage').classList.add('hidden');
+  document.getElementById('otaError').classList.add('hidden');
+  document.getElementById('progressContainer').classList.remove('hidden');
+
+  const formData = new FormData();
+  formData.append('firmware', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/ota/firmware', true);
+
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+    }
+  };
+
+  xhr.onload = function() {
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('progressPct').textContent = '100%';
+    try {
+      const result = JSON.parse(xhr.responseText);
+      if (result.status === 'success') {
+        const msg = document.getElementById('otaMessage');
+        msg.textContent = '✓ ' + result.message + ' Reconnect in a few seconds.';
+        msg.classList.remove('hidden');
+        btn.textContent = 'Rebooting...';
+        // Poll for reconnection
+        setTimeout(waitForReconnect, 3000);
+      } else {
+        showError('Update failed: ' + result.message);
+        resetBtn();
+      }
+    } catch(e) {
+      showError('Unexpected response from device.');
+      resetBtn();
+    }
+  };
+
+  xhr.onerror = function() {
+    // Device likely rebooted mid-response — treat as potential success
+    const msg = document.getElementById('otaMessage');
+    msg.textContent = 'Upload complete. Device may be rebooting — reconnect in a few seconds.';
+    msg.classList.remove('hidden');
+    setTimeout(waitForReconnect, 4000);
+  };
+
+  xhr.send(formData);
+}
+
+function waitForReconnect() {
+  fetch('/api/dashboard')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('firmware-version').textContent = data.device_version || 'Unknown';
+      const msg = document.getElementById('otaMessage');
+      msg.textContent = '✓ Device back online. New version: ' + (data.device_version || 'Unknown');
+      document.getElementById('uploadBtn').disabled = false;
+      document.getElementById('uploadBtn').innerHTML = '<i class="fa fa-upload mr-2"></i>Upload Firmware';
+    })
+    .catch(() => setTimeout(waitForReconnect, 2000));
+}
+
+function showError(msg) {
+  const el = document.getElementById('otaError');
+  el.textContent = '❌ ' + msg;
+  el.classList.remove('hidden');
+}
+
+function resetBtn() {
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa fa-upload mr-2"></i>Upload Firmware';
+  document.getElementById('progressContainer').classList.add('hidden');
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressPct').textContent = '0%';
+}
 </script>
 </body>
 </html>

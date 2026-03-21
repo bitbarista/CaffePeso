@@ -237,7 +237,7 @@ Once everything is tested and working:
 
 If you encounter issues during deployment:
 
-- Check the [GitHub repository](https://github.com/031devstudios/weighmybru2) for updates
+- Check the [GitHub repository](https://github.com/bitbarista/weighmybru2) for updates
 - Join the [Discord community](https://discord.gg/HYp4TSEjSf) for help
 - Review ESP32 Web Tools [documentation](https://esphome.github.io/esp-web-tools/)
 

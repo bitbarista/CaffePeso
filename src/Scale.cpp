@@ -16,31 +16,31 @@ Scale::Scale(uint8_t dataPin, uint8_t clockPin, float calibrationFactor)
 bool Scale::begin() {
     Serial.println("Starting scale initialization...");
     
-    preferences.begin("scale", false);
-    calibrationFactor = preferences.getFloat("calib", calibrationFactor);
-    
-    // Load filtering parameters with load cell-specific defaults
-    loadFilterSettings();
-    
-    // Auto-adjust brewing threshold based on calibration factor and load cell characteristics
-    // Only if not previously saved by user (check if key exists)
-    if (!preferences.isKey("brew_thresh")) {
-        // For 3kg load cells (1mV/V): calibration factors typically 400-800
-        // For 500g load cells (2mV/V): calibration factors typically 2000-5000+
-        if (calibrationFactor < 1000) {
-            brewingThreshold = 0.25f;  // 3kg load cell with 1mV/V - needs higher threshold due to lower sensitivity
-            Serial.println("Auto-detected 3kg load cell (low calibration factor)");
-        } else if (calibrationFactor < 2500) {
-            brewingThreshold = 0.15f; // Medium sensitivity load cell
-            Serial.println("Auto-detected medium sensitivity load cell");
-        } else {
-            brewingThreshold = 0.1f;  // 500g load cell with 2mV/V - more sensitive, can use lower threshold
-            Serial.println("Auto-detected high sensitivity load cell (500g/2mV/V type)");
+    // Load calibration and check whether filter settings exist — all in one open/close
+    {
+        preferences.begin("scale", false);
+        calibrationFactor = preferences.getFloat("calib", calibrationFactor);
+        bool filterExists = preferences.isKey("brew_thresh");
+        preferences.end();
+
+        // Load filtering parameters (self-contained begin/end)
+        loadFilterSettings();
+
+        // Auto-adjust brewing threshold only if never saved by user
+        if (!filterExists) {
+            if (calibrationFactor < 1000) {
+                brewingThreshold = 0.25f;
+                Serial.println("Auto-detected 3kg load cell (low calibration factor)");
+            } else if (calibrationFactor < 2500) {
+                brewingThreshold = 0.15f;
+                Serial.println("Auto-detected medium sensitivity load cell");
+            } else {
+                brewingThreshold = 0.1f;
+                Serial.println("Auto-detected high sensitivity load cell (500g/2mV/V type)");
+            }
+            saveFilterSettings(); // self-contained begin/end, no nesting
         }
-        saveFilterSettings(); // Save auto-detected values
     }
-    
-    preferences.end();
     
     // Initialize HX711 with error handling
     Serial.println("Initializing HX711...");
@@ -276,8 +276,8 @@ void Scale::initializeSamples(float initialValue) {
 float Scale::medianFilter(int samples) {
     if (samples > MAX_SAMPLES) samples = MAX_SAMPLES;
     
-    // Copy recent readings
-    float temp[samples];
+    // Copy recent readings (MAX_SAMPLES is fixed, samples already bounded above)
+    float temp[MAX_SAMPLES];
     for (int i = 0; i < samples; i++) {
         int idx = (readingIndex - 1 - i + MAX_SAMPLES) % MAX_SAMPLES;
         temp[i] = readings[idx];
@@ -352,11 +352,12 @@ void Scale::saveFilterSettings() {
 }
 
 void Scale::loadFilterSettings() {
-    // Load with sensible defaults
+    preferences.begin("scale", true); // read-only
     brewingThreshold = preferences.getFloat("brew_thresh", 0.15f);
     stabilityTimeout = preferences.getULong("stab_timeout", 2000);
     medianSamples = preferences.getInt("median_samples", 3);
-    averageSamples = preferences.getInt("avg_samples", 2); // Reduced for faster response
+    averageSamples = preferences.getInt("avg_samples", 2);
+    preferences.end();
 }
 
 void Scale::setFlowRatePtr(FlowRate* flowRatePtr) {

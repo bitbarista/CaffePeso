@@ -8,6 +8,19 @@
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  <style>
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #4b5563; border-radius: 9999px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; top: 2px; background: white; border-radius: 50%; transition: .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: #16a34a; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    html, body { overflow-x: hidden; max-width: 100%; }
+    @media (max-width: 767px) {
+      main { padding: 12px !important; }
+      .bg-black-select { max-width: 100% !important; box-sizing: border-box; }
+    }
+  </style>
 </head>
 <body class="bg-black-background text-white">
 
@@ -29,7 +42,7 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/updates.html"><i class="fa fa-upload mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
-  <main class="flex-grow overflow-y-auto p-8">
+  <main class="flex-grow overflow-y-auto p-4 md:p-8">
     <h1 class="text-3xl text-white font-bold mb-4">Settings</h1>
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <h2 class="text-2xl font-semibold mb-4">WiFi Configuration</h2>
@@ -55,8 +68,10 @@
         <input type="text" id="ssid" name="ssid" required class="w-full px-3 py-2 mb-4 rounded text-black" placeholder="Enter network name or select from scan above" />
         <label for="password" class="block mb-2">Password:</label>
         <input type="password" id="password" name="password" required class="w-full px-3 py-2 mb-4 rounded text-black" />
-        <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save WiFi Settings</button>
-        <button type="button" onclick="clearWiFiCredentials()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-2">Clear WiFi Credentials</button>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save WiFi Settings</button>
+          <button type="button" onclick="clearWiFiCredentials()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Clear WiFi Credentials</button>
+        </div>
       </form>
       <div id="message" class="text-green-400 mb-2"></div>
       <p id="status" class="text-red-400 mb-4"></p>
@@ -67,6 +82,11 @@
           <option value="0">0</option>
           <option value="1">1</option>
           <option value="2">2</option>
+        </select>
+        <label for="displayMode" class="block mb-2 mt-4">OLED layout:</label>
+        <select id="displayMode" name="displayMode" class="w-full px-2 py-1 rounded text-black mb-4">
+          <option value="0">Standard — weight + timer + flow rate</option>
+          <option value="1">Weight focus — full-screen weight when idle, split when timer runs</option>
         </select>
         <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded ml-2">Save Display Settings</button>
       </form>
@@ -94,58 +114,180 @@
         <span class="text-gray-400 ml-2">samples</span>
         <p class="text-gray-400 text-sm mb-4">Number of samples for average filter when stable (1-50)</p>
         
-        <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Filter Settings</button>
-        <button type="button" onclick="resetFilterSettings()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded ml-2">Reset to Defaults</button>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Filter Settings</button>
+        </div>
       </form>
       <div id="filterMessage" class="text-green-400 mb-2"></div>
       <p id="filterStatus" class="text-red-400"></p>
+
+      <h2 class="text-2xl font-semibold mb-4 mt-8">Sleep Settings</h2>
+      <form id="sleepForm" class="mb-6">
+        <div class="mb-4 p-4 bg-black-hover rounded">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="text-sm font-semibold">Auto Sleep</span>
+              <p class="text-gray-400 text-sm">Automatically sleep after a period of inactivity</p>
+            </div>
+            <label class="toggle-switch ml-4">
+              <input type="checkbox" id="sleepEnabled" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <label for="sleepTimeout" class="block mb-2 text-sm">Timeout Duration:</label>
+          <div class="flex items-center">
+            <input type="number" id="sleepTimeout" name="sleepTimeout" step="1" min="1" max="60" value="10" class="w-24 px-3 py-2 rounded text-black" />
+            <span class="text-gray-400 ml-2">minutes</span>
+          </div>
+          <p class="text-gray-400 text-sm mt-2">Time without weight change or touch input before sleeping (1–60 min)</p>
+        </div>
+        <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Sleep Settings</button>
+      </form>
+      <div id="sleepMessage" class="text-green-400 mb-2"></div>
+      <p id="sleepStatus" class="text-red-400"></p>
+
+      <h2 class="text-2xl font-semibold mb-4 mt-8">Brew Automation</h2>
+
+      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div>
+            <span class="text-sm font-semibold">Auto-Tare on Vessel Placement</span>
+            <p class="text-gray-400 text-sm">Automatically tare when a stable weight is placed on the scale</p>
+          </div>
+          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+            <input type="checkbox" id="autoTareEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <label for="autoTareThreshold" class="block mb-1 text-sm">Minimum weight to trigger (g):</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" id="autoTareThreshold" step="1" min="5" max="500" value="20" class="w-24 px-3 py-2 rounded text-black" />
+          <span class="text-gray-400 text-sm">grams</span>
+        </div>
+        <p class="text-gray-400 text-sm mt-2">Weight must be stable for ~0.6s before taring</p>
+      </div>
+
+      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div>
+            <span class="text-sm font-semibold">Post-Brew Idle Reset</span>
+            <p class="text-gray-400 text-sm">After brew finishes, auto-reset and re-tare if no weight change</p>
+          </div>
+          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+            <input type="checkbox" id="idleResetEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <label for="idleResetTimeout" class="block mb-1 text-sm">Idle timeout:</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" id="idleResetTimeout" step="5" min="5" max="300" value="30" class="w-24 px-3 py-2 rounded text-black" />
+          <span class="text-gray-400 text-sm">seconds</span>
+        </div>
+      </div>
+
+      <div class="mb-6 p-4 rounded" style="background:#1a1a1a;">
+        <span class="text-sm font-semibold">Target Yield Ratio</span>
+        <p class="text-gray-400 text-sm mb-3">Flash OLED and highlight web weight when approaching target yield (0 = disabled)</p>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" id="targetRatio" step="0.1" min="0" max="20" value="0" class="w-24 px-3 py-2 rounded text-black" />
+          <span class="text-gray-400 text-sm">e.g. 2.0 for a 1:2 ratio</span>
+        </div>
+      </div>
+
+      <button type="button" onclick="saveBrewAutomation()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Brew Automation</button>
+      <div id="automationMessage" class="text-green-400 mt-2 mb-4"></div>
+
+      <div class="mt-8 pt-6 border-t border-gray-700">
+        <button type="button" onclick="resetFilterSettings()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Reset Filter Defaults</button>
+        <p class="text-gray-400 text-sm mt-2">Resets filtering settings to factory defaults</p>
+      </div>
     </div>
   </main>
 </div>
 <script>
-    // Load all settings in a single API call for faster loading
+    // Load all settings
     Promise.all([
       fetch('/api/settings').then(r => r.json()),
-      fetch('/api/filter-settings').then(r => r.json())
-    ]).then(([settingsData, filterData]) => {
-      // Set WiFi credentials
+      fetch('/api/filter-settings').then(r => r.json()),
+      fetch('/api/sleep-settings').then(r => r.json()),
+      fetch('/api/display-mode').then(r => r.json()),
+      fetch('/api/auto-tare-settings').then(r => r.json()),
+      fetch('/api/idle-reset-settings').then(r => r.json()),
+      fetch('/api/target-ratio').then(r => r.json())
+    ]).then(([settingsData, filterData, sleepData, displayModeData, atData, irData, trData]) => {
       document.getElementById('ssid').value = settingsData.ssid || '';
       document.getElementById('password').value = settingsData.password || '';
-      
-      // Set decimal setting
-      if (settingsData.decimals !== undefined) {
+      if (settingsData.decimals !== undefined)
         document.getElementById('decimals').value = settingsData.decimals;
-      }
-      
-      // Set filter settings
+      if (displayModeData.mode !== undefined)
+        document.getElementById('displayMode').value = displayModeData.mode;
       document.getElementById('brewingThreshold').value = filterData.brewingThreshold || 0.15;
       document.getElementById('stabilityTimeout').value = filterData.stabilityTimeout || 2000;
       document.getElementById('medianSamples').value = filterData.medianSamples || 3;
       document.getElementById('averageSamples').value = filterData.averageSamples || 5;
+      document.getElementById('sleepEnabled').checked = sleepData.enabled !== false;
+      document.getElementById('sleepTimeout').value = sleepData.timeoutMinutes || 10;
+      document.getElementById('autoTareEnabled').checked = atData.enabled === true;
+      document.getElementById('autoTareThreshold').value = atData.threshold || 20;
+      document.getElementById('idleResetEnabled').checked = irData.enabled === true;
+      document.getElementById('idleResetTimeout').value = irData.timeoutSeconds || 30;
+      document.getElementById('targetRatio').value = trData.target_ratio || 0;
     }).catch(err => {
       console.error('Error loading settings:', err);
-      // Fallback to individual API calls if combined endpoint fails
       loadSettingsIndividually();
     });
 
     // Fallback function for individual API calls
     function loadSettingsIndividually() {
-      // Load WiFi and decimal settings in parallel
       Promise.all([
         fetch('/api/wifi-creds').then(r => r.json()),
         fetch('/api/decimal-setting').then(r => r.json()),
-        fetch('/api/filter-settings').then(r => r.json())
-      ]).then(([wifiData, decimalData, filterData]) => {
+        fetch('/api/filter-settings').then(r => r.json()),
+        fetch('/api/sleep-settings').then(r => r.json()),
+        fetch('/api/display-mode').then(r => r.json()),
+        fetch('/api/auto-tare-settings').then(r => r.json()),
+        fetch('/api/idle-reset-settings').then(r => r.json()),
+        fetch('/api/target-ratio').then(r => r.json())
+      ]).then(([wifiData, decimalData, filterData, sleepData, displayModeData, atData, irData, trData]) => {
         document.getElementById('ssid').value = wifiData.ssid || '';
         document.getElementById('password').value = wifiData.password || '';
-        if (decimalData.decimals !== undefined) {
+        if (decimalData.decimals !== undefined)
           document.getElementById('decimals').value = decimalData.decimals;
-        }
+        if (displayModeData.mode !== undefined)
+          document.getElementById('displayMode').value = displayModeData.mode;
         document.getElementById('brewingThreshold').value = filterData.brewingThreshold || 0.15;
         document.getElementById('stabilityTimeout').value = filterData.stabilityTimeout || 2000;
         document.getElementById('medianSamples').value = filterData.medianSamples || 3;
         document.getElementById('averageSamples').value = filterData.averageSamples || 5;
+        document.getElementById('sleepEnabled').checked = sleepData.enabled !== false;
+        document.getElementById('sleepTimeout').value = sleepData.timeoutMinutes || 10;
+        document.getElementById('autoTareEnabled').checked = atData.enabled === true;
+        document.getElementById('autoTareThreshold').value = atData.threshold || 20;
+        document.getElementById('idleResetEnabled').checked = irData.enabled === true;
+        document.getElementById('idleResetTimeout').value = irData.timeoutSeconds || 30;
+        document.getElementById('targetRatio').value = trData.target_ratio || 0;
       }).catch(err => console.error('Error loading individual settings:', err));
+    }
+
+    async function saveBrewAutomation() {
+      try {
+        await Promise.all([
+          fetch('/api/auto-tare-settings', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'enabled=' + document.getElementById('autoTareEnabled').checked +
+                  '&threshold=' + document.getElementById('autoTareThreshold').value }),
+          fetch('/api/idle-reset-settings', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'enabled=' + document.getElementById('idleResetEnabled').checked +
+                  '&timeoutSeconds=' + document.getElementById('idleResetTimeout').value }),
+          fetch('/api/target-ratio', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'target_ratio=' + document.getElementById('targetRatio').value })
+        ]);
+        document.getElementById('automationMessage').textContent = 'Brew automation settings saved.';
+      } catch(err) {
+        document.getElementById('automationMessage').textContent = 'Error: ' + err.message;
+      }
     }
 
     // Handle WiFi form submission
@@ -238,15 +380,26 @@
     document.getElementById('displayForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const decimals = document.getElementById('decimals').value;
-      const params = new URLSearchParams();
-      params.append('decimals', decimals);
-      const response = await fetch('/api/decimal-setting', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString()
-      });
-      const result = await response.text();
-      document.getElementById('displayMessage').textContent = result;
+      const mode = document.getElementById('displayMode').value;
+      try {
+        const [r1, r2] = await Promise.all([
+          fetch('/api/decimal-setting', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'decimals=' + decimals
+          }),
+          fetch('/api/display-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'mode=' + mode
+          })
+        ]);
+        const t1 = await r1.text();
+        const t2 = await r2.text();
+        document.getElementById('displayMessage').textContent = (r1.ok && r2.ok) ? 'Display settings saved.' : (t1 + ' ' + t2);
+      } catch (err) {
+        document.getElementById('displayMessage').textContent = 'Error: ' + err.message;
+      }
     });
 
     // Handle filter settings
@@ -402,6 +555,31 @@
       div.textContent = text;
       return div.innerHTML;
     }
+
+    // Handle sleep settings
+    document.getElementById('sleepForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams();
+      params.append('enabled', document.getElementById('sleepEnabled').checked ? 'true' : 'false');
+      params.append('timeoutMinutes', document.getElementById('sleepTimeout').value);
+      try {
+        const response = await fetch('/api/sleep-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+          document.getElementById('sleepMessage').textContent = 'Sleep settings saved.';
+          document.getElementById('sleepStatus').textContent = '';
+        } else {
+          document.getElementById('sleepStatus').textContent = 'Error saving sleep settings.';
+          document.getElementById('sleepMessage').textContent = '';
+        }
+      } catch (err) {
+        document.getElementById('sleepStatus').textContent = 'Error saving sleep settings.';
+      }
+    });
 
     // Initialize WiFi status on page load
     loadWiFiStatus();
