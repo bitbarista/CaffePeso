@@ -1,19 +1,15 @@
-<p align="center">
-<img src="docs/assets/Weighmybru-logo.png" alt="WeighMyBru Dashboard" width="500" height="745"/>
-</p>
+<p align="center"><!-- Logo placeholder — add your own image to docs/assets/logo.png and update this line --></p>
 
-<p align="center">  <b>The smart coffee scale that doesn't break the bank!</p>
-<br>
+<h1 align="center">WeighMyBru²</h1>
+
+<p align="center">The smart coffee scale that doesn't break the bank!</p>
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge)](LICENSE)
 
 This is a fork of [WeighMyBru²](https://github.com/031devstudios/weighmybru2) by 031DevStudios, with additional brewing automation features. It is a smart coffee scale with a web interface hosted on the ESP32-S3, designed to work alongside GaggiMate or as a standalone scale. Inspired by [EspressiScale](https://www.espressiscale.com) with a low-cost, easily sourceable non-custom PCB approach.
 
-<br>
-<br>
 <p>
-<img src="docs/assets/dashboard.jpg" alt="WeighMyBru Dashboard" width="250" />
-<img src="docs/assets/weighmybru.jpg" alt="WeighMyBru Dashboard" width="700" />
+<img src="docs/assets/weighmybru.jpg" alt="WeighMyBru² hardware" width="700" />
 </p>
 
 ## Documentation
