@@ -186,7 +186,7 @@ jobs:
         EOF
         
     - name: Upload release artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: weighmybru-${{ env.BOARD_SUFFIX }}-v${{ steps.version.outputs.VERSION }}
         path: release/
@@ -199,7 +199,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Extract version from tag
       id: version
