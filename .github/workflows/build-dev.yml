@@ -51,9 +51,7 @@ jobs:
         # Set build flags for development builds
         export PLATFORMIO_BUILD_FLAGS="\
           -DWEIGHMYBRU_BUILD_NUMBER=${{ steps.build_info.outputs.BUILD_NUMBER }} \
-          -DWEIGHMYBRU_COMMIT_HASH=\\\"${{ steps.build_info.outputs.COMMIT_HASH }}\\\" \
-          -DWEIGHMYBRU_BUILD_DATE=\\\"${{ steps.build_info.outputs.BUILD_DATE }}\\\" \
-          -DWEIGHMYBRU_BUILD_TIME=\\\"${{ steps.build_info.outputs.BUILD_TIME }}\\\""
+          -DWEIGHMYBRU_COMMIT_HASH=\\\"${{ steps.build_info.outputs.COMMIT_HASH }}\\\""
         
         echo "Building ${{ matrix.environment }} with flags: $PLATFORMIO_BUILD_FLAGS"
         
