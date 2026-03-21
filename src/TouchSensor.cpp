@@ -166,11 +166,11 @@ void TouchSensor::checkDelayedTare() {
                     displayPtr->arm(preTareWeightCapture);
                     Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", preTareWeightCapture);
                 } else {
-                    // Tap-tare: reset timer if brew just finished
-                    if (displayPtr->isTimerPaused()) {
+                    // Tap-tare: reset timer if not mid-brew (covers both stopped and paused states)
+                    if (!displayPtr->isTimerRunning()) {
                         displayPtr->resetTimer();
                         if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();
-                        Serial.println("Timer reset on tare after brew");
+                        Serial.println("Timer reset on tare");
                     }
                     // Auto-re-arm: if pre-tare weight matches saved cup weight ±5g
                     float saved = displayPtr->getSavedTareWeight();
