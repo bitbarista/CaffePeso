@@ -6,6 +6,10 @@ node_modules/
 .vscode/ipch
 .vscode/settings.json
 
+# Local-only reference files (not for distribution)
+cad/
+BOM.md
+
 # Build outputs
 build-output/
 *.bin
