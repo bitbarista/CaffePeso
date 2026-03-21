@@ -241,42 +241,7 @@ void Display::update() {
             }
         }
 
-        if (displayMode == 1 && flowRatePtr != nullptr) {
-            float fr = flowRatePtr->getFlowRate(); // positive only — removing weight must not trigger brew
-            bool flowing = fr > BREW_FLOW_THRESHOLD;
-
-            if (!timerRunning) {
-                // Waiting for brew to start (or previous brew paused — new flow resets and starts fresh)
-                if (flowing) {
-                    if (flowAboveThresholdSince == 0) {
-                        flowAboveThresholdSince = millis();
-                        // Start averaging immediately so the sustain window is included
-                        if (flowRatePtr != nullptr) flowRatePtr->startTimerAveraging();
-                    } else if (millis() - flowAboveThresholdSince >= BREW_SUSTAIN_MS) {
-                        // If previous brew stats are showing, clear them before starting new brew
-                        if (timerPaused) resetTimer();
-                        startTimer();
-                        // Backdate timer to true brew start (when flow was first detected)
-                        timerStartTime = flowAboveThresholdSince;
-                        flowAboveThresholdSince = 0;
-                    }
-                } else {
-                    if (flowAboveThresholdSince != 0) {
-                        // Flow dropped before sustain — cancel pending detection
-                        if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();
-                        flowAboveThresholdSince = 0;
-                    }
-                }
-            }
-        }
-
-        // Mode 1: full-screen weight only when timer is fully reset (not running AND not paused)
-        // When paused (brew finished), keep split layout so user can read elapsed time
-        if (displayMode == 1 && !timerRunning && !timerPaused) {
-            showWeightFull(weight);
-        } else {
-            showWeightWithFlowAndTimer(weight);
-        }
+        showWeightWithFlowAndTimer(weight);
     }
 }
 
@@ -917,202 +882,36 @@ void Display::showWeightWithTimer(float weight) - REMOVED FUNCTION
 Function removed as part of mode simplification - unified into showWeightWithFlowAndTimer()
 */
 
-// Mode 1: weight fills the full 128x32 screen when the timer is stopped.
-// Integer part in size-4 (24px tall, centred vertically in 32px).
-// Decimal point (size 1) and decimal digits (size 2) right-justified to the integer.
-void Display::showWeightFull(float weight) {
+// Layout (128x32):
+//   y=0..15  (16px): weight size 2, left-aligned
+//   y=16..23 ( 8px): gap
+//   y=24..31 ( 8px): timer+"T" left | running ratio centre | flow right
+//                    (centre ratio only when timer running and dose set;
+//                     right shows final ratio when paused, flow otherwise)
+void Display::showWeightWithFlowAndTimer(float weight) {
     if (!displayConnected) return;
     if (showingMessage) return;
 
     display->clearDisplay();
 
-    // Deadband: treat very small values as zero
+    // --- Weight: size 2, centred, top row ---
     float displayWeight = weight;
     if (weight >= -0.1f && weight <= 0.1f) displayWeight = 0.0f;
-
-    bool isNegative = displayWeight < 0.0f;
-    float absWeight = fabs(displayWeight);
-
-    // Round to configured decimal places
-    int multiplier = 1;
-    if (weightDecimals == 1) multiplier = 10;
-    else if (weightDecimals == 2) multiplier = 100;
-    float rounded = (int)(absWeight * multiplier + 0.5f) / (float)multiplier;
-
-    int integerPart = (int)rounded;
-    int decimalPart = (int)((rounded - integerPart) * multiplier + 0.5f);
-
-    // Build integer string (with leading minus if needed)
-    String intStr = isNegative ? ("-" + String(integerPart)) : String(integerPart);
-
-    // Size-4 glyph is 24px tall; centre it in the 32px screen
-    const int SIZE4_H = 24;
-    int intY = (SCREEN_HEIGHT - SIZE4_H) / 2; // = 4
-
-    // Measure integer width at size 4
-    int16_t bx, by;
-    uint16_t intW, intH;
-    display->setTextSize(4);
-    display->getTextBounds(intStr, 0, 0, &bx, &by, &intW, &intH);
-
-    // Build decimal string
-    String decStr;
-    if (weightDecimals > 0) {
-        if (weightDecimals == 2 && decimalPart < 10) decStr = "0" + String(decimalPart);
-        else decStr = String(decimalPart);
-    }
-
-    // Measure decimal point (size 1) and decimal digits (size 2)
-    uint16_t dotW = 0, dotH, decDigW = 0, decDigH;
-    if (weightDecimals > 0) {
-        display->setTextSize(1);
-        display->getTextBounds(".", 0, 0, &bx, &by, &dotW, &dotH);
-        display->setTextSize(2);
-        display->getTextBounds(decStr, 0, 0, &bx, &by, &decDigW, &decDigH);
-    }
-
-    // Total width of the number
-    uint16_t totalW = intW + dotW + decDigW;
-
-    // Centre the whole number horizontally
-    int startX = (SCREEN_WIDTH - totalW) / 2;
-
-    // Draw integer part (size 4)
-    display->setTextSize(4);
-    display->setCursor(startX, intY);
-    display->print(intStr);
-
-    if (weightDecimals > 0) {
-        int dotX = startX + intW;
-
-        // Decimal point at size 1, dropped to near baseline of size-4 text
-        display->setTextSize(1);
-        display->setCursor(dotX, intY + SIZE4_H - 8); // 8 = size-1 glyph height
-        display->print(".");
-
-        // Decimal digits at size 2, baseline-aligned with size-4
-        const int SIZE2_H = 16;
-        display->setTextSize(2);
-        display->setCursor(dotX + dotW, intY + SIZE4_H - SIZE2_H);
-        display->print(decStr);
-    }
-
-    display->display();
-}
-
-void Display::showWeightWithFlowAndTimer(float weight) {
-    // Return early if display is not connected
-    if (!displayConnected) {
-        return;
-    }
-    
-    // If we're showing a message, don't override it with weight display
-    if (showingMessage) {
-        return;
-    }
-    
-    // Declare variables used throughout function
-    int16_t x1, y1;
-    uint16_t w, h;
-    
-    display->clearDisplay();
-    
-    // Apply deadband to prevent flickering between 0.0g and -0.0g
-    float displayWeight = weight;
-    if (weight >= -0.1 && weight <= 0.1) {
-        displayWeight = 0.0;
-    }
-    
-    // Split weight into integer and decimal parts for custom rendering
-    bool isNegative = displayWeight < 0;
-    float absWeight = abs(displayWeight);
-
-    // Round to configured decimal places before splitting
-    int multiplier = 1;
-    if (weightDecimals == 1) multiplier = 10;
-    else if (weightDecimals == 2) multiplier = 100;
-    float rounded = (int)(absWeight * multiplier + 0.5) / (float)multiplier;
-
-    int integerPart = (int)rounded;
-    int decimalPart = (int)((rounded - integerPart) * multiplier + 0.5);
-
-    // Draw weight with custom decimal point - positioned at left middle
-    display->setTextSize(3);
-    int weightY = 5; // Middle of 32-pixel screen (size 3 text is ~21px tall, so (32-21)/2 ≈ 5)
-    display->setCursor(0, weightY);
-
-    // Draw negative sign if needed
-    int currentX = 0;
-    if (isNegative) {
-        display->print("-");
-        // Calculate width of "-" in size 3
-        display->getTextBounds("-", 0, 0, &x1, &y1, &w, &h);
-        currentX += w;
-    }
-
-    // Draw integer part in size 3
-    String intStr = String(integerPart);
-    display->setCursor(currentX, weightY);
-    display->print(intStr);
-
-    // Calculate position after integer part
-    display->getTextBounds(intStr, 0, 0, &x1, &y1, &w, &h);
-    currentX += w;
-
-    if (weightDecimals > 0) {
-        // Draw smaller decimal point (size 1) positioned to align with baseline
-        display->setTextSize(1);
-        display->setCursor(currentX, weightY + 11); // Offset from weight baseline for alignment
-        display->print(".");
-        display->getTextBounds(".", 0, 0, &x1, &y1, &w, &h);
-        currentX += w;
-
-        // Build decimal string (pad with leading zero for 2 decimals: "05" not "5")
-        String decStr;
-        if (weightDecimals == 2 && decimalPart < 10) {
-            decStr = "0" + String(decimalPart);
-        } else {
-            decStr = String(decimalPart);
-        }
-
-        // Draw decimal digit(s) in size 2 for better readability
-        display->setTextSize(2);
-        display->setCursor(currentX, weightY + 3); // Positioned relative to weight baseline
-        display->print(decStr);
-    }
-    
-    // Right side: Timer and flow rate stacked (size 2)
+    String weightStr = String(displayWeight, weightDecimals);
+    int16_t wx, wy;
+    uint16_t ww, wh;
     display->setTextSize(2);
-    
-    // Get timer value and format without "s"
-    float currentTime = getTimerSeconds();
-    
-    // Get flow rate: show average g/s after brew stops, live g/s while brewing
-    float currentFlowRate = 0.0;
-    if (flowRatePtr != nullptr) {
-        if (timerPaused && flowRatePtr->hasTimerAverage()) {
-            currentFlowRate = flowRatePtr->getTimerAverageFlowRate(); // final average
-        } else {
-            currentFlowRate = flowRatePtr->getFlowRate(); // live
-        }
-    }
+    display->getTextBounds(weightStr, 0, 0, &wx, &wy, &ww, &wh);
+    display->setCursor((SCREEN_WIDTH - ww) / 2, 0);
+    display->print(weightStr);
 
-    // Apply deadband to flow rate
-    float displayFlowRate = currentFlowRate;
-    if (currentFlowRate >= -0.1 && currentFlowRate <= 0.1) {
-        displayFlowRate = 0.0;
-    }
-    
-    // === CUSTOM TIMER RENDERING ===
-    // Format: M:SS when >= 60s, otherwise SS.t (tenths)
-    float absTimer = fabs(currentTime);
+    // --- Timer string (M:SS or SS.t) ---
+    float absTimer = fabs(getTimerSeconds());
     String timerStr;
     if (absTimer >= 60.0f) {
         int totalSec = (int)absTimer;
-        int mins = totalSec / 60;
-        int secs = totalSec % 60;
         char buf[8];
-        snprintf(buf, sizeof(buf), "%d:%02d", mins, secs);
+        snprintf(buf, sizeof(buf), "%d:%02d", totalSec / 60, totalSec % 60);
         timerStr = String(buf);
     } else {
         int timerSec = (int)absTimer;
@@ -1123,81 +922,60 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         timerStr = String(buf);
     }
 
-    // Calculate timer position with "T" label at far right
-    uint16_t timerStrWidth, timerH, timerLabelWidth;
-    display->setTextSize(2);
-    display->getTextBounds(timerStr, 0, 0, &x1, &y1, &timerStrWidth, &timerH);
+    // --- Bottom row (y=24): timer size 1 left + "T"; flow/ratio size 1 right ---
+    int16_t x1, y1;
+    uint16_t timerW, timerH;
     display->setTextSize(1);
-    display->getTextBounds("T", 0, 0, &x1, &y1, &timerLabelWidth, &timerH);
-
-    int timerLabelX = SCREEN_WIDTH - timerLabelWidth;
-    int timerStartX = timerLabelX - timerStrWidth;
-
-    // Draw timer string (size 2)
-    display->setTextSize(2);
-    display->setCursor(timerStartX, 0);
+    display->getTextBounds(timerStr, 0, 0, &x1, &y1, &timerW, &timerH);
+    display->setCursor(0, 24);
     display->print(timerStr);
-
-    // Draw "T" label at far right (size 1)
-    display->setTextSize(1);
-    display->setCursor(timerLabelX, 0);
+    display->setCursor(timerW + 1, 24);
     display->print("T");
-    
-    // === BOTTOM-RIGHT: ratio when brew finished, flow rate while brewing ===
-    bool showRatio = timerPaused && doseWeight > 1.0f && weight > 0.5f;
 
-    if (showRatio) {
-        char ratioBuf[10];
-        snprintf(ratioBuf, sizeof(ratioBuf), "1:%.1f", weight / doseWeight);
-        uint16_t ratioW, ratioH, rLabelW, rLabelH;
-        display->setTextSize(2);
-        display->getTextBounds(ratioBuf, 0, 0, &x1, &y1, &ratioW, &ratioH);
-        display->setTextSize(1);
-        display->getTextBounds("R", 0, 0, &x1, &y1, &rLabelW, &rLabelH);
-        int rLabelX = SCREEN_WIDTH - rLabelW;
-        display->setTextSize(2);
-        display->setCursor(rLabelX - ratioW, 16);
-        display->print(ratioBuf);
-        display->setTextSize(1);
-        display->setCursor(rLabelX, 16);
-        display->print("R");
-    } else {
-        // === CUSTOM FLOW RATE RENDERING ===
-        bool flowNegative = displayFlowRate < 0;
-        float absFlow = fabs(displayFlowRate);
-        int flowInteger = (int)absFlow;
-        int flowDecimal = (int)((absFlow - flowInteger) * 10 + 0.5);
-
-        if (flowDecimal >= 10) { flowInteger++; flowDecimal = 0; }
-
-        display->setTextSize(2);
-        String flowIntStr = String(flowInteger);
-        if (flowNegative) flowIntStr = "-" + flowIntStr;
-
-        uint16_t flowIntWidth, flowDecWidth, flowH, flowLabelWidth;
-        display->getTextBounds(flowIntStr, 0, 0, &x1, &y1, &flowIntWidth, &flowH);
-        display->setTextSize(1);
-        display->getTextBounds("F", 0, 0, &x1, &y1, &flowLabelWidth, &flowH);
-        display->getTextBounds(".", 0, 0, &x1, &y1, &w, &flowH);
-        uint16_t flowDotWidth = w;
-        display->getTextBounds(String(flowDecimal), 0, 0, &x1, &y1, &flowDecWidth, &flowH);
-
-        int flowLabelX = SCREEN_WIDTH - flowLabelWidth;
-        int flowStartX = flowLabelX - flowIntWidth - flowDotWidth - flowDecWidth;
-
-        display->setTextSize(2);
-        display->setCursor(flowStartX, 16);
-        display->print(flowIntStr);
-        display->setTextSize(1);
-        display->setCursor(flowStartX + flowIntWidth, 23);
-        display->print(".");
-        display->setCursor(flowStartX + flowIntWidth + flowDotWidth, 23);
-        display->print(String(flowDecimal));
-        display->setTextSize(1);
-        display->setCursor(flowLabelX, 16);
-        display->print("F");
+    // --- Centre: running ratio (timer running, dose set, weight positive) ---
+    bool showRunningRatio = !timerPaused && doseWeight > 1.0f && weight > 0.5f;
+    if (showRunningRatio) {
+        char buf[10];
+        snprintf(buf, sizeof(buf), "1:%.1f", weight / doseWeight);
+        uint16_t w, h;
+        display->getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+        display->setCursor((SCREEN_WIDTH - w) / 2, 24);
+        display->print(buf);
     }
-    
+
+    // --- Right: flow rate (brewing) or final ratio (paused) ---
+    float currentFlowRate = 0.0f;
+    if (flowRatePtr != nullptr) {
+        if (timerPaused && flowRatePtr->hasTimerAverage()) {
+            currentFlowRate = flowRatePtr->getTimerAverageFlowRate();
+        } else {
+            currentFlowRate = flowRatePtr->getFlowRate();
+        }
+    }
+    if (currentFlowRate >= -0.1f && currentFlowRate <= 0.1f) currentFlowRate = 0.0f;
+
+    bool showFinalRatio = timerPaused && doseWeight > 1.0f && weight > 0.5f;
+
+    if (showFinalRatio) {
+        char buf[12];
+        snprintf(buf, sizeof(buf), "1:%.1fR", weight / doseWeight);
+        uint16_t w, h;
+        display->getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+        display->setCursor(SCREEN_WIDTH - w, 24);
+        display->print(buf);
+    } else {
+        float absFlow = fabs(currentFlowRate);
+        int flowInt = (int)absFlow;
+        int flowDec = (int)((absFlow - flowInt) * 10 + 0.5f);
+        if (flowDec >= 10) { flowInt++; flowDec = 0; }
+        char buf[12];
+        snprintf(buf, sizeof(buf), currentFlowRate < 0 ? "-%d.%dF" : "%d.%dF", flowInt, flowDec);
+        uint16_t w, h;
+        display->getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+        display->setCursor(SCREEN_WIDTH - w, 24);
+        display->print(buf);
+    }
+
     display->display();
 }
 

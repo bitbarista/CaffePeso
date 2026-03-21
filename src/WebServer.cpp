@@ -59,30 +59,6 @@ void setCachedDecimals(int decimals) {
     }
 }
 
-// Cache for display mode (0=standard, 1=weight-focus)
-static int cachedDisplayMode = -1;
-
-int getCachedDisplayMode() {
-    if (cachedDisplayMode != -1) return cachedDisplayMode;
-    if (preferences.begin("display", false)) {
-        cachedDisplayMode = preferences.getInt("disp_mode", 0);
-        preferences.end();
-    } else {
-        cachedDisplayMode = 0;
-    }
-    return cachedDisplayMode;
-}
-
-void setCachedDisplayMode(int mode) {
-    if (preferences.begin("display", false)) {
-        preferences.putInt("disp_mode", mode);
-        preferences.end();
-        cachedDisplayMode = mode;
-    } else {
-        Serial.println("ERROR: Failed to save display mode to NVS");
-    }
-}
-
 // Dose weight — manually set by user, persisted so it survives reboots
 static float cachedDoseWeight = 0.0f;
 static bool  doseWeightCached = false;
@@ -374,8 +350,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   Serial.println("Pre-caching settings for faster page loads...");
   getCachedDecimals();        // This will cache the decimal setting
   display.setWeightDecimals(getCachedDecimals()); // Push cached value to display
-  getCachedDisplayMode();     // Cache display mode
-  display.setDisplayMode(getCachedDisplayMode()); // Push cached value to display
   display.setDoseWeight(getCachedDoseWeight()); // Restore persisted dose weight
   loadAutoTareSettings(display);   // Cache and apply auto-tare settings
   loadIdleResetSettings(display);  // Cache and apply idle-reset settings
@@ -694,24 +668,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
       request->send(200, "text/plain", "Decimal setting saved.");
     } else {
       request->send(400, "text/plain", "Missing decimals parameter");
-    }
-  });
-
-  server.on("/api/display-mode", HTTP_GET, [](AsyncWebServerRequest *request) {
-    int mode = getCachedDisplayMode();
-    request->send(200, "application/json", "{\"mode\":" + String(mode) + "}");
-  });
-
-  server.on("/api/display-mode", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    if (request->hasParam("mode", true)) {
-      int mode = request->getParam("mode", true)->value().toInt();
-      if (mode < 0) mode = 0;
-      if (mode > 1) mode = 1;
-      setCachedDisplayMode(mode);
-      display.setDisplayMode(mode);
-      request->send(200, "text/plain", "Display mode saved.");
-    } else {
-      request->send(400, "text/plain", "Missing mode parameter");
     }
   });
 

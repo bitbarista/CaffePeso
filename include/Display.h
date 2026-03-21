@@ -35,9 +35,6 @@ public:
     void clear();
     void setBrightness(uint8_t brightness);
     void setWeightDecimals(int decimals) { weightDecimals = decimals; }
-    void setDisplayMode(int mode) { displayMode = mode; }
-    int  getDisplayMode() const   { return displayMode; }
-
     // Auto-tare on vessel placement
     void setAutoTareEnabled(bool en)       { autoTareEnabled = en; }
     void setAutoTareThreshold(float grams) { autoTareThreshold = grams; }
@@ -104,7 +101,6 @@ private:
     Adafruit_SSD1306* display;
     bool displayConnected; // Track if display is actually connected
     int weightDecimals = 1; // Configurable decimal places (0, 1, or 2)
-    int displayMode = 0;    // 0=standard split, 1=weight-focus (big weight when idle, auto-switches on flow)
     static constexpr float BREW_FLOW_THRESHOLD = 0.5f;    // g/s to trigger brew display
     static const unsigned long BREW_SUSTAIN_MS   = 2000; // flow must sustain this long before timer starts
     unsigned long flowAboveThresholdSince = 0;            // millis() when flow first exceeded threshold
@@ -174,8 +170,7 @@ private:
     static const unsigned long STATUS_PAGE_TIMEOUT = 10000; // 10 seconds timeout
     
     void drawWeight(float weight);
-    void showWeightFull(float weight);             // Mode 1: weight fills full screen (timer stopped)
-    void showWeightWithFlowAndTimer(float weight); // Main display showing weight, flow rate, and timer
+    void showWeightWithFlowAndTimer(float weight); // Two-row layout: weight top, timer+flow/ratio bottom
     void setupDisplay();
     void drawBluetoothStatus(); // Draw Bluetooth connection status icon
     void drawBatteryStatus(); // Draw battery status with 3-segment indicator
