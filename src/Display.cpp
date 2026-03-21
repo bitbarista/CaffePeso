@@ -706,7 +706,7 @@ void Display::showIPAddresses() {
     display->print(line2);
     
     display->display();
-    delay(1000); // Show ready message for 1 second, then continue to normal display
+    delay(2000); // Show ready message long enough to read
 }
 
 void Display::clear() {
