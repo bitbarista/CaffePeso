@@ -124,10 +124,10 @@ jobs:
         
         # Determine board-specific settings
         if [[ "$BOARD_SUFFIX" == "supermini" ]]; then
-          BOARD_NAME="WeighMyBru² - ESP32-S3 Supermini"
+          BOARD_NAME="CaffePeso - ESP32-S3 Supermini"
           CHIP_FAMILY="ESP32-S3"
         else
-          BOARD_NAME="WeighMyBru² - XIAO ESP32S3"  
+          BOARD_NAME="CaffePeso - XIAO ESP32S3"  
           CHIP_FAMILY="ESP32-S3"
         fi
         
@@ -138,7 +138,7 @@ jobs:
           "version": "$VERSION", 
           "home_assistant_domain": "weighmybru",
           "new_install_prompt_erase": true,
-          "funding_url": "https://github.com/bitbarista/weighmybru2",
+          "funding_url": "https://github.com/bitbarista/caffepeso",
           "builds": [
             {
               "chipFamily": "$CHIP_FAMILY",
@@ -239,13 +239,13 @@ jobs:
 
           ### 🚀 Installation Options
 
-          1. **Web-based (Recommended):** Use the [flash page](https://bitbarista.github.io/weighmybru2)
+          1. **Web-based (Recommended):** Use the [flash page](https://bitbarista.github.io/caffepeso)
           2. **Manual:** Download binaries and flash with esptool or PlatformIO
 
           ### 📋 Requirements
           - ESP32-S3 Supermini or XIAO ESP32S3 board
           - Load cell and HX711 amplifier
-          - See [README.md](https://github.com/bitbarista/weighmybru2/blob/master/README.md) for wiring
+          - See [README.md](https://github.com/bitbarista/caffepeso/blob/master/README.md) for wiring
 
           ### 🔧 Build Information
           - Build: #${{ github.run_number }}
@@ -265,19 +265,19 @@ jobs:
     - name: Update website manifests with absolute release URLs
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
-        BASE_URL="https://github.com/bitbarista/weighmybru2/releases/download/v${VERSION}"
+        BASE_URL="https://github.com/bitbarista/caffepeso/releases/download/v${VERSION}"
 
         for BOARD in supermini xiao; do
           if [[ "$BOARD" == "supermini" ]]; then
-            BOARD_NAME="WeighMyBru² - ESP32-S3 Supermini"
+            BOARD_NAME="CaffePeso - ESP32-S3 Supermini"
           else
-            BOARD_NAME="WeighMyBru² - XIAO ESP32S3"
+            BOARD_NAME="CaffePeso - XIAO ESP32S3"
           fi
           cat > website/releases/latest/manifest-${BOARD}.json << EOF
         {
           "name": "${BOARD_NAME}",
           "version": "${VERSION}",
-          "funding_url": "https://github.com/bitbarista/weighmybru2",
+          "funding_url": "https://github.com/bitbarista/caffepeso",
           "builds": [
             {
               "chipFamily": "ESP32-S3",
