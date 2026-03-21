@@ -9,10 +9,10 @@
 #include <Preferences.h>
 
 Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate)
-    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr), wifiManagerPtr(nullptr),
+    : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr),
       messageStartTime(0), messageDuration(2000), showingMessage(false), 
       timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false),
-      lastFlowRate(0.0), showingStatusPage(false), statusPageStartTime(0) {
+      showingStatusPage(false), statusPageStartTime(0) {
     display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 }
 
@@ -76,24 +76,14 @@ bool Display::begin() {
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -285,11 +275,6 @@ void Display::showMessage(const String& message, int duration) {
     }
     
     display->display();
-    
-    // Update duration for this message
-    if (duration > 0) {
-        // We'll check this in update() method
-    }
 }
 
 void Display::showBatteryLowMessage(float voltage, int duration) {
@@ -298,7 +283,6 @@ void Display::showBatteryLowMessage(float voltage, int duration) {
         return;
     }
     
-    // Show battery low message in same format as WeighMyBru Starting message
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
@@ -309,24 +293,14 @@ void Display::showBatteryLowMessage(float voltage, int duration) {
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -349,7 +323,6 @@ void Display::showSleepCountdown(int seconds) {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show countdown in same large format as WeighMyBru Ready
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
@@ -360,24 +333,14 @@ void Display::showSleepCountdown(int seconds) {
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -394,11 +357,9 @@ void Display::showSleepMessage() {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show sleep message with large top line and small bottom line
+    // Large top line, small bottom line (different sizes so handled separately)
     display->clearDisplay();
     display->setTextColor(SSD1306_WHITE);
-    
-    // First line: "Sleep in 3" in large text (size 2)
     display->setTextSize(2);
     String line1 = "Sleeping..";
     
@@ -410,16 +371,12 @@ void Display::showSleepMessage() {
     display->setCursor(centerX1, 0);
     display->print(line1);
     
-    // Second line: "Touch to cancel" in small text (size 1)
     display->setTextSize(1);
     String line2 = "Touch to cancel";
-    
     uint16_t w2, h2;
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position small text at bottom (24 pixels from top gives us 8 pixels for the text)
-    display->setCursor(centerX2, 24);
+    display->setCursor(centerX2, 24); // size-1 text at bottom row
     display->print(line2);
     
     display->display();
@@ -436,36 +393,23 @@ void Display::showGoingToSleepMessage() {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show "Touch To / Wake Up" in same format as WeighMyBru Ready
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    
-    // Calculate text positioning for centering
     String line1 = "Touch To";
     String line2 = "Wake Up";
     
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions - tighter spacing for size 2 text
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines closer together to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -482,36 +426,23 @@ void Display::showSleepCancelledMessage() {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show "Sleep / Cancelled" in same format as WeighMyBru Ready
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    
-    // Calculate text positioning for centering
     String line1 = "Sleep";
     String line2 = "Cancelled";
     
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions - tighter spacing for size 2 text
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines closer together to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -528,37 +459,23 @@ void Display::showTaringMessage() {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show "Taring..." in same format as WeighMyBru Ready
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    
-    // Since "Taring..." is a single word, we'll center it on one line
-    // For consistency with WeighMyBru style, we can split it as "Taring" and "..."
     String line1 = "Taring";
     String line2 = "...";
     
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions - tighter spacing for size 2 text
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines closer together to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -575,91 +492,28 @@ void Display::showTaredMessage() {
     messageStartTime = millis();
     showingMessage = true;
     
-    // Show "Tared!" in same format as WeighMyBru Ready
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    
-    // Split "Tared!" into two lines for better visual impact
     String line1 = "Scale";
     String line2 = "Tared!";
     
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions - tighter spacing for size 2 text
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines closer together to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
 }
 
-void Display::showWiFiStatusMessage(bool isEnabled) {
-    // Return early if display is not connected
-    if (!displayConnected) {
-        return;
-    }
-    
-    // Set message state to prevent weight display interference
-    currentMessage = isEnabled ? "WiFi enabling" : "WiFi disabling";
-    messageStartTime = millis();
-    showingMessage = true;
-    
-    // Show WiFi status in same format as WeighMyBru Ready
-    display->clearDisplay();
-    display->setTextSize(2);
-    display->setTextColor(SSD1306_WHITE);
-    
-    String line1, line2;
-    if (isEnabled) {
-        line1 = "Turning";
-        line2 = "WiFi On";
-    } else {
-        line1 = "Turning";
-        line2 = "WiFi Off";
-    }
-    
-    int16_t x1, y1;
-    uint16_t w1, h1, w2, h2;
-    
-    // Get text bounds for both lines
-    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
-    display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions
-    int centerX1 = (SCREEN_WIDTH - w1) / 2;
-    int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
-    display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
-    display->print(line2);
-    
-    display->display();
-}
 
 void Display::clearMessageState() {
     showingMessage = false;
@@ -673,36 +527,23 @@ void Display::showIPAddresses() {
         return;
     }
     
-    // Show the WeighMyBru Ready message for 3 seconds
     display->clearDisplay();
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    
-    // Calculate text positioning for centering
     String line1 = "CaffePeso";
     String line2 = "Ready";
     
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     
-    // Get text bounds for both lines
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    
-    // Calculate centered positions - tighter spacing for size 2 text
     int centerX1 = (SCREEN_WIDTH - w1) / 2;
     int centerX2 = (SCREEN_WIDTH - w2) / 2;
-    
-    // Position lines closer together to fit in 32 pixels
-    int line1Y = 0;  // Start at top
-    int line2Y = 16; // Second line at pixel 16
-    
-    // Display first line
-    display->setCursor(centerX1, line1Y);
+
+    display->setCursor(centerX1, 0);
     display->print(line1);
-    
-    // Display second line
-    display->setCursor(centerX2, line2Y);
+    display->setCursor(centerX2, 16);
     display->print(line2);
     
     display->display();
@@ -742,9 +583,6 @@ void Display::setBatteryMonitor(BatteryMonitor* battery) {
     batteryPtr = battery;
 }
 
-void Display::setWiFiManager(WiFiManager* wifi) {
-    wifiManagerPtr = wifi;
-}
 
 void Display::drawBluetoothStatus() {
     // Return early if display is not connected
@@ -801,89 +639,8 @@ void Display::drawBatteryStatus() {
     }
 }
 
-void Display::drawWeight(float weight) {
-    // Return early if display is not connected
-    if (!displayConnected) {
-        return;
-    }
-    
-    display->clearDisplay();
-    
-    // Apply deadband to prevent flickering between 0.0g and -0.0g
-    // Show 0.0g (without negative sign) when weight is between -0.1g and +0.1g
-    float displayWeight = weight;
-    if (weight >= -0.1 && weight <= 0.1) {
-        displayWeight = 0.0; // Force to exactly 0.0 to avoid negative sign
-    }
-    
-    // Format weight string with consistent spacing (without "g" unit)
-    String weightStr;
-    if (displayWeight < 0) {
-        weightStr = String(displayWeight, 1); // Keep negative sign for values below -0.1g
-    } else {
-        weightStr = " " + String(displayWeight, 1); // Add space where negative sign would be
-    }
-    
-    // Calculate text width for centering weight
-    display->setTextSize(2);
-    int16_t x1, y1;
-    uint16_t textWidth, textHeight;
-    display->getTextBounds(weightStr, 0, 0, &x1, &y1, &textWidth, &textHeight);
-    
-    // Center the weight text horizontally
-    int centerX = (SCREEN_WIDTH - textWidth) / 2;
-    
-    // Large weight display - centered at top
-    display->setCursor(centerX, 0);
-    display->print(weightStr);
-    
-    // Get flow rate and format it
-    float currentFlowRate = 0.0;
-    if (flowRatePtr != nullptr) {
-        currentFlowRate = flowRatePtr->getFlowRate();
-    }
-    
-    // Apply deadband to prevent flickering between 0.0g/s and -0.0g/s
-    // Show 0.0g/s (without negative sign) when flow rate is between -0.1g/s and +0.1g/s
-    float displayFlowRate = currentFlowRate;
-    if (currentFlowRate >= -0.1 && currentFlowRate <= 0.1) {
-        displayFlowRate = 0.0; // Force to exactly 0.0 to avoid negative sign
-    }
-    
-    // Format flow rate string with consistent spacing (shorter format like Auto mode)
-    String flowRateStr = "";
-    if (displayFlowRate < 0) {
-        flowRateStr += String(displayFlowRate, 1); // Keep negative sign for values below -0.1g/s
-    } else {
-        flowRateStr += String(displayFlowRate, 1); // No extra space needed for shorter format
-    }
-    flowRateStr += "g/s";
-
-    // Small text at bottom left: hint when scale has large negative offset, otherwise flow rate
-    display->setTextSize(1);
-    display->setCursor(0, 24);
-    if (weight < -20.0f && !timerRunning) {
-        display->print("tap to zero");
-    } else {
-        display->print(flowRateStr);
-    }
-    
-    // Draw Bluetooth status if connected
-    drawBluetoothStatus();
-    
-    // Draw battery status
-    drawBatteryStatus();
-    
-    display->display();
-}
-
-/*
-void Display::showWeightWithTimer(float weight) - REMOVED FUNCTION
-Function removed as part of mode simplification - unified into showWeightWithFlowAndTimer()
-*/
-
 // Layout (128x32):
-//   y=0..15  (16px): weight size 2, left-aligned
+//   y=0..15  (16px): weight size 2, centred
 //   y=16..23 ( 8px): gap
 //   y=24..31 ( 8px): timer+"T" left | running ratio centre | flow right
 //                    (centre ratio only when timer running and dose set;
@@ -1026,7 +783,6 @@ void Display::resetTimer() {
     timerPausedTime = 0;
     timerRunning = false;
     timerPaused = false;
-    flowAboveThresholdSince = 0;
     idleResetWeightStableFrom = 0;
     prevWeightForRemoval = 0.0f;
     pendingShot = false;
