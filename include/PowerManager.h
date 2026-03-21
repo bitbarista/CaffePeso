@@ -41,7 +41,6 @@ private:
     unsigned long debounceDelay;
     unsigned long sleepCountdownStart;
     bool sleepCountdownActive;
-    int holdLevel; // 0=none, 1=status fired, 2=wifi fired, 3=sleep fired
     bool cancelledRecently;
     unsigned long cancelTime;
     unsigned long lastActivityTime;

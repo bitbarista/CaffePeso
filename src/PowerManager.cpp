@@ -5,7 +5,7 @@ PowerManager::PowerManager(uint8_t sleepTouchPin, Display* display)
     : sleepTouchPin(sleepTouchPin), displayPtr(display), sleepTouchThreshold(0),
       lastSleepTouchState(false), lastSleepTouchTime(0), touchStartTime(0),
       debounceDelay(50), sleepCountdownStart(0), sleepCountdownActive(false),
-      holdLevel(0), cancelledRecently(false), cancelTime(0),
+      cancelledRecently(false), cancelTime(0),
       lastActivityTime(0), inactivityTimeout(10UL * 60UL * 1000UL), inactivityEnabled(true),
       timerState(TimerState::STOPPED), lastTimerControlTime(0) {
 }
@@ -61,7 +61,8 @@ void PowerManager::update() {
         }
     }
     
-    // Handle touch state changes — short debounce on press, long on release to filter glitches
+    // Handle touch state changes.
+    // Asymmetric debounce: 50ms on press (responsive), 200ms on release (filters contact bounce).
     if (currentSleepTouchState != lastSleepTouchState) {
         unsigned long required = currentSleepTouchState ? 50UL : 200UL;
         if (currentTime - lastSleepTouchTime > required) {
@@ -70,7 +71,6 @@ void PowerManager::update() {
                 if (sleepCountdownActive) {
                     // Touch during countdown - cancel sleep
                     sleepCountdownActive = false;
-                    holdLevel = 0;
                     cancelledRecently = true;
                     cancelTime = currentTime;
                     lastActivityTime = currentTime; // Reset inactivity timer on cancel
@@ -81,7 +81,6 @@ void PowerManager::update() {
                 } else if (!cancelledRecently) {
                     // Handle timer control
                     touchStartTime = currentTime;
-                    holdLevel = 0;
                     lastActivityTime = currentTime; // Reset inactivity timer on touch
                     Serial.println("Timer control touch started");
                 }
@@ -99,9 +98,6 @@ void PowerManager::update() {
                         Serial.println("Tap: timer control");
                         handleTimerControl();
                     }
-                }
-                if (!sleepCountdownActive) {
-                    holdLevel = 0;
                 }
             }
             lastSleepTouchState = currentSleepTouchState;

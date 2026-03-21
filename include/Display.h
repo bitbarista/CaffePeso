@@ -23,11 +23,10 @@ public:
     void showBatteryLowMessage(float voltage, int duration = 3000);
     void showSleepCountdown(int seconds); // Show sleep countdown in large format
     void showSleepMessage(); // Show initial sleep message with big/small text format
-    void showGoingToSleepMessage(); // Show "Touch To / Wake Up" message like WeighMyBru Ready
-    void showSleepCancelledMessage(); // Show "Sleep / Cancelled" message like WeighMyBru Ready
-    void showTaringMessage(); // Show "Taring..." message like WeighMyBru Ready
-    void showTaredMessage(); // Show "Tared!" message like WeighMyBru Ready
-    void showWiFiStatusMessage(bool isEnabled); // Show WiFi status message like WeighMyBru Ready
+    void showGoingToSleepMessage();   // "Touch To / Wake Up" — shown just before deep sleep
+    void showSleepCancelledMessage(); // "Sleep / Cancelled" — shown when sleep is interrupted
+    void showTaringMessage();         // "Taring..." — shown during tare operation
+    void showTaredMessage();          // "Scale / Tared!" — shown after successful tare
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show startup ready message
     void showStatusPage(); // Show status page with battery, BLE, WiFi, and scale status
@@ -77,9 +76,6 @@ public:
     // Battery monitor reference for battery status display
     void setBatteryMonitor(BatteryMonitor* battery);
     
-    // WiFi manager reference for network status display  
-    void setWiFiManager(class WiFiManager* wifi);
-    
     // Timer management
     void startTimer();
     void stopTimer();
@@ -97,13 +93,9 @@ private:
     BluetoothScale* bluetoothPtr;
     PowerManager* powerManagerPtr;
     BatteryMonitor* batteryPtr;
-    class WiFiManager* wifiManagerPtr;
     Adafruit_SSD1306* display;
     bool displayConnected; // Track if display is actually connected
     int weightDecimals = 1; // Configurable decimal places (0, 1, or 2)
-    static constexpr float BREW_FLOW_THRESHOLD = 0.5f;    // g/s to trigger brew display
-    static const unsigned long BREW_SUSTAIN_MS   = 2000; // flow must sustain this long before timer starts
-    unsigned long flowAboveThresholdSince = 0;            // millis() when flow first exceeded threshold
 
     // Cup removal auto-stop
     static constexpr float CUP_REMOVAL_THRESHOLD = 15.0f; // g drop per 100ms update = >150 g/s
@@ -135,8 +127,8 @@ private:
     // Armed auto-start
     bool  armedAutoStart  = false;
     float savedTareWeight = 0.0f;
-    unsigned long armStartedAt = 0;
-    unsigned long armWeightAboveThresholdSince = 0;
+    unsigned long armStartedAt = 0;               // millis() when arm() was called — used for ARM_TIMEOUT_MS
+    unsigned long armWeightAboveThresholdSince = 0; // millis() when weight first exceeded threshold — used for ARM_SUSTAIN_MS
     static constexpr float ARM_TRIGGER_THRESHOLD = 1.0f;
     static const unsigned long ARM_SUSTAIN_MS    = 500;
     static const unsigned long ARM_TIMEOUT_MS    = 120000; // 2 minutes
@@ -162,14 +154,12 @@ private:
     unsigned long timerPausedTime;
     bool timerRunning;
     bool timerPaused;
-    float lastFlowRate; // Store last flow rate for comparison
     
     // Status page system
     bool showingStatusPage;
     unsigned long statusPageStartTime;
     static const unsigned long STATUS_PAGE_TIMEOUT = 10000; // 10 seconds timeout
     
-    void drawWeight(float weight);
     void showWeightWithFlowAndTimer(float weight); // Two-row layout: weight top, timer+flow/ratio bottom
     void setupDisplay();
     void drawBluetoothStatus(); // Draw Bluetooth connection status icon

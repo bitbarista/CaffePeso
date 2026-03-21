@@ -40,7 +40,8 @@ BatteryMonitor batteryMonitor(batteryPin);
 void setup() {
   Serial.begin(115200);
   
-  // Set CPU frequency explicitly for power optimization
+  // 80 MHz is the lowest stable frequency for WiFi + BLE on the ESP32-S3.
+  // Dropping below this causes radio instability; higher values increase power draw with no benefit here.
   setCpuFrequencyMhz(80);
   Serial.printf("CPU frequency set to: %dMHz for power optimization\n", getCpuFrequencyMhz());
   
@@ -156,7 +157,7 @@ void setup() {
 
   // Check for low battery - prevent boot if voltage too low
   float batteryVoltage = batteryMonitor.getBatteryVoltage();
-  if (batteryVoltage < 3.2f && batteryVoltage > 0.1f) { // > 0.1f to avoid false readings
+  if (batteryVoltage < 3.2f && batteryVoltage > 0.1f) { // 3.2V = BATTERY_EMPTY; > 0.1V to ignore missing/disconnected battery
     Serial.printf("CRITICAL: Battery voltage too low (%.2fV) - entering sleep\n", batteryVoltage);
     
     // Show battery low message on display with large, centered formatting
