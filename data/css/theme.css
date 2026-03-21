@@ -1,0 +1,67 @@
+/* CaffeRitmo dark theme — warm brown-grey palette */
+
+/* Page background */
+.bg-black-background {
+  background-color: #2d2a2a !important;
+}
+
+/* Nav / sidebar background (slightly darker than page) */
+.bg-black-discord {
+  background-color: #252121 !important;
+}
+
+/* Selected nav item */
+.bg-black-select {
+  background-color: #4a4646 !important;
+}
+
+/* Nav item hover */
+.hover\:bg-black-hover:hover {
+  background-color: #2f2b2b !important;
+}
+
+/* Body text: warm cream */
+body {
+  color: #f5e9dc !important;
+}
+
+.text-stone-50,
+.hover\:text-stone-50:hover,
+.focus\:text-stone-50:focus {
+  color: #f5e9dc !important;
+}
+
+/* Secondary text */
+.text-gray-400 {
+  color: #bcaaa4 !important;
+}
+
+.text-gray-300 {
+  color: #c9b8b3 !important;
+}
+
+.text-gray-500 {
+  color: #a08880 !important;
+}
+
+/* Card / panel backgrounds */
+.bg-gray-900 {
+  background-color: #1c1614 !important;
+}
+
+.bg-gray-800 {
+  background-color: #2a2320 !important;
+}
+
+/* Buttons (tare, utility) */
+.bg-gray-700 {
+  background-color: #4a4040 !important;
+}
+
+.hover\:bg-gray-600:hover {
+  background-color: #5e5252 !important;
+}
+
+.bg-gray-600 {
+  background-color: #554b4b !important;
+}

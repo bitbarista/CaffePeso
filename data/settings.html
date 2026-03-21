@@ -14,6 +14,12 @@
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+    .caffepeso-title { font-family: 'Playfair Display', serif; font-size: clamp(1rem, 2.5vmin, 1.8rem); font-weight: 700; font-style: italic; color: #f5e9dc; text-decoration: none; }
+  </style>
   <style>
     .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -33,7 +39,7 @@
 <div class="md:flex flex-col md:flex-row md:min-h-screen w-full font-light">
   <div @click.away="open = false" class="flex flex-col w-full md:w-64 text-gray-700 bg-black-discord dark-mode:text-gray-200 dark-mode:bg-gray-800 flex-shrink-0" x-data="{ open: false }">
     <div class="flex-shrink-0 px-8 py-4 flex flex-row items-center justify-between">
-      <a href="#" class="text-lg font-semibold tracking-widest text-green-600 bg-black-discord uppercase rounded-lg dark-mode:text-white focus:outline-none focus:shadow-outline">CaffePeso</a>
+      <a href="#" class="caffepeso-title">CaffePeso</a>
       <button class="rounded-lg md:hidden focus:outline-none focus:shadow-outline" @click="open = !open">
         <svg fill="currentColor" viewBox="0 0 20 20" class="w-6 h-6">
           <path x-show="!open" fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" clip-rule="evenodd"></path>
@@ -52,14 +58,6 @@
     <h1 class="text-3xl text-white font-bold mb-4">Settings</h1>
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <h2 class="text-2xl font-semibold mb-4">WiFi Configuration</h2>
-      
-      <!-- WiFi Power Management -->
-      <div class="mb-6 p-4 bg-black-hover rounded">
-        <h3 class="text-lg font-semibold mb-3">WiFi Power Management</h3>
-        <p class="text-sm text-gray-400 mb-3">Turn off WiFi to save battery. To turn WiFi back on, hold the touch sensor for 3 seconds.</p>
-        <button type="button" onclick="turnOffWiFi()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded mr-2">Turn Off WiFi</button>
-        <span id="wifiStatus" class="text-gray-400"></span>
-      </div>
       
       <form id="wifiForm" class="mb-6">
         <!-- WiFi Network Scanner -->
@@ -209,6 +207,7 @@
       </div>
     </div>
   </main>
+  <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
 <script>
     // Load all settings
@@ -331,37 +330,6 @@
         statusEl.textContent = '';
       }
     });
-
-    // WiFi Power Management Functions
-    async function turnOffWiFi() {
-      if (confirm('Turn off WiFi? You will need to hold the touch sensor for 3 seconds to turn it back on.')) {
-        try {
-          const response = await fetch('/api/wifi-enable', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'enabled=false'
-          });
-          const result = await response.text();
-          document.getElementById('message').textContent = result + ' - WiFi is now off. Hold touch sensor for 3 seconds to turn back on.';
-        } catch (error) {
-          console.error('Error turning off WiFi:', error);
-          document.getElementById('message').textContent = 'Error turning off WiFi';
-        }
-      }
-    }
-
-    async function loadWiFiStatus() {
-      try {
-        const response = await fetch('/api/wifi-status');
-        const status = await response.json();
-        document.getElementById('wifiStatus').textContent = status.enabled ? 
-          (status.connected ? `Connected: ${status.ssid}` : 'WiFi Enabled - AP Mode') : 
-          'WiFi is Off';
-      } catch (error) {
-        console.error('Error loading WiFi status:', error);
-        document.getElementById('wifiStatus').textContent = 'Status unavailable';
-      }
-    }
 
     // Clear WiFi credentials
     async function clearWiFiCredentials() {

@@ -1,8 +1,8 @@
-# WeighMyBru² — User Guide
+# CaffePeso — User Guide
 
 ## Overview
 
-WeighMyBru² is an ESP32-S3 based coffee scale with a real-time OLED display, brew timer, flow rate measurement, and a Wi-Fi web interface. It is designed around two physical buttons and a strain gauge load cell.
+CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew timer, flow rate measurement, and a Wi-Fi web interface. It is designed around two physical buttons and a strain gauge load cell.
 
 ---
 
@@ -36,8 +36,7 @@ WeighMyBru² is an ESP32-S3 based coffee scale with a real-time OLED display, br
 | **Tap** (timer running) | Stop/pause timer |
 | **Tap** (timer paused) | Reset timer |
 | **Hold 1 s** | Toggle status page (battery, scale, BLE, Wi-Fi) |
-| **Hold 3 s** | Toggle Wi-Fi on/off |
-| **Hold 5 s** | Start sleep countdown |
+| **Hold 3 s** | Start sleep countdown |
 
 ---
 
@@ -199,7 +198,7 @@ OTA firmware upload. Upload a new `.bin` file directly from the browser without 
 
 | Setting | Value |
 |---------|-------|
-| SSID | `WeighMyBru` (or similar — check serial output) |
+| SSID | `WeighMyBru-AP` |
 | Default IP | `192.168.4.1` |
 
 **Connecting to your home network:**
@@ -210,14 +209,12 @@ OTA firmware upload. Upload a new `.bin` file directly from the browser without 
 
 Once connected to your home network, find the device's assigned IP address from your router's DHCP table, or check the OLED status page (hold timer button 1 s).
 
-**Toggle Wi-Fi:** Hold the timer button for 3 s to turn Wi-Fi off (saves battery) or back on.
-
 ---
 
 ## Power / Sleep
 
 - **Inactivity sleep:** Device enters deep sleep after a configurable period of no button activity (default 10 minutes). Configurable in Settings → Sleep.
-- **Manual sleep:** Hold the timer button for 5 s. OLED counts down 3…2…1 then the display blanks and the device sleeps.
+- **Manual sleep:** Hold the timer button for 3 s. OLED counts down 3…2…1 then the display blanks and the device sleeps.
 - **Cancel sleep:** Touch either button during the countdown.
 - **Wake:** Touch either button. Device restarts from boot.
 - **Battery low:** OLED shows "Bat Low" with voltage on boot. Device sleeps immediately if voltage is below 3.2 V.

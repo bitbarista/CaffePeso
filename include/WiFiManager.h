@@ -30,13 +30,4 @@ String getWiFiSignalQuality(); // Get WiFi signal quality description
 String getWiFiConnectionInfo(); // Get detailed WiFi connection information
 String scanWiFiNetworks(); // Scan for available WiFi networks and return JSON
 
-// WiFi Power Management
-bool isWiFiEnabled(); // Check if WiFi is currently enabled
-void enableWiFi(); // Enable WiFi and restore previous mode
-void disableWiFi(); // Disable WiFi completely to save battery
-void toggleWiFi(); // Toggle WiFi on/off
-bool loadWiFiEnabledState(); // Load WiFi enabled state from preferences
-void saveWiFiEnabledState(bool enabled); // Save WiFi enabled state to preferences
-void resetWiFiEnabledState(); // Clear WiFi state from all storage (debug function)
-
 #endif

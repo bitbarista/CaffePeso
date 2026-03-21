@@ -70,7 +70,7 @@ bool Display::begin() {
     display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
     
-    String line1 = "WeighMyBru";
+    String line1 = "CaffePeso";
     String line2 = "Starting";
     
     int16_t x1, y1;
@@ -714,7 +714,7 @@ void Display::showIPAddresses() {
     display->setTextColor(SSD1306_WHITE);
     
     // Calculate text positioning for centering
-    String line1 = "WeighMyBru";
+    String line1 = "CaffePeso";
     String line2 = "Ready";
     
     int16_t x1, y1;
@@ -1262,6 +1262,11 @@ void Display::resetTimer() {
     if (flowRatePtr != nullptr) {
         flowRatePtr->resetTimerAveraging();
     }
+
+    // Sync PowerManager state
+    if (powerManagerPtr != nullptr) {
+        powerManagerPtr->resetTimerState();
+    }
 }
 
 bool Display::isTimerRunning() const {
@@ -1325,11 +1330,7 @@ void Display::showStatusPage() {
     // Bottom line: WiFi mode and IP address (moved to very bottom)
     display->setTextSize(1);
     
-    // Check WiFi power state first
-    if (!isWiFiEnabled()) {
-        display->setCursor(0, 24);  // Bottom of 32-pixel display
-        display->print("WiFi: OFF");
-    } else if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.status() == WL_CONNECTED) {
         display->setCursor(0, 24);  // Bottom of 32-pixel display
         display->print("STA: ");
         display->print(WiFi.localIP().toString());

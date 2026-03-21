@@ -1,12 +1,11 @@
 #include "PowerManager.h"
 #include "Display.h"
-#include "WiFiManager.h"
 
 PowerManager::PowerManager(uint8_t sleepTouchPin, Display* display) 
     : sleepTouchPin(sleepTouchPin), displayPtr(display), sleepTouchThreshold(0),
       lastSleepTouchState(false), lastSleepTouchTime(0), touchStartTime(0),
-      debounceDelay(200), sleepCountdownStart(0), sleepCountdownActive(false),
-      longPressDetected(false), cancelledRecently(false), cancelTime(0),
+      debounceDelay(50), sleepCountdownStart(0), sleepCountdownActive(false),
+      holdLevel(0), cancelledRecently(false), cancelTime(0),
       lastActivityTime(0), inactivityTimeout(10UL * 60UL * 1000UL), inactivityEnabled(true),
       timerState(TimerState::STOPPED), lastTimerControlTime(0) {
 }
@@ -62,15 +61,16 @@ void PowerManager::update() {
         }
     }
     
-    // Handle touch state changes with long press detection
+    // Handle touch state changes — short debounce on press, long on release to filter glitches
     if (currentSleepTouchState != lastSleepTouchState) {
-        if (currentTime - lastSleepTouchTime > debounceDelay) {
+        unsigned long required = currentSleepTouchState ? 50UL : 200UL;
+        if (currentTime - lastSleepTouchTime > required) {
             if (currentSleepTouchState) {
                 // Touch started
                 if (sleepCountdownActive) {
                     // Touch during countdown - cancel sleep
                     sleepCountdownActive = false;
-                    longPressDetected = false;
+                    holdLevel = 0;
                     cancelledRecently = true;
                     cancelTime = currentTime;
                     lastActivityTime = currentTime; // Reset inactivity timer on cancel
@@ -81,20 +81,27 @@ void PowerManager::update() {
                 } else if (!cancelledRecently) {
                     // Handle timer control
                     touchStartTime = currentTime;
-                    longPressDetected = false;
+                    holdLevel = 0;
                     lastActivityTime = currentTime; // Reset inactivity timer on touch
                     Serial.println("Timer control touch started");
                 }
             } else {
-                // Touch ended
-                if (!sleepCountdownActive && !longPressDetected && !cancelledRecently) {
-                    // Handle timer control
-                    Serial.println("Timer control executed");
-                    handleTimerControl();
+                // Touch ended — fire action based on hold duration
+                if (!sleepCountdownActive && !cancelledRecently) {
+                    unsigned long held = currentTime - touchStartTime;
+                    if (held >= HOLD_SLEEP_MS) {
+                        Serial.println("Hold 3s release: sleep");
+                        handleSleepTouch();
+                    } else if (held >= HOLD_STATUS_MS) {
+                        Serial.println("Hold 1s release: status page");
+                        handleStatusPage();
+                    } else {
+                        Serial.println("Tap: timer control");
+                        handleTimerControl();
+                    }
                 }
-                // Don't reset longPressDetected here if countdown is active
                 if (!sleepCountdownActive) {
-                    longPressDetected = false;
+                    holdLevel = 0;
                 }
             }
             lastSleepTouchState = currentSleepTouchState;
@@ -102,23 +109,7 @@ void PowerManager::update() {
         }
     }
     
-    // Multi-level hold detection — fires during hold so user gets immediate feedback
-    if (currentSleepTouchState && !longPressDetected && !sleepCountdownActive && !cancelledRecently) {
-        unsigned long held = currentTime - touchStartTime;
-        if (held >= HOLD_SLEEP_MS) {
-            longPressDetected = true;
-            Serial.println("Hold 5s: sleep");
-            handleSleepTouch();
-        } else if (held >= HOLD_WIFI_MS) {
-            longPressDetected = true;
-            Serial.println("Hold 3s: WiFi toggle");
-            handleWiFiToggle();
-        } else if (held >= HOLD_STATUS_MS) {
-            longPressDetected = true;
-            Serial.println("Hold 1s: status page");
-            handleStatusPage();
-        }
-    }
+    // No during-hold actions — all levels fire on release
 
     // Inactivity timeout: sleep after no activity for inactivityTimeout ms
     if (inactivityEnabled && inactivityTimeout > 0 && !sleepCountdownActive && !currentSleepTouchState) {
@@ -191,15 +182,6 @@ void PowerManager::handleStatusPage() {
     if (displayPtr != nullptr) {
         displayPtr->toggleStatusPage();
         Serial.println("Hold 1s: status page toggled");
-    }
-}
-
-void PowerManager::handleWiFiToggle() {
-    toggleWiFi();
-    if (displayPtr != nullptr) {
-        bool enabled = isWiFiEnabled();
-        displayPtr->showWiFiStatusMessage(enabled);
-        Serial.printf("Hold 3s: WiFi %s\n", enabled ? "ON" : "OFF");
     }
 }
 

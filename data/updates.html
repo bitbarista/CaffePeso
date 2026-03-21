@@ -14,6 +14,12 @@
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+    .caffepeso-title { font-family: 'Playfair Display', serif; font-size: clamp(1rem, 2.5vmin, 1.8rem); font-weight: 700; font-style: italic; color: #f5e9dc; text-decoration: none; }
+  </style>
   <style>
     html, body { overflow-x: hidden; max-width: 100%; }
     @media (max-width: 767px) {
@@ -28,7 +34,7 @@
 <div class="md:flex flex-col md:flex-row md:min-h-screen w-full font-light">
   <div @click.away="open = false" class="flex flex-col w-full md:w-64 text-gray-700 bg-black-discord dark-mode:text-gray-200 dark-mode:bg-gray-800 flex-shrink-0" x-data="{ open: false }">
     <div class="flex-shrink-0 px-8 py-4 flex flex-row items-center justify-between">
-      <a href="#" class="text-lg font-semibold tracking-widest text-green-600 bg-black-discord uppercase rounded-lg dark-mode:text-white focus:outline-none focus:shadow-outline">CaffePeso</a>
+      <a href="#" class="caffepeso-title">CaffePeso</a>
       <button class="rounded-lg md:hidden focus:outline-none focus:shadow-outline" @click="open = !open">
         <svg fill="currentColor" viewBox="0 0 20 20" class="w-6 h-6">
           <path x-show="!open" fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" clip-rule="evenodd"></path>
@@ -97,6 +103,7 @@
     </div>
 
   </main>
+  <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
 <script>
 fetch('/api/dashboard')
