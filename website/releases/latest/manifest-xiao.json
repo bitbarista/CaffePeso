@@ -1,25 +1,25 @@
 {
   "name": "WeighMyBru² - XIAO ESP32S3",
   "version": "2.3.0",
-  "funding_url": "https://github.com/bitbarista/weighmybru2",
+  "funding_url": "https://github.com/bitbarista/caffepeso",
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-bootloader.bin",
+          "path": "https://github.com/bitbarista/caffepeso/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-bootloader.bin",
           "offset": 0
         },
         {
-          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-partitions.bin",
+          "path": "https://github.com/bitbarista/caffepeso/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-partitions.bin",
           "offset": 32768
         },
         {
-          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-xiao-v2.3.0.bin",
+          "path": "https://github.com/bitbarista/caffepeso/releases/download/v2.3.0/weighmybru-xiao-v2.3.0.bin",
           "offset": 65536
         },
         {
-          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-littlefs.bin",
+          "path": "https://github.com/bitbarista/caffepeso/releases/download/v2.3.0/weighmybru-xiao-v2.3.0-littlefs.bin",
           "offset": 2686976
         }
       ]

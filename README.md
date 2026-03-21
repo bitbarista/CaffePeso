@@ -70,7 +70,7 @@ pio run -e esp32s3-xiao -t uploadfs       # For XIAO ESP32S3
 
 For beginners, use the browser-based installer — no software installation required:
 
-1. **Visit the [flash page](https://bitbarista.github.io/weighmybru2)** (available once the repo is public)
+1. **Visit the [flash page](https://bitbarista.github.io/caffepeso)** (available once the repo is public)
 2. **Connect your ESP32 board** via USB
 3. **Click "Install Firmware"** and select your board:
    - ESP32-S3 Supermini
