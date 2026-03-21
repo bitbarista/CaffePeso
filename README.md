@@ -14,7 +14,7 @@ Armed auto-start • Live brew ratio • Shot history • Target yield alert •
 
 [Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
-<img src="docs/assets/weighmybru.jpg" alt="CaffePeso hardware" width="700"/>
+<img src="docs/assets/CaffePeso.png" alt="CaffePeso" width="300"/>
 
 </div>
 
