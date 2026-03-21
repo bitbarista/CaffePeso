@@ -1,8 +1,10 @@
-<p align="center"><!-- Logo placeholder — add your own image to docs/assets/logo.png and update this line --></p>
+<p align="center">
+<img src="docs/assets/CaffePeso.png" alt="CaffePeso" width="300"/>
+</p>
 
-<h1 align="center">WeighMyBru²</h1>
+<h1 align="center">CaffePeso</h1>
 
-<p align="center">The smart coffee scale that doesn't break the bank!</p>
+<p align="center">The smart automated espresso scale.</p>
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge)](LICENSE)
 
