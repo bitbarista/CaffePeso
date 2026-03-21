@@ -44,18 +44,15 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 
 ```
 ┌──────────────────────────────────┐
-│ 12%   [weight large]   30.2   T  │  ← battery%, weight, timer value + "T"
-│                        1.4    F  │  ← (blank left), flow rate + "F"
+│          18.52                   │  ← weight (centred, large)
+│ 30.2T    1:2.1    1.4F           │  ← timer | running ratio | flow rate
 └──────────────────────────────────┘
 ```
 
-- **Left column (large)** — current weight in grams
-- **Top right** — elapsed timer time. Format: `SS.t` under 60 s, `M:SS` over 60 s
-- **Bottom right** — live flow rate (g/s) while brewing; brew ratio (`1:X R`) after timer stops (if dose is set)
-- **Bottom left** — "tap to zero" hint when scale reads more than −20 g and timer is not running
-- **Top left** — battery percentage; flashes red when critical
-
-When the timer is stopped and the scale is in **display mode 1** (weight-focus), the full screen shows just the weight in a large font.
+- **Top row (large)** — current weight in grams, centred
+- **Bottom left** — elapsed timer. Format: `SS.t` under 60 s, `M:SS` over 60 s, followed by `T`
+- **Bottom centre** — live brew ratio (`1:X`) while weight is building, if dose is set
+- **Bottom right** — live flow rate (`g/s`) while brewing; final brew ratio (`1:X R`) after timer stops
 
 ---
 
@@ -177,7 +174,7 @@ Connect to the device's Wi-Fi network, then open a browser to the device's IP ad
 | Section | What you can configure |
 |---------|----------------------|
 | Wi-Fi | SSID and password for home network |
-| Display | Decimal places (0/1/2), OLED layout mode |
+| Display | Decimal places (0/1/2) |
 | Sleep | Inactivity timeout (minutes) |
 | Brew Automation | Auto-tare on vessel placement, post-brew idle reset, target yield ratio |
 | Filter | Advanced HX711 filter tuning |
