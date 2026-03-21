@@ -7,7 +7,6 @@
 ![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-blue)
 ![Platform](https://img.shields.io/badge/platform-ESP32--S3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino-teal)
-<a href="https://ko-fi.com/caffepeso" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-Support%20the%20Project-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 
 **A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
@@ -107,20 +106,6 @@ pio run -e esp32s3-xiao --target uploadfs
 Full user guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 
 For hardware build guides and video walkthroughs, see the [original project](https://github.com/031devstudios/weighmybru2).
-
----
-
-## ☕ Support the Project
-
-CaffePeso is a hobby project built in spare time. If it's improved your espresso routine, consider supporting development.
-
-<div align="center">
-
-<a href="https://ko-fi.com/caffepeso" target="_blank"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"></a>
-
-</div>
-
-Your support helps keep the project maintained and available for everyone.
 
 ---
 
