@@ -14,6 +14,7 @@ public:
     void resetTimerAveraging();
     float getTimerAverageFlowRate() const;
     bool hasTimerAverage() const;
+    bool isTimerAveragingActive() const { return timerAveragingActive; }
     
     // Tare operation support
     void pauseCalculation();  // Pause flow rate during tare operations

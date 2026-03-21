@@ -12,6 +12,7 @@
   
   <!-- RESPONSIVE LAYOUT CSS -->
   <style>
+    html, body { overflow-x: hidden; max-width: 100%; }
     /* Desktop: Your exact pixel control (768px and up) */
     @media (min-width: 768px) {
       .graph-container-responsive {
@@ -29,54 +30,34 @@
       }
     }
     
-    /* Tablet: Compact but readable (481px - 767px) */
-    @media (max-width: 767px) and (min-width: 481px) {
+    /* Mobile: all screens under 768px (phones + tablets in portrait) */
+    @media (max-width: 767px) {
       .graph-container-responsive {
-        width: 350px !important;
+        width: 95% !important;
         height: 220px !important;
-        margin: 80px auto 0 auto !important; /* Extra top margin for mobile nav */
+        margin: 0 auto !important;
+        padding: 12px !important;
       }
       .dashboard-container-responsive {
-        width: 90% !important;
+        width: 95% !important;
         margin: 0 auto !important;
+        padding: 12px !important;
       }
       .graph-canvas-responsive {
-        width: 310px !important;
+        width: 100% !important;
         height: 180px !important;
       }
     }
     
-    /* Mobile: Optimized for small screens (480px and below) */
-    @media (max-width: 480px) {
-      .graph-container-responsive {
-        width: 95% !important;
-        height: 250px !important; /* Taller for portrait */
-        margin: 80px auto 0 auto !important; /* Extra top margin for mobile nav */
-        padding: 15px !important;
-      }
-      .dashboard-container-responsive {
-        width: 95% !important;
-        margin: 0 auto !important;
-        padding: 15px !important;
-      }
-      /* Mobile Portrait - Canvas uses percentage of container */
-      .graph-canvas-responsive {
-        width: calc(100% - 20px) !important;
-        max-width: 280px !important;
-        height: 210px !important; /* Taller canvas for portrait */
-      }
-    }
-    
-    /* Mobile Landscape: Wider canvas for landscape */
-    @media (max-width: 480px) and (orientation: landscape),
-           (max-height: 480px) and (orientation: landscape) {
+    /* Mobile Landscape */
+    @media (max-width: 767px) and (orientation: landscape) {
       .graph-container-responsive {
         width: 90% !important;
-        height: 200px !important; /* Even taller for better landscape viewing */
-        margin: 70px auto 0 auto !important; /* Top margin for mobile nav in landscape */
+        height: 180px !important;
+        margin: 0 auto !important;
       }
       .graph-canvas-responsive {
-        width: calc(100% - 20px) !important;
+        width: 100% !important;
         max-width: 420px !important;
         height: 160px !important; /* Taller canvas for landscape */
       }
@@ -85,8 +66,13 @@
       }
     }
   </style>
+  <style>
+    #toast { transition: opacity 0.3s ease; }
+  </style>
 </head>
 <body class="bg-black-background text-white font-sans min-h-screen">
+  <div id="toast" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;z-index:9999;"
+       class="bg-gray-700 text-white text-sm px-5 py-2 rounded-full shadow-lg"></div>
 
   <!-- Mobile Navigation (Hidden by default, shown on mobile) -->
   <div @click.away="open = false" class="md:hidden fixed top-0 left-0 right-0 z-50 bg-black-discord" x-data="{ open: false }">
@@ -121,7 +107,7 @@
   </div>
 
   <!-- Content Layout - Graph Above Main Container -->
-  <div class="flex flex-col space-y-4 pt-4">
+  <div class="flex flex-col space-y-4 pt-16 md:pt-4">
     <!-- GRAPH CONTAINER - RESPONSIVE DESIGN -->
     <!-- Desktop: 400px×250px | Tablet: 350px×220px | Mobile: 95%×200px -->
     <div style="width: 400px; height: 250px; padding: 20px; margin: 20px auto 0 280px;" class="graph-container-responsive bg-black-select rounded-xl">
@@ -192,23 +178,24 @@
     <!-- Timer Status -->
     <div class="text-center">
       <p class="text-sm text-gray-400" id="timerStatus">Stopped</p>
+      <p class="text-sm text-amber-400 font-semibold" id="armedIndicator" style="display:none;">&#9679; Armed — waiting for drip</p>
       <p class="text-sm text-blue-400" id="avgFlowRate" style="display: none;"></p>
+      <p class="text-sm text-green-400" id="brewRatio" style="visibility: hidden;">&nbsp;</p>
+    </div>
+
+    <!-- Dose entry -->
+    <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+      <label class="text-sm text-gray-400">Dose:</label>
+      <input type="number" id="doseInput" step="0.1" min="0" max="100" placeholder="g"
+             style="width:72px; padding:4px 8px; border-radius:6px; color:#000; font-size:14px;" />
+      <button onclick="saveDose()" style="background:#4b5563; color:#fff; padding:4px 12px; border-radius:6px; font-size:13px;">Set</button>
+      <span id="doseMessage" style="font-size:12px; color:#22c55e;"></span>
     </div>
 
     <!-- Action Buttons -->
-    <div class="grid grid-cols-2 gap-2 mt-2">
+    <div class="grid grid-cols-3 gap-2 mt-2">
       <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">
         Tare
-      </button>
-      <button id="brewModeBtn" onclick="toggleBrewMode()" class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold">
-        <i class="fa fa-coffee mr-1"></i>Brew Mode
-      </button>
-    </div>
-    
-    <!-- Timer Control Buttons -->
-    <div class="grid grid-cols-3 gap-2 mt-2">
-      <button onclick="startTimer()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm">
-        <i class="fa fa-play mr-1"></i>Start
       </button>
       <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm">
         <i class="fa fa-stop mr-1"></i>Stop
@@ -224,16 +211,55 @@
         <span id="scaleStatus" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">HX711 Connected</span>
       </div>
     </div>
+
+    <!-- Shot History -->
+    <div class="mt-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-gray-300">Shot History</h2>
+        <button onclick="clearShotHistory()" class="text-xs text-gray-500 hover:text-red-400">Clear</button>
+      </div>
+      <div id="shotHistoryContainer">
+        <p class="text-xs text-gray-500 text-center" id="noShotsMsg">No shots recorded yet</p>
+        <table id="shotTable" class="w-full text-xs" style="display:none; border-collapse:collapse;">
+          <thead>
+            <tr class="text-gray-400 border-b border-gray-700">
+              <th class="py-1 text-left">#</th>
+              <th class="py-1 text-right">Dose</th>
+              <th class="py-1 text-right">Yield</th>
+              <th class="py-1 text-right">Time</th>
+              <th class="py-1 text-right">Ratio</th>
+            </tr>
+          </thead>
+          <tbody id="shotTableBody"></tbody>
+        </table>
+      </div>
+    </div>
     
     <!-- Status -->
     <div class="text-center">
-      <div id="updateStatus" class="text-xs text-gray-400"></div>
     </div>
   </div>
   </div>
 
 <script>
   let decimalPlaces = 1;
+
+  // Load persisted dose weight on startup
+  fetch('/api/dose').then(r => r.json()).then(d => {
+    if (d.dose_weight > 0) document.getElementById('doseInput').value = d.dose_weight;
+  }).catch(() => {});
+
+  async function saveDose() {
+    const val = document.getElementById('doseInput').value;
+    const msg = document.getElementById('doseMessage');
+    try {
+      await fetch('/api/dose', { method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'dose_weight=' + val });
+      msg.textContent = '✓';
+      setTimeout(() => { msg.textContent = ''; }, 2000);
+    } catch(e) { msg.textContent = '✗'; }
+  }
   
   // Chart.js configuration and data
   let weightFlowChart;
@@ -531,15 +557,22 @@
     }
   }
 
+  function showToast(msg, duration = 2000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration);
+  }
+
   function tareScale() {
     fetch('/api/tare', { method: 'POST' })
       .then(response => response.text())
-      .then(data => {
-        alert(data);
-        // Hide average flow rate display since we've reset for fresh brew
+      .then(() => {
+        showToast('Scale tared');
         document.getElementById('avgFlowRate').style.display = 'none';
       })
-      .catch(err => alert("Tare failed!"));
+      .catch(() => showToast('Tare failed'));
   }
 
   function startTimer() {
@@ -673,81 +706,88 @@
             avgFlowRateElement.innerText = `Avg Flow Rate: ${data.timer_avg_flowrate.toFixed(2)} g/s`;
             avgFlowRateElement.style.display = 'block';
           } else if (data.timer_running) {
-            // Hide average when timer is running
             avgFlowRateElement.style.display = 'none';
           }
+
+          // Show brew ratio when timer is stopped and dose is set
+          const ratioEl = document.getElementById('brewRatio');
+          const dose = parseFloat(document.getElementById('doseInput').value);
+          const yieldW = parseFloat(data.weight);
+          if (!data.timer_running && dose > 0 && yieldW > 5) {
+            ratioEl.innerText = `Ratio: 1:${(yieldW / dose).toFixed(1)} (${dose.toFixed(1)}g → ${yieldW.toFixed(1)}g)`;
+            ratioEl.style.visibility = 'visible';
+          } else {
+            ratioEl.style.visibility = 'hidden';
+          }
+
+          // Target yield alert: turn weight amber when approaching target
+          const weightEl = document.getElementById('weight');
+          const targetRatio = parseFloat(data.target_ratio || 0);
+          if (data.timer_running && dose > 0 && targetRatio > 0) {
+            const alertThreshold = dose * targetRatio - 2;
+            weightEl.style.color = weight >= alertThreshold ? '#f59e0b' : '';
+          } else {
+            weightEl.style.color = '';
+          }
+
+          // Armed indicator
+          const armedEl = document.getElementById('armedIndicator');
+          if (armedEl) armedEl.style.display = data.armed ? 'block' : 'none';
         }
       })
       .catch(err => console.error("Dashboard fetch error:", err));
   }
 
-  let updateInterval = 100; // Start with 100ms (10x per second)
-  let lastWeight = 0;
-  let isBrewingActive = false;
-  let manualBrewMode = false;
-  
-  function toggleBrewMode() {
-    manualBrewMode = !manualBrewMode;
-    const btn = document.getElementById('brewModeBtn');
-    const status = document.getElementById('updateStatus');
-    
-    if (manualBrewMode) {
-      btn.textContent = 'Exit Brew Mode';
-      btn.className = 'bg-red-600 hover:bg-red-700 py-2 rounded-lg text-sm font-semibold';
-      status.textContent = 'Manual Brew Mode: Fast Updates (20/sec)';
-      clearInterval(updateTimer);
-      updateTimer = setInterval(updateWeight, 50); // 20x per second
-    } else {
-      btn.textContent = 'Brew Mode';
-      btn.className = 'bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold';
-      status.textContent = 'Auto Mode: Smart Updates';
-      clearInterval(updateTimer);
-      updateTimer = setInterval(updateWeight, 200); // Back to normal
-      isBrewingActive = false;
+  let updateTimer = setInterval(updateWeight, 100);
+  updateWeight();
+
+  // Shot history
+  let lastShotCount = 0;
+
+  function renderShotHistory(shots) {
+    const table   = document.getElementById('shotTable');
+    const noMsg   = document.getElementById('noShotsMsg');
+    const tbody   = document.getElementById('shotTableBody');
+    if (!shots || shots.length === 0) {
+      table.style.display = 'none';
+      noMsg.style.display = 'block';
+      return;
     }
-  }
-  
-  function smartUpdate() {
-    // Skip auto detection if manual mode is active
-    if (manualBrewMode) return;
-    
-    // Check if brewing is likely active (weight changing rapidly)
-    fetch('/api/weight-fast') // Use fast endpoint for detection
-      .then(response => response.text())
-      .then(data => {
-        let currentWeight = parseFloat(data);
-        let weightChange = Math.abs(currentWeight - lastWeight);
-        
-        // If weight is changing fast (more than 0.5g in 100ms), we're likely brewing
-        if (weightChange > 0.5) {
-          if (!isBrewingActive) {
-            isBrewingActive = true;
-            document.getElementById('updateStatus').textContent = 'Auto Brew Detected: Fast Updates (20/sec)';
-            clearInterval(updateTimer);
-            updateTimer = setInterval(updateWeight, 50); // 20x per second during brewing
-          }
-        } else {
-          if (isBrewingActive) {
-            isBrewingActive = false;
-            document.getElementById('updateStatus').textContent = 'Auto Mode: Normal Updates (5/sec)';
-            clearInterval(updateTimer);
-            updateTimer = setInterval(updateWeight, 200); // 5x per second when idle
-          }
-        }
-        
-        lastWeight = currentWeight;
-        updateWeight(); // Always update the display
-      })
-      .catch(err => console.error("Smart update error:", err));
+    noMsg.style.display = 'none';
+    table.style.display = 'table';
+    tbody.innerHTML = shots.map(s =>
+      `<tr class="border-b border-gray-800">
+         <td class="py-1 text-gray-400">#${s.shot}</td>
+         <td class="py-1 text-right">${s.dose}g</td>
+         <td class="py-1 text-right">${s.yield}g</td>
+         <td class="py-1 text-right">${s.time}s</td>
+         <td class="py-1 text-right">1:${s.ratio}</td>
+       </tr>`
+    ).join('');
+    lastShotCount = shots.length;
   }
 
-  // Start with faster updates for real-time brewing experience
-  let updateTimer = setInterval(updateWeight, 100); // 100ms (10/sec) for real-time updates
-  document.getElementById('updateStatus').textContent = 'Real-time Mode: Fast Updates (10/sec)';
-  
-  // Run smart detection every 200ms to adjust update frequency for brewing activity
-  setInterval(smartUpdate, 200); // Re-enabled for intelligent brewing detection
-  updateWeight();
+  function loadShotHistory() {
+    fetch('/api/shot-history').then(r => r.json()).then(renderShotHistory).catch(() => {});
+  }
+
+  function clearShotHistory() {
+    fetch('/api/shot-history', { method: 'DELETE' })
+      .then(() => { renderShotHistory([]); showToast('Shot history cleared'); })
+      .catch(() => showToast('Clear failed'));
+  }
+
+  loadShotHistory();
+
+  // Refresh shot history when timer stops (detect transition)
+  let prevTimerRunningForShots = false;
+  const origUpdateWeight = updateWeight;
+  // Patch updateWeight to also check for timer stop (shot saved)
+  setInterval(() => {
+    fetch('/api/shot-history').then(r => r.json()).then(shots => {
+      if (shots.length !== lastShotCount) renderShotHistory(shots);
+    }).catch(() => {});
+  }, 5000); // poll every 5s for new shots
 
   // Signal strength update function
   function updateSignalStrength(data) {

@@ -322,7 +322,7 @@ void BluetoothScale::sendGaggiMateWeight(float weight) {
         payload[6] = (weightInt >= 0) ? 43 : 45;
         
         // Weight data (3 bytes, big endian)
-        uint32_t absWeight = abs(weightInt);
+        uint32_t absWeight = (weightInt < 0) ? (uint32_t)(-weightInt) : (uint32_t)weightInt;
         payload[7] = (absWeight >> 16) & 0xFF;
         payload[8] = (absWeight >> 8) & 0xFF;
         payload[9] = absWeight & 0xFF;

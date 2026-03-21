@@ -26,12 +26,12 @@ void FlowRate::update(float currentWeight) {
             bool tareTransition = false;
             
             // Check for tare transition: negative weight going to near zero
-            if (lastWeight < -5.0f && abs(currentWeight) < 2.0f) {
+            if (lastWeight < -5.0f && fabs(currentWeight) < 2.0f) {
                 tareTransition = true;
             }
             
             // Check for large weight jump (likely tare operation)
-            if (abs(deltaWeight) > 50.0f) {
+            if (fabs(deltaWeight) > 50.0f) {
                 tareTransition = true;
             }
             
@@ -41,7 +41,7 @@ void FlowRate::update(float currentWeight) {
                 bool weightRemoval = deltaWeight < -NEGATIVE_CHANGE_THRESHOLD;
                 
                 // Apply stronger deadband filter for load cell noise
-                if (abs(deltaWeight) < WEIGHT_DEADBAND) {
+                if (fabs(deltaWeight) < WEIGHT_DEADBAND) {
                     deltaWeight = 0.0f;
                 }
                 
@@ -49,7 +49,7 @@ void FlowRate::update(float currentWeight) {
                     float instantRate = deltaWeight / deltaTime;
                     
                     // Only clear buffer for significant weight removal
-                    if (weightRemoval && abs(deltaWeight) > 1.0f) {
+                    if (weightRemoval && fabs(deltaWeight) > 1.0f) {
                         // Major weight removed - reset buffer for fast zero response
                         for (int i = 0; i < FLOWRATE_AVG_WINDOW; i++) {
                             flowRateBuffer[i] = 0.0f;
@@ -74,7 +74,7 @@ void FlowRate::update(float currentWeight) {
                     }
                     
                     // Apply zero threshold to eliminate tiny fluctuations
-                    if (abs(flowRate) < ZERO_THRESHOLD) {
+                    if (fabs(flowRate) < ZERO_THRESHOLD) {
                         flowRate = 0.0f;
                     }
                 }

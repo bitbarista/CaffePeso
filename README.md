@@ -44,7 +44,7 @@ GaggiMate now fully supports WeighMyBru scale.
 
 ## Installation
 
-Installation instructions are currently under development, for now follow the [link](https://031devstudios.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [YouTube](https://www.youtube.com/watch?v=O5SP40Liuq0)
+Installation instructions are currently under development, for now follow the [link](https://bitbarista.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [YouTube](https://www.youtube.com/watch?v=O5SP40Liuq0)
 
 ```
   this project requires VSCode with PlatformIO extension installed
@@ -121,3 +121,17 @@ For advanced users or development, continue with the PlatformIO instructions bel
 |  4  | M2 Washers (Used for HX711)       |
 
 \* Bottom has 2 options - The supported option has engineered supports, while the standard option requires you to slice with your own supports.
+
+---
+
+## Attribution
+
+This project is a derivative of [WeighMyBru](https://github.com/031devstudios/weighmybru2) by 031devstudios, licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+Additions in this fork:
+- Armed auto-start: hold tare to arm timer; auto-triggers on first drip; auto-re-arms when same cup detected
+- Target yield alert: configurable brew ratio target; OLED flashes and web UI turns amber at approach
+- Cup weight persistence across reboots
+- Shot history: last 10 shots stored in NVS, displayed in web UI
+
+This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).

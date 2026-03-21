@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <esp_sleep.h>
+#include <Preferences.h>
 
 class Display; // Forward declaration
 
@@ -17,9 +18,19 @@ public:
     void setDisplay(Display* display);
     
     // Timer control for TIME mode
-    void handleTimerControl();
-    void resetTimerState(); // Reset timer state to sync with auto mode
-    
+    void handleTimerControl();   // Touch-driven cycling: STOPPED→RUNNING→PAUSED→STOPPED
+    void startTimer();           // Explicit start/resume (web UI)
+    void stopTimer();            // Explicit pause (web UI)
+    void resetTimer();           // Explicit reset (web UI)
+    void resetTimerState();      // Reset internal state enum without touching display
+    void notifyActivity();  // Call on any user/weight activity to reset inactivity timer
+
+    // Inactivity sleep settings
+    void setInactivityEnabled(bool enabled);
+    void setInactivityTimeout(unsigned long ms);
+    bool getInactivityEnabled() const { return inactivityEnabled; }
+    unsigned long getInactivityTimeout() const { return inactivityTimeout; }
+
 private:
     uint8_t sleepTouchPin;
     Display* displayPtr;
@@ -33,6 +44,10 @@ private:
     bool longPressDetected;
     bool cancelledRecently;
     unsigned long cancelTime;
+    unsigned long lastActivityTime;
+    unsigned long inactivityTimeout; // ms
+    bool inactivityEnabled;
+    Preferences preferences;
     
     // Timer control state
     enum class TimerState {
@@ -45,6 +60,12 @@ private:
     
     void handleSleepTouch();
     void showSleepCountdown(int seconds);
+    void handleStatusPage();
+    void handleWiFiToggle();
+
+    static const unsigned long HOLD_STATUS_MS = 1000; // hold for status page
+    static const unsigned long HOLD_WIFI_MS   = 3000; // hold for WiFi toggle
+    static const unsigned long HOLD_SLEEP_MS  = 5000; // hold for sleep
 };
 
 #endif

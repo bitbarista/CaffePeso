@@ -8,6 +8,19 @@
   <link rel="stylesheet" href="/output.css">
   <script src="/js/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/css/all.min.css">
+  <style>
+    html, body { overflow-x: hidden; max-width: 100%; }
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #4b5563; border-radius: 9999px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; top: 2px; background: white; border-radius: 50%; transition: .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: #16a34a; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    @media (max-width: 767px) {
+      main { padding: 12px !important; }
+      .bg-black-select { max-width: 100% !important; box-sizing: border-box; }
+    }
+  </style>
 </head>
 <body class="bg-black-background text-white">
 
@@ -29,7 +42,7 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/updates.html"><i class="fa fa-upload mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
-  <main class="flex-grow overflow-y-auto p-8">
+  <main class="flex-grow overflow-y-auto p-4 md:p-8">
     <h1 class="text-3xl text-white font-bold mb-4">Calibration</h1>
     <div class="bg-black-select p-6 rounded shadow max-w-xl">
       <div id="message" class="text-green-400 mb-2"></div>
@@ -49,6 +62,24 @@
           <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Calibrate</button>
         </form>
       </div>
+
+      <!-- Step 3: Optional verification with a second weight -->
+      <div id="step3" class="hidden mb-6">
+        <h2 class="text-2xl font-semibold mb-2">Step 3: Verify Accuracy <span class="text-sm text-gray-400 font-normal">(optional)</span></h2>
+        <p class="text-gray-400 text-sm mb-3">Place a different known weight to check linearity. This does not change the calibration.</p>
+        <form id="verifyForm">
+          <label for="verifyWeight" class="block mb-2">Enter second known weight (grams):</label>
+          <input type="number" id="verifyWeight" name="verifyWeight" required step="any" min="0.01" class="w-full px-3 py-2 mb-4 rounded text-black" />
+          <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Verify</button>
+        </form>
+        <div id="verifyResult" class="hidden mt-4 p-4 rounded bg-black-background">
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="text-gray-400">Expected:</div><div id="verifyExpected" class="font-mono"></div>
+            <div class="text-gray-400">Measured:</div><div id="verifyMeasured" class="font-mono"></div>
+            <div class="text-gray-400">Error:</div><div id="verifyError" class="font-mono font-semibold"></div>
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- Battery Calibration Section -->
@@ -56,16 +87,16 @@
       <h2 class="text-2xl font-semibold mb-4"><i class="fa fa-battery-half mr-2" style="color: rgb(71, 168, 100);"></i>Battery Calibration</h2>
       <div id="batteryMessage" class="text-green-400 mb-2"></div>
       <p id="batteryStatus" class="text-yellow-400 mb-4"></p>
-      
-      <div id="currentBattery" class="mb-6">
+
+      <div class="mb-6">
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div><strong>Current Voltage:</strong> <span id="currentVoltage">Loading...</span></div>
           <div><strong>Current Percentage:</strong> <span id="currentPercentage">Loading...</span></div>
           <div><strong>Battery Status:</strong> <span id="batteryState">Loading...</span></div>
-          <div><strong>Calibration Offset:</strong> <span id="calibrationOffset">Loading...</span></div>
+          <div><strong>Correction Factor:</strong> <span id="calibrationScale">Loading...</span></div>
         </div>
       </div>
-      
+
       <div class="mb-6">
         <h3 class="text-xl font-semibold mb-2">Calibrate Battery Voltage</h3>
         <div class="bg-black-background p-4 rounded mb-4">
@@ -77,13 +108,12 @@
             <li>Click "Calibrate Battery" to apply the correction</li>
           </ol>
         </div>
-        
         <form id="batteryCalibrationForm">
           <label for="actualVoltage" class="block mb-2">Measured Battery Voltage (V):</label>
-          <input type="number" id="actualVoltage" name="actualVoltage" required step="0.01" min="2.5" max="5.0" 
-                 placeholder="e.g., 4.25" class="w-full px-3 py-2 mb-4 rounded text-black" />
+          <input type="number" id="actualVoltage" name="actualVoltage" required step="0.01" min="2.5" max="5.0"
+                 placeholder="e.g., 4.10" class="w-full px-3 py-2 mb-4 rounded text-black" />
           <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">
-            <i class="fa fa-calibrate mr-2"></i>Calibrate Battery
+            Calibrate Battery
           </button>
         </form>
       </div>
@@ -97,11 +127,6 @@
     const status = document.getElementById("status");
     const message = document.getElementById("message");
     const calibrateForm = document.getElementById("calibrateForm");
-    
-    // Battery elements
-    const batteryCalibrationForm = document.getElementById("batteryCalibrationForm");
-    const batteryStatus = document.getElementById("batteryStatus");
-    const batteryMessage = document.getElementById("batteryMessage");
 
     // Scale calibration handlers
     tareBtn.addEventListener("click", async () => {
@@ -128,74 +153,92 @@
       });
       const result = await response.text();
       status.textContent = result;
+      if (response.ok) {
+        // Show verification step
+        document.getElementById("step3").classList.remove("hidden");
+        document.getElementById("verifyResult").classList.add("hidden");
+        // Refresh calibration factor display
+        fetch('/api/calibrationfactor').then(r => r.text()).then(d => {
+          document.getElementById('currentCalib').textContent = d;
+        });
+      }
     });
 
-    // Battery calibration handler
+    // Verification step
+    document.getElementById("verifyForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const verifyWeight = parseFloat(document.getElementById("verifyWeight").value);
+      const params = new URLSearchParams();
+      params.append('knownWeight', verifyWeight);
+      try {
+        const result = await fetch("/api/calibrate/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
+        }).then(r => r.json());
+
+        document.getElementById("verifyExpected").textContent = result.known.toFixed(2) + "g";
+        document.getElementById("verifyMeasured").textContent = result.measured.toFixed(2) + "g";
+
+        const errEl = document.getElementById("verifyError");
+        const absPct = Math.abs(result.error_pct);
+        let colour = absPct <= 0.5 ? "#22c55e" : absPct <= 2.0 ? "#f59e0b" : "#ef4444";
+        let rating = absPct <= 0.5 ? "Excellent" : absPct <= 2.0 ? "Acceptable" : "Recalibrate recommended";
+        errEl.textContent = (result.error >= 0 ? "+" : "") + result.error.toFixed(2) + "g (" +
+          (result.error_pct >= 0 ? "+" : "") + result.error_pct.toFixed(2) + "%) — " + rating;
+        errEl.style.color = colour;
+        document.getElementById("verifyResult").classList.remove("hidden");
+      } catch (err) {
+        status.textContent = "Verification failed: " + err.message;
+      }
+    });
+
+    // Battery calibration
+    const batteryCalibrationForm = document.getElementById("batteryCalibrationForm");
+    const batteryStatus = document.getElementById("batteryStatus");
+    const batteryMessage = document.getElementById("batteryMessage");
+
+    async function updateBatteryDisplay() {
+      try {
+        const data = await fetch('/api/battery').then(r => r.json());
+        const voltageEl = document.getElementById('currentVoltage');
+        const percentEl = document.getElementById('currentPercentage');
+        const stateEl = document.getElementById('batteryState');
+        voltageEl.textContent = `${data.voltage}V`;
+        percentEl.textContent = `${data.percentage}%`;
+        stateEl.textContent = data.status;
+        document.getElementById('calibrationScale').textContent = data.calibration_scale != null
+          ? data.calibration_scale.toFixed(4) : 'N/A';
+        const colour = data.critical_battery ? "text-red-400" : data.low_battery ? "text-yellow-400" : "text-green-400";
+        voltageEl.className = colour;
+        percentEl.className = colour;
+        stateEl.className = colour;
+      } catch (e) { console.error('Battery update failed:', e); }
+    }
+
     batteryCalibrationForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const actualVoltage = document.getElementById("actualVoltage").value;
-      batteryStatus.textContent = "Calibrating battery...";
+      batteryStatus.textContent = "Calibrating...";
       batteryMessage.textContent = "";
-      
       try {
-        const response = await fetch(`/api/battery/calibrate?voltage=${actualVoltage}`);
-        const result = await response.json();
-        
+        const result = await fetch(`/api/battery/calibrate?voltage=${actualVoltage}`).then(r => r.json());
         if (result.status === "success") {
-          batteryMessage.textContent = `✓ ${result.message}`;
-          batteryStatus.textContent = `Before: ${result.before_voltage}V (${result.before_percentage}%) → After: ${result.after_voltage}V (${result.after_percentage}%)`;
-          batteryStatus.className = "text-green-400 mb-4";
-          
-          // Update current battery display
-          updateBatteryDisplay();
-          
-          // Clear form
+          batteryMessage.textContent = `✓ Calibrated — before: ${result.before_voltage}V → after: ${result.after_voltage}V`;
+          batteryStatus.textContent = "";
           document.getElementById("actualVoltage").value = "";
+          updateBatteryDisplay();
         } else {
           batteryMessage.textContent = "";
-          batteryStatus.textContent = `❌ Error: ${result.message}`;
-          batteryStatus.className = "text-red-400 mb-4";
+          batteryStatus.textContent = `❌ ${result.message}`;
         }
-      } catch (error) {
-        batteryMessage.textContent = "";
-        batteryStatus.textContent = `❌ Network error: ${error.message}`;
-        batteryStatus.className = "text-red-400 mb-4";
+      } catch (err) {
+        batteryStatus.textContent = `❌ Network error: ${err.message}`;
       }
     });
 
-    // Function to update battery display
-    async function updateBatteryDisplay() {
-      try {
-        const response = await fetch('/api/battery');
-        const data = await response.json();
-        
-        document.getElementById('currentVoltage').textContent = `${data.voltage}V`;
-        document.getElementById('currentPercentage').textContent = `${data.percentage}%`;
-        document.getElementById('batteryState').textContent = data.status;
-        document.getElementById('calibrationOffset').textContent = `${data.calibration_offset}V`;
-        
-        // Color code the battery status
-        const voltageElement = document.getElementById('currentVoltage');
-        const percentageElement = document.getElementById('currentPercentage');
-        const statusElement = document.getElementById('batteryState');
-        
-        if (data.critical_battery) {
-          voltageElement.className = "text-red-400";
-          percentageElement.className = "text-red-400";
-          statusElement.className = "text-red-400";
-        } else if (data.low_battery) {
-          voltageElement.className = "text-yellow-400";
-          percentageElement.className = "text-yellow-400";
-          statusElement.className = "text-yellow-400";
-        } else {
-          voltageElement.className = "text-green-400";
-          percentageElement.className = "text-green-400";
-          statusElement.className = "text-green-400";
-        }
-      } catch (error) {
-        console.error('Error updating battery display:', error);
-      }
-    }
+    updateBatteryDisplay();
+    setInterval(updateBatteryDisplay, 5000);
 
     // Fetch current calibration factor
     fetch('/api/calibrationfactor')
@@ -204,11 +247,7 @@
         document.getElementById('currentCalib').textContent = data;
       });
       
-    // Initial battery display update
-    updateBatteryDisplay();
-    
-    // Update battery display every 5 seconds
-    setInterval(updateBatteryDisplay, 5000);
+
 </script>
 </body>
 </html>

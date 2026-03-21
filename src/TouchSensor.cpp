@@ -4,10 +4,11 @@
 #include "FlowRate.h"
 #include "WiFiManager.h"
 
-TouchSensor::TouchSensor(uint8_t touchPin, Scale* scale) 
-    : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), flowRatePtr(nullptr), touchThreshold(30000), 
+TouchSensor::TouchSensor(uint8_t touchPin, Scale* scale)
+    : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), flowRatePtr(nullptr), touchThreshold(30000),
       lastTouchState(false), lastTouchTime(0), touchStartTime(0), debounceDelay(200),
-      longPressDetected(false), delayedTarePending(false), delayedTareTime(0) {
+      longPressDetected(false), delayedTarePending(false), delayedTareTime(0),
+      holdTarePending(false), preTareWeightCapture(0.0f) {
 }
 
 void TouchSensor::begin() {
@@ -34,19 +35,9 @@ void TouchSensor::update() {
                 unsigned long pressDuration = currentTime - touchStartTime;
                 
                 if (!longPressDetected) {
-                    if (pressDuration >= WIFI_TOGGLE_DURATION) {
-                        // Very long press (5+ seconds) - WiFi toggle
-                        handleWiFiToggle();
-                        Serial.println("Very long press detected - WiFi toggle");
-                    } else if (pressDuration >= 500) {
-                        // Medium press (500ms+) - Status page toggle
-                        handleStatusPageToggle();
-                        Serial.println("Medium press detected - status page toggle");
-                    } else {
-                        // Short press - Tare
-                        scheduleDelayedTare();
-                        Serial.println("Short press detected - tare");
-                    }
+                    // Tap: always tare (resets timer too if brew is finished)
+                    scheduleDelayedTare();
+                    Serial.println("Tare button: tare");
                 }
                 longPressDetected = false;
                 Serial.println("Touch ended");
@@ -56,15 +47,21 @@ void TouchSensor::update() {
         }
     }
     
-    // Check for very long press (WiFi toggle) while touch is still active
-    if (currentTouchState && !longPressDetected && touchStartTime > 0) {
-        if (currentTime - touchStartTime >= WIFI_TOGGLE_DURATION) {
+    
+    // During-hold: check for hold-tare (arm + save cup weight)
+    if (currentTouchState && !longPressDetected) {
+        unsigned long held = currentTime - touchStartTime;
+        if (held >= HOLD_TARE_MS) {
             longPressDetected = true;
-            handleWiFiToggle();
-            Serial.println("Very long press detected (during hold) - WiFi toggle");
+            Serial.println("Hold tare: arm + save cup weight");
+            preTareWeightCapture = (scalePtr != nullptr) ? scalePtr->getCurrentWeight() : 0.0f;
+            holdTarePending   = true;
+            delayedTarePending = true;
+            delayedTareTime    = currentTime + TARE_DELAY;
+            if (displayPtr != nullptr) displayPtr->showArmedMessage();
         }
     }
-    
+
     // Check for pending delayed tare
     checkDelayedTare();
 }
@@ -137,13 +134,16 @@ void TouchSensor::handleTouch() {
 
 void TouchSensor::scheduleDelayedTare() {
     Serial.println("Touch detected - showing taring message immediately");
-    
-    // Show taring message immediately for better user feedback
+
+    // Capture weight at tap time for auto-re-arm comparison
+    preTareWeightCapture = (scalePtr != nullptr) ? scalePtr->getCurrentWeight() : 0.0f;
+    holdTarePending = false; // tap, not hold
+
     if (displayPtr != nullptr) {
         displayPtr->showTaringMessage();
         Serial.println("Taring message displayed");
     }
-    
+
     Serial.println("Scheduling delayed tare in 1.5 seconds...");
     delayedTarePending = true;
     delayedTareTime = millis() + TARE_DELAY;
@@ -153,27 +153,35 @@ void TouchSensor::checkDelayedTare() {
     if (delayedTarePending && millis() >= delayedTareTime) {
         Serial.println("Executing delayed tare operation");
         delayedTarePending = false;
-        
-        // Perform the actual tare operation without showing message again
+        bool wasHoldTare   = holdTarePending;
+        holdTarePending    = false;
+
         if (scalePtr != nullptr) {
             scalePtr->tare();
             Serial.println("Scale tared successfully");
-            
-            // Reset timer when manual tare is pressed
+
             if (displayPtr != nullptr) {
-                displayPtr->resetTimer();
-                Serial.println("Timer reset with manual tare");
-            }
-            
-            // Reset flow rate averaging for fresh brew
-            if (flowRatePtr != nullptr) {
-                flowRatePtr->resetTimerAveraging();
-                Serial.println("Flow rate averaging reset for fresh brew");
-            }
-            
-            // Show completion message on display if available
-            if (displayPtr != nullptr) {
-                displayPtr->showTaredMessage();
+                if (wasHoldTare) {
+                    // Hold-tare: arm auto-start and save cup weight to NVS
+                    displayPtr->arm(preTareWeightCapture);
+                    Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", preTareWeightCapture);
+                } else {
+                    // Tap-tare: reset timer if brew just finished
+                    if (displayPtr->isTimerPaused()) {
+                        displayPtr->resetTimer();
+                        if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();
+                        Serial.println("Timer reset on tare after brew");
+                    }
+                    // Auto-re-arm: if pre-tare weight matches saved cup weight ±5g
+                    float saved = displayPtr->getSavedTareWeight();
+                    if (saved > 5.0f && fabs(preTareWeightCapture - saved) <= 5.0f) {
+                        displayPtr->arm(saved); // re-arm with existing saved weight
+                        Serial.printf("Auto-re-armed: %.1fg matches saved %.1fg\n",
+                                      preTareWeightCapture, saved);
+                    } else {
+                        displayPtr->showTaredMessage();
+                    }
+                }
             }
         } else {
             Serial.println("Error: Scale pointer is null");
@@ -181,29 +189,3 @@ void TouchSensor::checkDelayedTare() {
     }
 }
 
-void TouchSensor::handleStatusPageToggle() {
-    Serial.println("Medium press detected - toggling status page");
-    
-    if (displayPtr != nullptr) {
-        displayPtr->toggleStatusPage();
-    } else {
-        Serial.println("Error: Display pointer is null");
-    }
-}
-
-void TouchSensor::handleWiFiToggle() {
-    Serial.println("Long press detected - toggling WiFi power");
-    
-    // Toggle WiFi power state
-    toggleWiFi();
-    
-    // Show feedback on display
-    if (displayPtr != nullptr) {
-        // Show WiFi status using the same format as WeighMyBru Ready
-        bool enabled = isWiFiEnabled();
-        displayPtr->showWiFiStatusMessage(enabled);
-        Serial.printf("WiFi toggled: %s\n", enabled ? "ON" : "OFF");
-    } else {
-        Serial.println("Error: Display pointer is null");
-    }
-}

@@ -1,5 +1,6 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include "WebServer.h"
 #include "Scale.h"
 #include "WiFiManager.h"
@@ -10,6 +11,14 @@
 #include "Version.h"
 
 Preferences preferences;
+
+// Deferred WiFi disable — set from async callback, actioned in loop() via checkPendingWiFiDisable()
+static volatile bool wifiDisablePending = false;
+static unsigned long wifiDisableTime = 0;
+
+// Deferred restart — set after OTA completes, actioned in loop()
+static volatile bool restartPending = false;
+static unsigned long restartTime = 0;
 
 // Cache for display settings to avoid repeated slow EEPROM reads
 static int cachedDecimals = -1; // -1 indicates not cached yet
@@ -50,6 +59,238 @@ void setCachedDecimals(int decimals) {
         Serial.printf("Decimal setting saved in %lu ms\n", millis() - startTime);
     } else {
         Serial.println("ERROR: Failed to save decimal setting to EEPROM");
+    }
+}
+
+// Cache for display mode (0=standard, 1=weight-focus)
+static int cachedDisplayMode = -1;
+
+int getCachedDisplayMode() {
+    if (cachedDisplayMode != -1) return cachedDisplayMode;
+    if (preferences.begin("display", false)) {
+        cachedDisplayMode = preferences.getInt("disp_mode", 0);
+        preferences.end();
+    } else {
+        cachedDisplayMode = 0;
+    }
+    return cachedDisplayMode;
+}
+
+void setCachedDisplayMode(int mode) {
+    if (preferences.begin("display", false)) {
+        preferences.putInt("disp_mode", mode);
+        preferences.end();
+        cachedDisplayMode = mode;
+    } else {
+        Serial.println("ERROR: Failed to save display mode to NVS");
+    }
+}
+
+// Dose weight — manually set by user, persisted so it survives reboots
+static float cachedDoseWeight = 0.0f;
+static bool  doseWeightCached = false;
+
+float getCachedDoseWeight() {
+    if (doseWeightCached) return cachedDoseWeight;
+    if (preferences.begin("display", false)) {
+        cachedDoseWeight = preferences.getFloat("dose_w", 0.0f);
+        preferences.end();
+    }
+    doseWeightCached = true;
+    return cachedDoseWeight;
+}
+
+void setCachedDoseWeight(float grams, Display& display) {
+    cachedDoseWeight = grams;
+    doseWeightCached = true;
+    if (preferences.begin("display", false)) {
+        preferences.putFloat("dose_w", grams);
+        preferences.end();
+    }
+    display.setDoseWeight(grams);
+}
+
+// Auto-tare settings cache
+static bool  cachedAutoTareEnabled   = false;
+static float cachedAutoTareThreshold = 20.0f;
+static bool  autoTareCached          = false;
+
+void loadAutoTareSettings(Display& display) {
+    if (autoTareCached) return;
+    if (preferences.begin("display", false)) {
+        cachedAutoTareEnabled   = preferences.getBool("at_en", false);
+        cachedAutoTareThreshold = preferences.getFloat("at_thresh", 20.0f);
+        preferences.end();
+    }
+    autoTareCached = true;
+    display.setAutoTareEnabled(cachedAutoTareEnabled);
+    display.setAutoTareThreshold(cachedAutoTareThreshold);
+}
+
+void saveAutoTareSettings(bool enabled, float threshold, Display& display) {
+    cachedAutoTareEnabled   = enabled;
+    cachedAutoTareThreshold = threshold;
+    if (preferences.begin("display", false)) {
+        preferences.putBool("at_en", enabled);
+        preferences.putFloat("at_thresh", threshold);
+        preferences.end();
+    }
+    display.setAutoTareEnabled(enabled);
+    display.setAutoTareThreshold(threshold);
+}
+
+// Idle reset settings cache
+static bool          cachedIdleResetEnabled = false;
+static unsigned long cachedIdleResetTimeout = 30000UL;
+static bool          idleResetCached        = false;
+
+void loadIdleResetSettings(Display& display) {
+    if (idleResetCached) return;
+    if (preferences.begin("display", false)) {
+        cachedIdleResetEnabled = preferences.getBool("ir_en", false);
+        cachedIdleResetTimeout = preferences.getULong("ir_timeout", 30000UL);
+        preferences.end();
+    }
+    idleResetCached = true;
+    display.setIdleResetEnabled(cachedIdleResetEnabled);
+    display.setIdleResetTimeout(cachedIdleResetTimeout);
+}
+
+void saveIdleResetSettings(bool enabled, unsigned long ms, Display& display) {
+    cachedIdleResetEnabled = enabled;
+    cachedIdleResetTimeout = ms;
+    if (preferences.begin("display", false)) {
+        preferences.putBool("ir_en", enabled);
+        preferences.putULong("ir_timeout", ms);
+        preferences.end();
+    }
+    display.setIdleResetEnabled(enabled);
+    display.setIdleResetTimeout(ms);
+}
+
+// Target ratio — for target yield alert (0 = disabled)
+static float cachedTargetRatio = 0.0f;
+static bool  targetRatioCached = false;
+
+float getCachedTargetRatio() {
+    if (targetRatioCached) return cachedTargetRatio;
+    if (preferences.begin("display", false)) {
+        cachedTargetRatio = preferences.getFloat("target_r", 0.0f);
+        preferences.end();
+    }
+    targetRatioCached = true;
+    return cachedTargetRatio;
+}
+
+void setCachedTargetRatio(float ratio, Display& display) {
+    cachedTargetRatio  = ratio;
+    targetRatioCached  = true;
+    if (preferences.begin("display", false)) {
+        preferences.putFloat("target_r", ratio);
+        preferences.end();
+    }
+    display.setTargetRatio(ratio);
+}
+
+// Saved tare weight — cup weight persisted for auto-re-arm
+void loadSavedTareWeight(Display& display) {
+    if (preferences.begin("display", false)) {
+        float saved = preferences.getFloat("saved_tare", 0.0f);
+        preferences.end();
+        // Inject into Display so arm() comparisons work after reboot
+        // (arm state itself is NOT persisted — user must hold-tare again after boot)
+        if (saved > 5.0f) {
+            // Directly set via a temporary arm call then disarm so savedTareWeight is populated
+            display.arm(saved);
+            display.disarm();
+        }
+    }
+}
+
+// Shot history — rolling buffer of last 10 shots in "shots" NVS namespace
+static uint8_t  shotHead    = 0;   // Next write slot (0-9)
+static uint8_t  shotCount   = 0;   // Shots stored so far (0-10)
+static uint32_t shotCounter = 0;   // Ever-incrementing shot number
+static bool     shotHistoryLoaded = false;
+
+void loadShotHistory() {
+    if (shotHistoryLoaded) return;
+    Preferences p;
+    if (p.begin("shots", false)) {
+        shotHead    = p.getUChar("head",    0);
+        shotCount   = p.getUChar("count",   0);
+        shotCounter = p.getULong("counter", 0);
+        p.end();
+    }
+    shotHistoryLoaded = true;
+}
+
+void saveShotToHistory(float dose, float yield, float timeSec, float ratio) {
+    loadShotHistory();
+    shotCounter++;
+    char key[4];
+    Preferences p;
+    if (!p.begin("shots", false)) return;
+    snprintf(key, sizeof(key), "d%d", shotHead); p.putFloat(key, dose);
+    snprintf(key, sizeof(key), "y%d", shotHead); p.putFloat(key, yield);
+    snprintf(key, sizeof(key), "t%d", shotHead); p.putFloat(key, timeSec);
+    snprintf(key, sizeof(key), "r%d", shotHead); p.putFloat(key, ratio);
+    snprintf(key, sizeof(key), "n%d", shotHead); p.putULong(key, shotCounter);
+    shotHead = (shotHead + 1) % 10;
+    if (shotCount < 10) shotCount++;
+    p.putUChar("head",    shotHead);
+    p.putUChar("count",   shotCount);
+    p.putULong("counter", shotCounter);
+    p.end();
+    Serial.printf("Shot #%lu saved: dose=%.1f yield=%.1f time=%.1fs ratio=%.2f\n",
+                  (unsigned long)shotCounter, dose, yield, timeSec, ratio);
+}
+
+String getShotHistoryJSON() {
+    loadShotHistory();
+    Preferences p;
+    if (!p.begin("shots", true)) return "[]";
+    String json = "[";
+    char key[4];
+    for (int i = 0; i < shotCount; i++) {
+        uint8_t idx = (shotHead - 1 - i + 10) % 10;
+        snprintf(key, sizeof(key), "d%d", idx); float dose    = p.getFloat(key, 0.0f);
+        snprintf(key, sizeof(key), "y%d", idx); float yield   = p.getFloat(key, 0.0f);
+        snprintf(key, sizeof(key), "t%d", idx); float timeSec = p.getFloat(key, 0.0f);
+        snprintf(key, sizeof(key), "r%d", idx); float ratio   = p.getFloat(key, 0.0f);
+        snprintf(key, sizeof(key), "n%d", idx); unsigned long num = p.getULong(key, 0);
+        if (i > 0) json += ",";
+        json += "{\"shot\":" + String(num) +
+                ",\"dose\":"  + String(dose,    1) +
+                ",\"yield\":" + String(yield,   1) +
+                ",\"time\":"  + String(timeSec, 1) +
+                ",\"ratio\":" + String(ratio,   2) + "}";
+    }
+    p.end();
+    json += "]";
+    return json;
+}
+
+void clearShotHistory() {
+    shotHead = 0; shotCount = 0;
+    shotHistoryLoaded = true;
+    Preferences p;
+    if (p.begin("shots", false)) { p.clear(); p.end(); }
+    Serial.println("Shot history cleared");
+}
+
+// Called from loop() — detect timer stop and save shot
+static bool prevTimerRunningForShot = false;
+
+void checkPendingShotSave(Display& display, Scale& scale) {
+    if (display.hasPendingShot()) {
+        float dose    = display.getDoseWeight();
+        float yield   = display.getLastBrewYield();
+        float timeSec = display.getLastBrewTime();
+        if (dose > 0.5f && yield > 5.0f && timeSec > 3.0f) {
+            saveShotToHistory(dose, yield, timeSec, yield / dose);
+        }
+        display.clearPendingShot();
     }
 }
 
@@ -108,7 +349,7 @@ AsyncWebServer server(80);
  * Response: {"weight":45.23,"flowrate":2.15}
  */
 
-void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery) {
+void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery, PowerManager &powerManager) {
   if (!LittleFS.begin()) {
     Serial.println();
     Serial.println("=====================================");
@@ -135,6 +376,16 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   // Pre-cache settings to avoid delays on first page load
   Serial.println("Pre-caching settings for faster page loads...");
   getCachedDecimals();        // This will cache the decimal setting
+  display.setWeightDecimals(getCachedDecimals()); // Push cached value to display
+  getCachedDisplayMode();     // Cache display mode
+  display.setDisplayMode(getCachedDisplayMode()); // Push cached value to display
+  display.setDoseWeight(getCachedDoseWeight()); // Restore persisted dose weight
+  loadAutoTareSettings(display);   // Cache and apply auto-tare settings
+  loadIdleResetSettings(display);  // Cache and apply idle-reset settings
+  getCachedTargetRatio();          // Cache target ratio
+  display.setTargetRatio(getCachedTargetRatio()); // Push to display
+  loadSavedTareWeight(display);    // Restore saved cup weight for auto-re-arm
+  loadShotHistory();               // Pre-load shot history index
   getStoredSSID();            // This will cache WiFi credentials
 
   // Register API route first
@@ -192,24 +443,27 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += ",\"device_board\":\"" + String(WEIGHMYBRU_BOARD_NAME) + "\"";
     json += ",\"device_build_date\":\"" + String(WEIGHMYBRU_BUILD_DATE) + "\"";
     json += ",\"device_full_version\":\"" + String(WEIGHMYBRU_FULL_VERSION) + "\"";
-    
+    json += ",\"dose_weight\":" + String(display.getDoseWeight(), 1);
+    json += ",\"target_ratio\":" + String(display.getTargetRatio(), 2);
+    json += ",\"armed\":" + String(display.isArmed() ? "true" : "false");
+
     json += "}";
     request->send(200, "application/json", json);
   });
 
-  // Timer control endpoints
-  server.on("/api/timer/start", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    display.startTimer();
+  // Timer control endpoints — route through PowerManager to keep touch state in sync
+  server.on("/api/timer/start", HTTP_POST, [&powerManager](AsyncWebServerRequest *request) {
+    powerManager.startTimer();
     request->send(200, "text/plain", "Timer started");
   });
 
-  server.on("/api/timer/stop", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    display.stopTimer();
+  server.on("/api/timer/stop", HTTP_POST, [&powerManager](AsyncWebServerRequest *request) {
+    powerManager.stopTimer();
     request->send(200, "text/plain", "Timer stopped");
   });
 
-  server.on("/api/timer/reset", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    display.resetTimer();
+  server.on("/api/timer/reset", HTTP_POST, [&powerManager](AsyncWebServerRequest *request) {
+    powerManager.resetTimer();
     request->send(200, "text/plain", "Timer reset");
   });
 
@@ -237,61 +491,28 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  // Battery calibration endpoints (must be before general /api/battery route)
-  server.on("/api/battery/calibrate", HTTP_POST, [&battery](AsyncWebServerRequest *request) {
-    if (request->hasParam("actualVoltage", true)) {
-      String value = request->getParam("actualVoltage", true)->value();
-      float actualVoltage = value.toFloat();
-      if (actualVoltage > 0.0f && actualVoltage <= 5.0f) {
-        battery.calibrateVoltage(actualVoltage);
-        String json = "{";
-        json += "\"status\":\"success\",";
-        json += "\"message\":\"Battery calibrated to " + String(actualVoltage, 3) + "V\",";
-        json += "\"new_voltage\":" + String(battery.getBatteryVoltage(), 3) + ",";
-        json += "\"new_percentage\":" + String(battery.getBatteryPercentage()) + ",";
-        json += "\"calibration_offset\":" + String(battery.getCalibrationOffset(), 3);
-        json += "}";
-        request->send(200, "application/json", json);
-      } else {
-        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid voltage. Must be between 0.1V and 5.0V\"}");
-      }
-    } else {
-      request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing 'actualVoltage' parameter\"}");
-    }
-  });
-
-  // GET version for easy browser access
+  // Battery calibration endpoint
   server.on("/api/battery/calibrate", HTTP_GET, [&battery](AsyncWebServerRequest *request) {
-    if (request->hasParam("voltage")) {
-      String value = request->getParam("voltage")->value();
-      float actualVoltage = value.toFloat();
-      if (actualVoltage > 0.0f && actualVoltage <= 5.0f) {
-        float beforeVoltage = battery.getBatteryVoltage();
-        int beforePercentage = battery.getBatteryPercentage();
-        
-        battery.calibrateVoltage(actualVoltage);
-        
-        float afterVoltage = battery.getBatteryVoltage();
-        int afterPercentage = battery.getBatteryPercentage();
-        
-        String json = "{";
-        json += "\"status\":\"success\",";
-        json += "\"message\":\"Battery calibrated successfully\",";
-        json += "\"before_voltage\":" + String(beforeVoltage, 3) + ",";
-        json += "\"before_percentage\":" + String(beforePercentage) + ",";
-        json += "\"after_voltage\":" + String(afterVoltage, 3) + ",";
-        json += "\"after_percentage\":" + String(afterPercentage) + ",";
-        json += "\"target_voltage\":" + String(actualVoltage, 3) + ",";
-        json += "\"calibration_offset\":" + String(battery.getCalibrationOffset(), 3);
-        json += "}";
-        request->send(200, "application/json", json);
-        Serial.printf("Battery calibrated via GET: %.3fV (was %.3fV, now %.3fV)\n", actualVoltage, beforeVoltage, afterVoltage);
-      } else {
-        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid voltage. Must be between 0.1V and 5.0V\"}");
-      }
-    } else {
-      request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing 'voltage' parameter. Use ?voltage=4.30\"}");
+    if (!request->hasParam("voltage")) {
+      request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing 'voltage' parameter. Use ?voltage=4.10\"}");
+      return;
     }
+    float actualVoltage = request->getParam("voltage")->value().toFloat();
+    if (actualVoltage < 2.5f || actualVoltage > 5.0f) {
+      request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Voltage must be between 2.5V and 5.0V\"}");
+      return;
+    }
+    float beforeVoltage = battery.getBatteryVoltage();
+    battery.calibrateVoltage(actualVoltage);
+    float afterVoltage = battery.getBatteryVoltage();
+    String json = "{";
+    json += "\"status\":\"success\",";
+    json += "\"before_voltage\":" + String(beforeVoltage, 3) + ",";
+    json += "\"after_voltage\":" + String(afterVoltage, 3) + ",";
+    json += "\"target_voltage\":" + String(actualVoltage, 3) + ",";
+    json += "\"calibration_scale\":" + String(battery.getCalibrationScale(), 4);
+    json += "}";
+    request->send(200, "application/json", json);
   });
 
   // Battery monitoring endpoint (general status)
@@ -304,39 +525,34 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += ",\"low_battery\":" + String(battery.isLowBattery() ? "true" : "false");
     json += ",\"critical_battery\":" + String(battery.isCriticalBattery() ? "true" : "false");
     json += ",\"charging\":" + String(battery.isCharging() ? "true" : "false");
-    json += ",\"calibration_offset\":" + String(battery.getCalibrationOffset(), 3);
+    json += ",\"calibration_scale\":" + String(battery.getCalibrationScale(), 4);
     json += "}";
     request->send(200, "application/json", json);
   });
 
   // Battery debug endpoint for troubleshooting
   server.on("/api/battery/debug", HTTP_GET, [&battery](AsyncWebServerRequest *request) {
-    // We need to expose the raw ADC reading for debugging
-    // Let's create a temporary battery instance to get raw data
-    int rawADC = analogRead(7); // GPIO7 battery pin
-    float rawVoltage = ((float)rawADC / 4095.0f) * 3.3f;
-    float dividedVoltage = rawVoltage * 2.0f; // Apply voltage divider ratio
-    
+    float rawMv = analogReadMilliVolts(battery.getBatteryPin()); // Use configured battery pin
+    float dividedVoltage = (rawMv / 1000.0f) * 2.0f; // Apply voltage divider ratio
+
     String json = "{";
-    json += "\"raw_adc\":" + String(rawADC) + ",";
-    json += "\"raw_voltage\":" + String(rawVoltage, 3) + ",";
+    json += "\"raw_mv\":" + String(rawMv, 1) + ",";
     json += "\"divided_voltage\":" + String(dividedVoltage, 3) + ",";
-    json += "\"calibrated_voltage\":" + String(battery.getBatteryVoltage(), 3) + ",";
-    json += "\"calibration_offset\":" + String(battery.getCalibrationOffset(), 3) + ",";
+    json += "\"voltage\":" + String(battery.getBatteryVoltage(), 3) + ",";
     json += "\"percentage\":" + String(battery.getBatteryPercentage());
     json += "}";
     request->send(200, "application/json", json);
   });
 
-  server.on("/api/tare", HTTP_POST, [&scale, &display, &flowRate](AsyncWebServerRequest *request){
+  server.on("/api/tare", HTTP_POST, [&scale, &powerManager, &flowRate](AsyncWebServerRequest *request){
     scale.tare(20);
-    
-    // Reset timer when taring (prepare for fresh brew)
-    display.resetTimer();
-    
+
+    // Reset timer through PowerManager to keep touch state in sync
+    powerManager.resetTimer();
+
     // Reset flow rate averaging for fresh brew measurement
     flowRate.resetTimerAveraging();
-    
+
     request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });
 
@@ -439,13 +655,12 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
 
   server.on("/api/wifi-toggle", HTTP_POST, [](AsyncWebServerRequest *request) {
     bool currentlyEnabled = isWiFiEnabled() && WiFi.getMode() != WIFI_OFF;
-    
+
     if (currentlyEnabled) {
-      // Send response before disabling WiFi
       request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
-      // Add delay to allow response to be sent, then disable WiFi
-      delay(100);
-      disableWiFi();
+      // Defer actual disable to loop() so the response can be fully transmitted first
+      wifiDisablePending = true;
+      wifiDisableTime = millis();
     } else {
       enableWiFi();
       request->send(200, "text/plain", "WiFi enabled");
@@ -459,11 +674,10 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
         enableWiFi();
         request->send(200, "text/plain", "WiFi enabled");
       } else {
-        // Send response before disabling WiFi
         request->send(200, "text/plain", "WiFi disabled for battery saving. Device will be inaccessible until WiFi is re-enabled.");
-        // Add delay to allow response to be sent, then disable WiFi
-        delay(100);
-        disableWiFi();
+        // Defer actual disable to loop() so the response can be fully transmitted first
+        wifiDisablePending = true;
+        wifiDisableTime = millis();
       }
     } else {
       request->send(400, "text/plain", "Missing enabled parameter");
@@ -516,16 +730,86 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  server.on("/api/decimal-setting", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/api/decimal-setting", HTTP_POST, [&display](AsyncWebServerRequest *request) {
     if (request->hasParam("decimals", true)) {
       int decimals = request->getParam("decimals", true)->value().toInt();
       if (decimals < 0) decimals = 0;
       if (decimals > 2) decimals = 2;
       setCachedDecimals(decimals);
+      display.setWeightDecimals(decimals); // Update display immediately
       request->send(200, "text/plain", "Decimal setting saved.");
     } else {
       request->send(400, "text/plain", "Missing decimals parameter");
     }
+  });
+
+  server.on("/api/display-mode", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int mode = getCachedDisplayMode();
+    request->send(200, "application/json", "{\"mode\":" + String(mode) + "}");
+  });
+
+  server.on("/api/display-mode", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    if (request->hasParam("mode", true)) {
+      int mode = request->getParam("mode", true)->value().toInt();
+      if (mode < 0) mode = 0;
+      if (mode > 1) mode = 1;
+      setCachedDisplayMode(mode);
+      display.setDisplayMode(mode);
+      request->send(200, "text/plain", "Display mode saved.");
+    } else {
+      request->send(400, "text/plain", "Missing mode parameter");
+    }
+  });
+
+  server.on("/api/dose", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json",
+                  "{\"dose_weight\":" + String(cachedDoseWeight, 1) + "}");
+  });
+
+  server.on("/api/dose", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    if (request->hasParam("dose_weight", true)) {
+      float grams = request->getParam("dose_weight", true)->value().toFloat();
+      if (grams < 0.0f) grams = 0.0f;
+      if (grams > 1000.0f) grams = 1000.0f;
+      setCachedDoseWeight(grams, display);
+      request->send(200, "text/plain", "Dose saved.");
+    } else {
+      request->send(400, "text/plain", "Missing dose_weight parameter");
+    }
+  });
+
+  server.on("/api/auto-tare-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"enabled\":" + String(cachedAutoTareEnabled ? "true" : "false") +
+                  ",\"threshold\":" + String(cachedAutoTareThreshold, 1) + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/auto-tare-settings", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    float thr = request->hasParam("threshold", true) ?
+                request->getParam("threshold", true)->value().toFloat() : 20.0f;
+    if (thr < 5.0f) thr = 5.0f;
+    if (thr > 500.0f) thr = 500.0f;
+    saveAutoTareSettings(en, thr, display);
+    request->send(200, "text/plain", "Auto-tare settings saved.");
+  });
+
+  server.on("/api/idle-reset-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"enabled\":" + String(cachedIdleResetEnabled ? "true" : "false") +
+                  ",\"timeoutSeconds\":" + String(cachedIdleResetTimeout / 1000UL) + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/idle-reset-settings", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    unsigned long secs = request->hasParam("timeoutSeconds", true) ?
+                         (unsigned long)request->getParam("timeoutSeconds", true)->value().toInt() : 30UL;
+    if (secs < 5) secs = 5;
+    if (secs > 300) secs = 300;
+    saveIdleResetSettings(en, secs * 1000UL, display);
+    request->send(200, "text/plain", "Idle reset settings saved.");
   });
 
   server.on("/api/flowrate", HTTP_GET, [&flowRate](AsyncWebServerRequest *request) {
@@ -586,6 +870,28 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     } else {
       request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"No valid parameters provided\"}");
     }
+  });
+
+  // Sleep timeout settings
+  server.on("/api/sleep-settings", HTTP_GET, [&powerManager](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"enabled\":" + String(powerManager.getInactivityEnabled() ? "true" : "false") + ",";
+    json += "\"timeoutMinutes\":" + String(powerManager.getInactivityTimeout() / 60000UL);
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/sleep-settings", HTTP_POST, [&powerManager](AsyncWebServerRequest *request) {
+    if (request->hasParam("enabled", true)) {
+      bool enabled = request->getParam("enabled", true)->value() == "true";
+      powerManager.setInactivityEnabled(enabled);
+    }
+    if (request->hasParam("timeoutMinutes", true)) {
+      unsigned long minutes = request->getParam("timeoutMinutes", true)->value().toInt();
+      minutes = constrain(minutes, 1, 60);
+      powerManager.setInactivityTimeout(minutes * 60000UL);
+    }
+    request->send(200, "application/json", "{\"status\":\"success\"}");
   });
 
   // Filter debug endpoint - shows current filter state
@@ -649,6 +955,34 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     }
   });
 
+  // Target ratio for yield alert
+  server.on("/api/target-ratio", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json",
+                  "{\"target_ratio\":" + String(cachedTargetRatio, 2) + "}");
+  });
+
+  server.on("/api/target-ratio", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    if (request->hasParam("target_ratio", true)) {
+      float ratio = request->getParam("target_ratio", true)->value().toFloat();
+      if (ratio < 0.0f) ratio = 0.0f;
+      if (ratio > 20.0f) ratio = 20.0f;
+      setCachedTargetRatio(ratio, display);
+      request->send(200, "text/plain", "Target ratio saved.");
+    } else {
+      request->send(400, "text/plain", "Missing target_ratio parameter");
+    }
+  });
+
+  // Shot history
+  server.on("/api/shot-history", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", getShotHistoryJSON());
+  });
+
+  server.on("/api/shot-history", HTTP_DELETE, [](AsyncWebServerRequest *request) {
+    clearShotHistory();
+    request->send(200, "text/plain", "Shot history cleared.");
+  });
+
   // Serve static files for non-API paths
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
@@ -681,6 +1015,62 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(LittleFS, "/webfonts/fa-regular-400.woff2", "font/woff2");
   });
 
+  // OTA firmware upload endpoint
+  server.on("/api/ota/firmware", HTTP_POST,
+    [](AsyncWebServerRequest *request) {
+      bool success = !Update.hasError();
+      request->send(200, "application/json",
+        String("{\"status\":\"") + (success ? "success" : "error") +
+        "\",\"message\":\"" + (success ? "Update complete, rebooting..." : "Update failed") + "\"}");
+      if (success) {
+        restartPending = true;
+        restartTime = millis();
+      }
+    },
+    [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+      if (index == 0) {
+        Serial.printf("OTA firmware start: %s (%u bytes)\n", filename.c_str(), request->contentLength());
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+          Update.printError(Serial);
+        }
+      }
+      if (Update.isRunning()) {
+        if (Update.write(data, len) != len) {
+          Update.printError(Serial);
+        }
+      }
+      if (final) {
+        if (Update.end(true)) {
+          Serial.printf("OTA firmware complete: %u bytes\n", index + len);
+        } else {
+          Update.printError(Serial);
+        }
+      }
+    });
+
+  // Calibration verification endpoint (checks accuracy with a second known weight)
+  server.on("/api/calibrate/verify", HTTP_POST, [&scale](AsyncWebServerRequest *request) {
+    if (!request->hasParam("knownWeight", true)) {
+      request->send(400, "text/plain", "Missing knownWeight");
+      return;
+    }
+    float knownWeight = request->getParam("knownWeight", true)->value().toFloat();
+    if (knownWeight <= 0) {
+      request->send(400, "text/plain", "Known weight must be positive");
+      return;
+    }
+    float measured = scale.getCurrentWeight();
+    float error = measured - knownWeight;
+    float errorPct = (error / knownWeight) * 100.0f;
+    String json = "{";
+    json += "\"known\":" + String(knownWeight, 2) + ",";
+    json += "\"measured\":" + String(measured, 2) + ",";
+    json += "\"error\":" + String(error, 2) + ",";
+    json += "\"error_pct\":" + String(errorPct, 2);
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
   // Only start the web server if WiFi is enabled
   if (isWiFiEnabled()) {
     server.begin();
@@ -700,4 +1090,18 @@ void startWebServer() {
 void stopWebServer() {
   server.end();
   Serial.println("Web server stopped");
+}
+
+void checkPendingWiFiDisable() {
+  // Disable WiFi ~200ms after the response was queued, giving TCP time to flush
+  if (wifiDisablePending && (millis() - wifiDisableTime >= 200)) {
+    wifiDisablePending = false;
+    disableWiFi();
+  }
+  // Restart after OTA ~500ms after response was queued
+  if (restartPending && (millis() - restartTime >= 500)) {
+    restartPending = false;
+    Serial.println("OTA complete — restarting...");
+    ESP.restart();
+  }
 }

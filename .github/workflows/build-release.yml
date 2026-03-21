@@ -140,7 +140,7 @@ jobs:
           "version": "$VERSION", 
           "home_assistant_domain": "weighmybru",
           "new_install_prompt_erase": true,
-          "funding_url": "https://github.com/031devstudios/weighmybru2",
+          "funding_url": "https://github.com/bitbarista/weighmybru2",
           "builds": [
             {
               "chipFamily": "$CHIP_FAMILY",
@@ -247,7 +247,7 @@ jobs:
           ### 📋 Requirements
           - ESP32-S3 Supermini or XIAO ESP32S3 board
           - Load cell and HX711 amplifier
-          - See [README.md](https://github.com/031devstudios/weighmybru2/blob/master/README.md) for wiring
+          - See [README.md](https://github.com/bitbarista/weighmybru2/blob/master/README.md) for wiring
           
           ### 🔧 Build Information
           - Build: #${{ github.run_number }}

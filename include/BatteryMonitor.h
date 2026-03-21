@@ -19,10 +19,11 @@ public:
     bool isLowBattery();
     bool isCriticalBattery();
     
-    // Configuration and calibration
-    void calibrateVoltage(float actualVoltage);  // For fine-tuning readings
-    float getCalibrationOffset() const { return calibrationOffset; }
-    
+    // Calibration — pass actual voltage measured with a multimeter
+    void calibrateVoltage(float actualVoltage);
+    float getCalibrationScale() const { return calibrationScale; }
+    uint8_t getBatteryPin() const { return batteryPin; }
+
     // Update method for periodic readings
     void update();
     
@@ -43,12 +44,10 @@ private:
     
     // Hardware configuration
     static constexpr float VOLTAGE_DIVIDER_RATIO = 2.0f;  // 100k + 100k resistors
-    static constexpr float ADC_REFERENCE = 3.3f;          // ESP32-S3 with ADC_11db attenuation (0-3.3V)
-    static constexpr int ADC_RESOLUTION = 4095;
-    
+
     // Calibration and smoothing
-    float calibrationOffset = 0.0f;  // Voltage adjustment for accuracy
-    float lastVoltage = 0.0f;        // For smoothing readings
+    float calibrationScale = 1.0f;  // Multiplier to correct resistor tolerance error
+    float lastVoltage = 0.0f;
     unsigned long lastUpdate = 0;
     static constexpr unsigned long UPDATE_INTERVAL = 1000; // Update every 1 second
     
