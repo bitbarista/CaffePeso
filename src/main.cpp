@@ -95,55 +95,22 @@ void setup() {
     Serial.println("Display brightness set to 50% for power optimization");
   }
   
-  // Check wake-up reason and show appropriate message
+  // Log wake-up reason (no delay needed — real init below keeps "Starting" on screen)
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   switch(wakeup_reason) {
-    case ESP_SLEEP_WAKEUP_EXT0:
-      Serial.println("Wakeup caused by external signal (touch sensor)");
-      // Show the same starting message as normal boot for consistency
-      delay(1500);
-      break;
-    case ESP_SLEEP_WAKEUP_EXT1:
-      Serial.println("Wakeup caused by external signal using RTC_CNTL");
-      break;
-    case ESP_SLEEP_WAKEUP_TIMER:
-      Serial.println("Wakeup caused by timer");
-      break;
-    case ESP_SLEEP_WAKEUP_TOUCHPAD:
-      Serial.println("Wakeup caused by touchpad");
-      break;
-    default:
-      Serial.println("Wakeup was not caused by deep sleep: " + String(wakeup_reason));
-      // For normal startup, the begin() method already shows a startup message
-      delay(1000);
-      break;
+    case ESP_SLEEP_WAKEUP_EXT0:    Serial.println("Wakeup: external signal (touch)"); break;
+    case ESP_SLEEP_WAKEUP_EXT1:    Serial.println("Wakeup: external signal (RTC_CNTL)"); break;
+    case ESP_SLEEP_WAKEUP_TIMER:   Serial.println("Wakeup: timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD:Serial.println("Wakeup: touchpad"); break;
+    default: Serial.println("Cold boot (wakeup cause: " + String(wakeup_reason) + ")"); break;
   }
-  //Wait for BLE to finish intitalizing before starting WiFi
-  delay(1500); 
-  
-  // Initialize WiFi power management BEFORE any WiFi operations
-  Serial.println("Initializing WiFi power management...");
-  
-  // CRITICAL: Force WiFi completely off first to ensure clean state
+
+  // Reset WiFi hardware to clean state then start
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-  delay(1000); // Allow hardware to fully reset
-  
-  // Debug: Uncomment the next line to force reset WiFi state for testing
-  // resetWiFiEnabledState(); // DISABLED - state has been cleared
-  
-  // ALWAYS enable WiFi power management for optimal battery life
+  delay(50); // minimal hardware settle
   WiFi.setSleep(true);
-  Serial.println("WiFi power management enabled for battery optimization");
-  
-  // CRITICAL: Always setup WiFi first (like tare button scenario)
-  // This ensures all WiFi subsystems are properly initialized
-  // Then disable it cleanly if needed (replicating tare button sequence)
-  Serial.println("FORCING WiFi initialization to replicate tare button scenario...");
-  setupWiFiForced(); // Use forced setup to bypass state checks
-
-  // Wait for WiFi to fully stabilize after BLE is already running
-  delay(1500);
+  setupWiFiForced();
   Serial.printf("Version: %s\n", ESP.getSdkVersion());
   // Initialize scale with error handling - don't block web server if HX711 fails
   Serial.println("Initializing scale...");
@@ -210,8 +177,7 @@ void setup() {
   
   Serial.printf("Battery voltage OK (%.2fV) - continuing boot\n", batteryVoltage);
 
-  // Show IP addresses and welcome message if display is available
-  delay(100); // Small delay to ensure WiFi is fully initialized
+  // Show ready message once all hardware is initialised
   if (oledDisplay.isConnected()) {
     oledDisplay.showIPAddresses();
   }
