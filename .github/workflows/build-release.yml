@@ -226,29 +226,29 @@ jobs:
         files: release-final/*
         body: |
           ## WeighMyBru² v${{ steps.version.outputs.VERSION }}
-          
+
           ### 📦 Release Binaries
-          
+
           **ESP32-S3 Supermini:**
           - `weighmybru-supermini-v${{ steps.version.outputs.VERSION }}.bin` - Main firmware
           - `weighmybru-supermini-v${{ steps.version.outputs.VERSION }}-littlefs.bin` - Web interface files
           - `manifest-supermini.json` - ESP32 Web Tools manifest
-          
+
           **XIAO ESP32S3:**
-          - `weighmybru-xiao-v${{ steps.version.outputs.VERSION }}.bin` - Main firmware  
+          - `weighmybru-xiao-v${{ steps.version.outputs.VERSION }}.bin` - Main firmware
           - `weighmybru-xiao-v${{ steps.version.outputs.VERSION }}-littlefs.bin` - Web interface files
           - `manifest-xiao.json` - ESP32 Web Tools manifest
-          
+
           ### 🚀 Installation Options
-          
-          1. **Web-based (Recommended):** Use ESP32 Web Tools on [weighmybru.com](https://weighmybru.com)
+
+          1. **Web-based (Recommended):** Use the [flash page](https://bitbarista.github.io/weighmybru2)
           2. **Manual:** Download binaries and flash with esptool or PlatformIO
-          
+
           ### 📋 Requirements
           - ESP32-S3 Supermini or XIAO ESP32S3 board
           - Load cell and HX711 amplifier
           - See [README.md](https://github.com/bitbarista/weighmybru2/blob/master/README.md) for wiring
-          
+
           ### 🔧 Build Information
           - Build: #${{ github.run_number }}
           - Commit: ${{ github.sha }}
@@ -257,3 +257,60 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout repository to update manifests
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: master
+
+    - name: Update website manifests with absolute release URLs
+      run: |
+        VERSION=${{ steps.version.outputs.VERSION }}
+        BASE_URL="https://github.com/bitbarista/weighmybru2/releases/download/v${VERSION}"
+
+        for BOARD in supermini xiao; do
+          if [[ "$BOARD" == "supermini" ]]; then
+            BOARD_NAME="WeighMyBru² - ESP32-S3 Supermini"
+          else
+            BOARD_NAME="WeighMyBru² - XIAO ESP32S3"
+          fi
+          cat > website/releases/latest/manifest-${BOARD}.json << EOF
+        {
+          "name": "${BOARD_NAME}",
+          "version": "${VERSION}",
+          "funding_url": "https://github.com/bitbarista/weighmybru2",
+          "builds": [
+            {
+              "chipFamily": "ESP32-S3",
+              "parts": [
+                {
+                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-bootloader.bin",
+                  "offset": 0
+                },
+                {
+                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-partitions.bin",
+                  "offset": 32768
+                },
+                {
+                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}.bin",
+                  "offset": 65536
+                },
+                {
+                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-littlefs.bin",
+                  "offset": 2686976
+                }
+              ]
+            }
+          ]
+        }
+        EOF
+        done
+
+    - name: Commit and push updated manifests
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add website/releases/latest/manifest-supermini.json website/releases/latest/manifest-xiao.json
+        git commit -m "Update flash manifests for v${{ steps.version.outputs.VERSION }}"
+        git push origin master
