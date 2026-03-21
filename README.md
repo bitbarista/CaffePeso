@@ -1,60 +1,93 @@
-<p align="center">
-<img src="docs/assets/CaffePeso.png" alt="CaffePeso" width="300"/>
-</p>
+# CaffePeso ☕
 
-<h1 align="center">CaffePeso</h1>
+<div align="center">
 
-<p align="center">The smart automated espresso scale.</p>
+### *Weigh smarter. Pull better.*
 
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge)](LICENSE)
+![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-blue)
+![Platform](https://img.shields.io/badge/platform-ESP32--S3-orange)
+![Framework](https://img.shields.io/badge/framework-Arduino-teal)
+<a href="https://ko-fi.com/caffepeso" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-Support%20the%20Project-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 
-This is a fork of [WeighMyBru²](https://github.com/031devstudios/weighmybru2) by 031DevStudios, with additional brewing automation features. It is a smart coffee scale with a web interface hosted on the ESP32-S3, designed to work alongside GaggiMate or as a standalone scale. Inspired by [EspressiScale](https://www.espressiscale.com) with a low-cost, easily sourceable non-custom PCB approach.
+**A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
-<p>
-<img src="docs/assets/weighmybru.jpg" alt="WeighMyBru² hardware" width="700" />
-</p>
+Armed auto-start • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Wi-Fi web UI
 
-## Documentation
+[Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
-Full user guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
+<img src="docs/assets/weighmybru.jpg" alt="CaffePeso hardware" width="700"/>
 
-For hardware build guides and video walkthroughs, see the [original project](https://github.com/031devstudios/weighmybru2).
+</div>
 
-## Features
+---
 
-- Web interface via Wi-Fi (always-on; device sleeps to save power)
-- Bluetooth connectivity to GaggiMate
-- Calibration via web interface
-- Real-time flow rate display
-- Adjustable decimal places
-- Display modes for espresso and pour-overs
-- **Armed auto-start** — hold tare to arm; timer starts automatically on first drip
-- **Auto-re-arm** — scale recognises your cup and arms itself on the next shot
-- **Target yield alert** — OLED flashes and web UI turns amber when approaching your target ratio
-- **Shot history** — last 10 shots (dose, yield, time, ratio) stored in non-volatile memory
-- **Single-button timer control** — tap to start / pause / reset; hold for status page or sleep
+## 📖 What is CaffePeso?
 
+CaffePeso is a fork of [WeighMyBru²](https://github.com/031devstudios/weighmybru2) by 031DevStudios, adding brewing automation to an already excellent DIY espresso scale. It runs on an ESP32-S3 and hosts its own web interface over Wi-Fi — no external server or hub required.
 
-## GaggiMate
+It is designed to work alongside [GaggiMate](https://github.com/jniebuhr/gaggimate) via Bluetooth, or as a standalone scale. Inspired by the [EspressiScale](https://www.espressiscale.com) approach, but built from easily sourceable off-the-shelf parts — no custom PCBs.
 
-GaggiMate now fully supports WeighMyBru scale.
+---
 
-[GaggiMate](https://github.com/jniebuhr/gaggimate)
+## ✨ Features
 
-## Installation
+### ⏱️ Armed Auto-Start
+Hold tare to arm the scale before your shot. The timer starts automatically when the first drip hits the cup — no button press needed at the machine.
 
-For hardware assembly and wiring, see the [original project's guides](https://github.com/031devstudios/weighmybru2).
+### 🔄 Auto-Re-Arm
+The scale remembers your cup weight. On the next shot, place the same cup and tap tare — it recognises the cup and arms itself automatically.
 
-```
-  this project requires VSCode with PlatformIO extension installed
-```
+### 📊 Live Brew Ratio
+Set your dose once. The OLED displays a live 1:X ratio as yield builds in the cup, so you always know where you are in the extraction.
 
-### Important: Filesystem Upload Required
+### 🔔 Target Yield Alert
+Configure a target ratio (e.g. 1:2.0). When yield approaches your target, the OLED flashes and the web UI turns amber — giving you time to stop the shot.
 
-After uploading the firmware, you **must also upload the filesystem** for the web interface to work:
+### 📜 Shot History
+The last 10 shots are automatically saved to non-volatile memory: dose, yield, time, and ratio. Survives reboots and power loss. Displayed in the web UI dashboard.
+
+### 📱 Wi-Fi Web Interface
+A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot history, OTA firmware updates, and real-time graphs. No app required.
+
+### 🔵 GaggiMate BLE
+Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate).
+
+---
+
+## 🛠️ Hardware
+
+The hardware is identical to the original WeighMyBru² project. See the [original WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) for:
+- Bill of Materials (BOM) with purchase links
+- Wiring guides and pin assignments
+- Enclosure CAD files and print instructions
+
+**Supported boards:**
+- ESP32-S3 SuperMini (4 MB flash) — default
+- XIAO ESP32S3 (8 MB flash)
+
+---
+
+## 📦 Installation
+
+### 🌐 Web-Based (Recommended)
+
+No software installation required — flash directly from your browser:
+
+1. Visit the [flash page](https://bitbarista.github.io/caffepeso) *(available once the repo is public)*
+2. Connect your ESP32 board via USB
+3. Click **Install Firmware** and select your board
+4. Follow the prompts
+
+✅ No VS Code or PlatformIO needed
+✅ Installs firmware + filesystem in one step
+✅ Works on Chrome, Edge, and Opera
+
+### 🔧 PlatformIO (Advanced)
+
+Requires VS Code with the PlatformIO extension.
 
 ```bash
-# Upload firmware (default environment: esp32s3-supermini)
+# Upload firmware (default: esp32s3-supermini)
 pio run --target upload
 
 # Upload filesystem (required for web interface)
@@ -65,56 +98,68 @@ pio run -e esp32s3-xiao --target upload
 pio run -e esp32s3-xiao --target uploadfs
 ```
 
-> **Important:** Always flash firmware and filesystem using the same environment. Flashing the wrong board environment (e.g. xiao firmware onto a supermini) causes a boot crash due to flash size mismatch (4 MB vs 8 MB).
-
-**Without the filesystem upload:**
-- The device will function normally for scale operations
-- The web interface will be unavailable
-- You'll see a clear message explaining how to fix this issue
-
-### 🌐 Web-Based Installation (Recommended)
-
-For beginners, use the browser-based installer — no software installation required:
-
-1. **Visit the [flash page](https://bitbarista.github.io/caffepeso)** (available once the repo is public)
-2. **Connect your ESP32 board** via USB
-3. **Click "Install Firmware"** and select your board:
-   - ESP32-S3 Supermini
-   - XIAO ESP32S3
-4. **Follow the prompts** - no software installation required!
-
-**Benefits:**
-- ✅ No need to install VS Code or PlatformIO
-- ✅ Automatic latest firmware version
-- ✅ Complete installation (firmware + filesystem)
-- ✅ Works on any modern browser (Chrome, Edge, Opera)
-- ✅ Version checking and device information
-
-For advanced users or development, continue with the PlatformIO instructions below.
-
-## Bill Of Materials (BOM)
-
-The hardware is identical to the original project. See the [original WeighMyBru² BOM](https://github.com/031devstudios/weighmybru2#bill-of-materials-bom) for the full parts list with purchase links.
-
-
-
-## Printed Parts
-
-The enclosure design is identical to the original project. See the [original WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) for CAD files and print instructions.
+> **Important:** Always flash firmware and filesystem using the same environment. Flashing the wrong environment (e.g. xiao firmware onto a supermini) causes a boot crash due to flash size mismatch (4 MB vs 8 MB).
 
 ---
 
-## Attribution
+## 📚 Documentation
 
-This project is a derivative of [WeighMyBru](https://github.com/031devstudios/weighmybru2) by 031devstudios, licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Full user guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
+
+For hardware build guides and video walkthroughs, see the [original project](https://github.com/031devstudios/weighmybru2).
+
+---
+
+## ☕ Support the Project
+
+CaffePeso is a hobby project built in spare time. If it's improved your espresso routine, consider supporting development.
+
+<div align="center">
+
+<a href="https://ko-fi.com/caffepeso" target="_blank"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"></a>
+
+</div>
+
+Your support helps keep the project maintained and available for everyone.
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome — bug fixes, features, and documentation improvements are all appreciated. Please test your changes before submitting a pull request.
+
+---
+
+## 📜 Attribution
+
+This project is a derivative of [WeighMyBru²](https://github.com/031devstudios/weighmybru2) by 031devstudios, licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 Additions in this fork:
-- CaffePeso branding — dark warm-brown web UI theme, Playfair Display italic title, OLED splash renamed
-- Armed auto-start: hold tare to arm timer; auto-triggers on first drip; auto-re-arms when same cup detected
-- Target yield alert: configurable brew ratio target; OLED flashes and web UI turns amber at approach
-- Cup weight persistence across reboots
+- CaffePeso branding — dark warm-brown web UI theme, Playfair Display italic title, OLED splash
+- Armed auto-start: hold tare to arm; timer triggers on first drip; auto-re-arms when same cup detected
+- Live OLED brew ratio during extraction
+- Target yield alert: OLED flashes and web UI turns amber when approaching target ratio
+- Cup weight persistence across reboots (NVS)
 - Shot history: last 10 shots stored in NVS, displayed in web UI
-- Power button redesigned: tap cycles timer (start → pause → reset); hold 1 s shows status page; hold 3 s sleeps
-- Wi-Fi always-on: toggle removed; device sleeps to save power instead
+- Power button redesigned: tap cycles timer (start → pause → reset); hold 1 s = status page; hold 3 s = sleep
+- Wi-Fi always-on: toggle removed; device deep-sleeps to save power instead
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+---
+
+## 🙏 Acknowledgments
+
+- **[WeighMyBru²](https://github.com/031devstudios/weighmybru2)** by 031devstudios — the hardware design and original firmware this project is built on (CC BY-NC-SA 4.0)
+- **[GaggiMate](https://github.com/jniebuhr/gaggimate)** by jniebuhr — for native BLE scale support
+- **[EspressiScale](https://www.espressiscale.com)** — inspiration for the approach
+
+---
+
+<div align="center">
+
+**Built with ☕ by a home espresso enthusiast**
+
+*Not affiliated with any espresso machine manufacturer*
+
+</div>
