@@ -49,7 +49,7 @@ The last 10 shots are automatically saved to non-volatile memory: dose, yield, t
 A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot history, OTA firmware updates, and real-time graphs. No app required.
 
 ### 🔵 GaggiMate BLE
-Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate).
+Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate). CaffePeso uses the same BLE protocol as WeighMyBru² — GaggiMate's existing WeighMyBru support works with CaffePeso without any changes on either side.
 
 ---
 
