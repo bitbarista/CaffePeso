@@ -90,17 +90,9 @@ The hardware is identical to the original project. See the [original WeighMyBruÂ
 
 
 
-## Printed Parts (Found in CAD Folder)
+## Printed Parts
 
-| Qty |           Item                    | 
-| --- | ----------------------------------|  
-|  1  | Bottom*                           |  
-|  1  | Top                               |
-|  1  | ESP32 Clamp                       |
-|  1  | Screen Clamp                      |
-|  4  | M2 Washers (Used for HX711)       |
-
-\* Bottom has 2 options - The supported option has engineered supports, while the standard option requires you to slice with your own supports.
+The enclosure design is identical to the original project. See the [original WeighMyBruÂ² repository](https://github.com/031devstudios/weighmybru2) for CAD files and print instructions.
 
 ---
 
