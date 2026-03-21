@@ -139,20 +139,21 @@ void Display::update() {
         float weight = scalePtr->getCurrentWeight();
 
         // --- Auto-tare on vessel placement ---
+        // autoTareFired is reset in resetTimer() so it fires at most once per brew cycle,
+        // preventing a re-tare mid-brew when yield crosses the same threshold.
         if (autoTareEnabled) {
             float absW = fabs(weight);
             if (absW < 2.0f) {
-                autoTareFired = false;
-                autoTareStableSince = 0;
+                autoTareStableSince = 0; // Reset stability timer when weight is negligible
             } else if (absW > autoTareThreshold && !autoTareFired) {
                 if (autoTareStableSince == 0) {
                     autoTareStableSince = millis();
                 } else if (millis() - autoTareStableSince >= AUTO_TARE_STABLE_MS) {
-                    autoTareFired = true;
                     autoTareStableSince = 0;
                     showTaringMessage();
                     scalePtr->tare();
-                    resetTimer();
+                    resetTimer();                        // resets autoTareFired to false
+                    autoTareFired = true;                // re-lock after reset so brew crossing won't re-tare
                     if (flowRatePtr) flowRatePtr->resetTimerAveraging();
                     showTaredMessage();
                     weight = 0.0f; // reflect post-tare state immediately
@@ -783,6 +784,7 @@ void Display::resetTimer() {
     timerPausedTime = 0;
     timerRunning = false;
     timerPaused = false;
+    autoTareFired = false;    // Allow auto-tare to fire again on the next cup placement
     idleResetWeightStableFrom = 0;
     prevWeightForRemoval = 0.0f;
     pendingShot = false;
