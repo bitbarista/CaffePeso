@@ -2,16 +2,12 @@
 <img src="docs/assets/Weighmybru-logo.png" alt="WeighMyBru Dashboard" width="500" height="745"/>
 </p>
 
-<p align="center">  <b>The smart coffee scale that doesn't break the bank!<br>https://weighmybru.com</p>
+<p align="center">  <b>The smart coffee scale that doesn't break the bank!</p>
 <br>
 
-
-
-[![](https://dcbadge.limes.pink/api/server/HYp4TSEjSf)](https://discord.gg/HYp4TSEjSf)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge)](LICENSE)
 
-This project is a smart coffee scale with a webserver hosted on the ESP32-S3.
-This scale was designed to be used in conjunction with GaggiMate, but can also be used as a standalone scale. The project is still in a beta phase and is actively being worked on. Please head over to the [Discord](https://discord.gg/HYp4TSEjSf) server for more info. This scale was inspired by [EspressiScale](https://www.espressiscale.com) but with a non-custom PCB approach. The idea is to be low-cost, easily sourcable scale.
+This is a fork of [WeighMyBru²](https://github.com/031devstudios/weighmybru2) by 031DevStudios, with additional brewing automation features. It is a smart coffee scale with a web interface hosted on the ESP32-S3, designed to work alongside GaggiMate or as a standalone scale. Inspired by [EspressiScale](https://www.espressiscale.com) with a low-cost, easily sourceable non-custom PCB approach.
 
 <br>
 <br>
@@ -22,18 +18,22 @@ This scale was designed to be used in conjunction with GaggiMate, but can also b
 
 ## Documentation
 
-The documentation, build video guide, flashing software etc. can be found on the website. 
+Full user guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 
-[WeighMyBru Guides](https://weighmybru.com/guides/)
+For hardware build guides and video walkthroughs, see the [original project](https://github.com/031devstudios/weighmybru2).
 
 ## Features
 
-- Webserver via WiFi
+- Web interface via Wi-Fi
 - Bluetooth connectivity to GaggiMate
-- Calibration via webserver
-- Real-time flowrate display
-- Adjustable decimal point readings
-- Different modes for to cater for espresso and pour-overs
+- Calibration via web interface
+- Real-time flow rate display
+- Adjustable decimal places
+- Display modes for espresso and pour-overs
+- **Armed auto-start** — hold tare to arm; timer starts automatically on first drip
+- **Auto-re-arm** — scale recognises your cup and arms itself on the next shot
+- **Target yield alert** — OLED flashes and web UI turns amber when approaching your target ratio
+- **Shot history** — last 10 shots (dose, yield, time, ratio) stored in non-volatile memory
 
 
 ## GaggiMate
@@ -44,7 +44,7 @@ GaggiMate now fully supports WeighMyBru scale.
 
 ## Installation
 
-Installation instructions are currently under development, for now follow the [link](https://bitbarista.github.io/weighmybru-docs/#/installation/flashing) for step-by-step installation instructions. Additionally, a video is available on [YouTube](https://www.youtube.com/watch?v=O5SP40Liuq0)
+For hardware assembly and wiring, see the [original project's guides](https://github.com/031devstudios/weighmybru2).
 
 ```
   this project requires VSCode with PlatformIO extension installed
@@ -70,9 +70,9 @@ pio run -e esp32s3-xiao -t uploadfs       # For XIAO ESP32S3
 
 ### 🌐 Web-Based Installation (Recommended)
 
-For beginners, we now support **ESP32 Web Tools** for easy browser-based installation:
+For beginners, use the browser-based installer — no software installation required:
 
-1. **Visit [weighmybru.com](https://weighmybru.com)** 
+1. **Visit the [flash page](https://bitbarista.github.io/weighmybru2)** (available once the repo is public)
 2. **Connect your ESP32 board** via USB
 3. **Click "Install Firmware"** and select your board:
    - ESP32-S3 Supermini
