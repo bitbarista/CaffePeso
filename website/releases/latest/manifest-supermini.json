@@ -1,26 +1,26 @@
 {
-  "name": "WeighMyBru² ESP32-S3 Supermini",
-  "version": "2.2.0",
+  "name": "WeighMyBru² - ESP32-S3 Supermini",
+  "version": "2.3.0",
   "funding_url": "https://github.com/bitbarista/weighmybru2",
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "bootloader.bin",
+          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-supermini-v2.3.0-bootloader.bin",
           "offset": 0
         },
         {
-          "path": "partitions.bin", 
+          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-supermini-v2.3.0-partitions.bin",
           "offset": 32768
         },
         {
-          "path": "firmware-supermini.bin",
+          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-supermini-v2.3.0.bin",
           "offset": 65536
         },
         {
-          "path": "spiffs.bin",
-          "offset": 2097152
+          "path": "https://github.com/bitbarista/weighmybru2/releases/download/v2.3.0/weighmybru-supermini-v2.3.0-littlefs.bin",
+          "offset": 2686976
         }
       ]
     }
