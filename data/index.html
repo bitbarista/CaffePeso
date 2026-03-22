@@ -228,7 +228,7 @@
       <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">
         Tare
       </button>
-      <button id="armBtn" onclick="toggleArm()" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-sm">
+      <button id="armBtn" onclick="toggleArm()" class="text-white font-bold py-2 rounded-lg text-sm" style="background:#15803d;">
         Arm
       </button>
       <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm">
@@ -777,10 +777,10 @@
             armBtn.dataset.armed = data.armed ? 'true' : 'false';
             if (data.armed) {
               armBtn.textContent = 'Disarm';
-              armBtn.className = 'bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-sm';
+              armBtn.style.background = '#d97706';
             } else {
               armBtn.textContent = 'Arm';
-              armBtn.className = 'bg-green-700 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-sm';
+              armBtn.style.background = '#15803d';
             }
           }
         }
