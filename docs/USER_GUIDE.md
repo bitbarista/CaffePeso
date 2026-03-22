@@ -25,8 +25,8 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 
 | Gesture | Action |
 |---------|--------|
-| **Tap** | Zero the scale. If a brew just finished (timer paused), also resets the timer ready for the next shot. |
-| **Hold 0.5 s** | Tare + **arm** the auto-start + save current cup weight to memory. OLED shows **"Armed / Ready!"**. |
+| **Tap** | Zero the scale. Resets the timer if a brew just finished. |
+| **Hold 1.5 s** | Save cup weight + tare + **arm** auto-start. Three-stage feedback: "Taring..." at 0.5 s (keep holding) → "Release Now!" at 1.5 s → release → OLED flashes inverted **"ARMED / Ready!"**. |
 
 ### Timer/Power button (GPIO 3)
 
@@ -104,25 +104,22 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 Armed auto-start removes the need to manually press the timer button at the start of a shot.
 
 **To arm:**
-- Hold the tare button for 0.5 s (before starting your machine). The scale tares simultaneously and saves your cup weight to memory.
+- Hold the tare button until "Release Now!" appears (~1.5 s), then release. The display shows "Taring..." while you hold, then "Release Now!" when you can let go. After release the scale settles, captures the cup weight, tares, and shows the inverted **"ARMED / Ready!"** screen.
+- The cup weight is saved to memory automatically.
 
 **Trigger:**
 - The timer starts automatically when the weight on the scale increases by more than 1 g and remains above that threshold for 0.5 s. This corresponds to the first drip hitting the cup.
 
-**Auto re-arm — full workflow:**
+**Auto re-arm — no button press needed:**
 
-After arming and completing a shot, the scale is zeroed *with the cup on it*. Removing the cup leaves the scale reading negative. The re-arm check fires on the **second** tap tare of the next shot cycle:
+Once a cup weight is saved, the scale re-arms automatically whenever it detects the cup returning. Two scenarios are handled:
 
-1. Remove cup after shot → scale reads negative
-2. **Tap tare (empty scale)** → zeroes the empty scale — no re-arm here (weight doesn't match saved)
-3. Place cup → scale now reads the cup weight
-4. **Tap tare** → cup weight matches saved weight within ±5 g → **auto re-arms**
-
-Step 2 is the critical one — you must tare the empty scale before placing the cup. This is the natural thing to do anyway (clearing the negative reading between shots).
+- **Cup removed and placed straight back** — scale went negative, cup returns to ~0 g → "ARMED" flashes automatically.
+- **Cup removed, empty scale tapped to clear, cup placed back** — scale reads ~saved cup weight → "ARMED" flashes automatically.
 
 The saved cup weight persists across reboots (NVS).
 
-> **Important:** Auto re-arm requires **Auto-Tare on Vessel Placement to be disabled**. If auto-tare is on, placing the cup fires an automatic tare and you never tap tare manually — the re-arm check never runs. The two features are mutually exclusive; use one or the other.
+> **Note:** Auto re-arm and Auto-Tare on Vessel Placement are mutually exclusive. If auto-tare is enabled, it fires its own tare on cup placement and the cup weight matching logic cannot run. Disable auto-tare to use auto re-arm.
 
 **Disarm:**
 - The armed state expires after 2 minutes of no drip activity.
