@@ -110,7 +110,10 @@ Armed auto-start removes the need to manually press the timer button at the star
 - The timer starts automatically when the weight on the scale increases by more than 1 g and remains above that threshold for 0.5 s. This corresponds to the first drip hitting the cup.
 
 **Auto re-arm:**
-- On your next shot, simply place the same cup on the scale and tap tare as normal. If the pre-tare weight matches the saved cup weight within ±5 g, the device arms automatically without needing a hold gesture.
+- On your next shot, place the same cup on the scale and **tap tare** as normal. If the pre-tare weight matches the saved cup weight within ±5 g, the device arms automatically without needing a hold gesture.
+- The saved cup weight persists across reboots (NVS), so this works across power cycles.
+
+> **Important:** Auto re-arm requires **Auto-Tare on Vessel Placement to be disabled**. If auto-tare is on, placing the cup fires an automatic tare and you never tap tare manually — the re-arm check never runs. The two features are mutually exclusive; use one or the other.
 
 **Disarm:**
 - The armed state expires after 2 minutes of no drip activity.
@@ -166,6 +169,23 @@ Alerts you when the yield in the cup is approaching your target ratio, so you ca
 - **Web UI**: weight display turns amber
 
 > Requires dose to be set. Enter your dose in the Dose field on the dashboard before brewing.
+
+---
+
+## Auto-Tare on Vessel Placement
+
+**Configuration:** Settings → Brew Automation → Auto-Tare on Vessel Placement (toggle + threshold)
+
+When enabled, the scale tares automatically when a stable weight above the threshold is detected. Useful if you want a completely hands-free setup where placing the cup zeroes the scale without touching anything.
+
+**How it works:**
+- Weight must exceed the configured threshold (default 20 g) and remain stable for ~0.6 s
+- Does not fire while the timer is running or while armed
+- Resets (ready to fire again) only when the scale returns to near-zero (< 2 g)
+
+**Threshold guidance:** Set this above your empty cup weight but below any weight you'd place deliberately (e.g. if your cup is 150 g, a threshold of 100 g would work). The default 20 g is intentionally low — raise it if it fires unexpectedly on vibration or light contact.
+
+> **Incompatible with auto re-arm.** If auto-tare is on, placing the cup fires an automatic tare and bypasses the manual tap tare that triggers re-arm. Disable auto-tare if you want to use the cup weight memory / auto re-arm feature.
 
 ---
 
