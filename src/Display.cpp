@@ -139,7 +139,8 @@ void Display::update() {
                 autoTareStableSince = 0; // reset stability timer — don't let it accumulate while held
             } else if (absW < 2.0f) {
                 autoTareStableSince = 0; // Reset stability timer when weight is negligible
-            } else if (absW > autoTareThreshold && !autoTareFired) {
+                autoTareFired = false;   // Scale is empty again — allow auto-tare on next vessel placement
+            } else if (absW > autoTareThreshold && !autoTareFired && !timerRunning && !armedAutoStart) {
                 if (autoTareStableSince == 0) {
                     autoTareStableSince = millis();
                 } else if (millis() - autoTareStableSince >= AUTO_TARE_STABLE_MS) {
@@ -789,7 +790,9 @@ void Display::resetTimer() {
     timerPausedTime = 0;
     timerRunning = false;
     timerPaused = false;
-    autoTareFired = false;    // Allow auto-tare to fire again on the next cup placement
+    // autoTareFired is intentionally NOT reset here — it resets only when the scale
+    // returns to near-zero, ensuring a vessel already on the scale never triggers
+    // a re-tare just because the timer was reset.
     idleResetWeightStableFrom = 0;
     prevWeightForRemoval = 0.0f;
     pendingShot = false;
