@@ -141,7 +141,7 @@ jobs:
           "version": "$VERSION", 
           "home_assistant_domain": "weighmybru",
           "new_install_prompt_erase": true,
-          "funding_url": "https://github.com/bitbarista/caffepeso",
+          "funding_url": "https://github.com/bitbarista/CaffePeso",
           "builds": [
             {
               "chipFamily": "$CHIP_FAMILY",
@@ -295,6 +295,7 @@ jobs:
           "name": "${BOARD_NAME}",
           "version": "${VERSION}",
           "funding_url": "https://github.com/bitbarista/CaffePeso",
+          "new_install_prompt_erase": true,
           "builds": [
             {
               "chipFamily": "ESP32-S3",
