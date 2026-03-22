@@ -8,7 +8,7 @@ TouchSensor::TouchSensor(uint8_t touchPin, Scale* scale)
     : touchPin(touchPin), scalePtr(scale), displayPtr(nullptr), flowRatePtr(nullptr), touchThreshold(30000),
       lastTouchState(false), lastTouchTime(0), touchStartTime(0), debounceDelay(200),
       longPressDetected(false), delayedTarePending(false), delayedTareTime(0),
-      holdTarePending(false), preTareWeightCapture(0.0f) {
+      holdTarePending(false), holdFeedbackShown(false), holdWaitingForRelease(false) {
 }
 
 void TouchSensor::begin() {
@@ -39,18 +39,26 @@ void TouchSensor::update() {
     if (currentTouchState != lastTouchState) {
         if (currentTime - lastTouchTime > debounceDelay) {
             if (currentTouchState) {
-                // Touch started - record start time
+                // Touch started
                 touchStartTime = currentTime;
                 longPressDetected = false;
+                holdFeedbackShown = false;
+                holdWaitingForRelease = false;
                 Serial.println("Touch started");
             } else {
                 // Touch ended
-                unsigned long pressDuration = currentTime - touchStartTime;
-                
                 if (!longPressDetected) {
-                    // Tap: always tare (resets timer too if brew is finished)
+                    // Tap: just zero the scale
                     scheduleDelayedTare();
-                    Serial.println("Tare button: tare");
+                    Serial.println("Tare button: tap tare");
+                } else if (holdWaitingForRelease) {
+                    // Hold complete — user just released. Wait HOLD_SETTLE_MS for scale to
+                    // settle (no press force), then read cup weight and execute tare+arm.
+                    holdWaitingForRelease = false;
+                    holdTarePending    = true;
+                    delayedTarePending = true;
+                    delayedTareTime    = currentTime + HOLD_SETTLE_MS;
+                    Serial.println("Hold tare: button released, settling...");
                 }
                 longPressDetected = false;
                 Serial.println("Touch ended");
@@ -59,19 +67,20 @@ void TouchSensor::update() {
             lastTouchTime = currentTime;
         }
     }
-    
-    
-    // During-hold: check for hold-tare (arm + save cup weight)
+
+    // During-hold: show "Taring..." at 500ms, show "Release!" at 1500ms
     if (currentTouchState && !longPressDetected) {
         unsigned long held = currentTime - touchStartTime;
-        if (held >= HOLD_TARE_MS) {
-            longPressDetected = true;
-            Serial.println("Hold tare: arm + save cup weight");
-            preTareWeightCapture = (scalePtr != nullptr) ? scalePtr->getCurrentWeight() : 0.0f;
-            holdTarePending   = true;
-            delayedTarePending = true;
-            delayedTareTime    = currentTime + TARE_DELAY;
-            if (displayPtr != nullptr) displayPtr->showArmedMessage();
+        if (held >= HOLD_FEEDBACK_MS && !holdFeedbackShown) {
+            holdFeedbackShown = true;
+            if (displayPtr != nullptr) displayPtr->showTaringMessage();
+            Serial.println("Hold tare: feedback shown, keep holding");
+        }
+        if (held >= HOLD_TARE_MS && !holdWaitingForRelease) {
+            holdWaitingForRelease = true;
+            longPressDetected = true; // prevents tap path on release
+            if (displayPtr != nullptr) displayPtr->showReleaseMessage();
+            Serial.println("Hold tare: threshold reached, waiting for release");
         }
     }
 
@@ -146,10 +155,6 @@ void TouchSensor::handleTouch() {
 }
 
 void TouchSensor::scheduleDelayedTare() {
-    Serial.println("Touch detected - showing taring message immediately");
-
-    // Capture weight at tap time for auto-re-arm comparison
-    preTareWeightCapture = (scalePtr != nullptr) ? scalePtr->getCurrentWeight() : 0.0f;
     holdTarePending = false; // tap, not hold
 
     if (displayPtr != nullptr) {
@@ -170,30 +175,28 @@ void TouchSensor::checkDelayedTare() {
         holdTarePending    = false;
 
         if (scalePtr != nullptr) {
+            // For hold-tare: read cup weight BEFORE tare — after tare the scale reads 0g
+            float cupWeight = (wasHoldTare) ? scalePtr->getCurrentWeight() : 0.0f;
+
             scalePtr->tare();
             Serial.println("Scale tared successfully");
 
             if (displayPtr != nullptr) {
                 if (wasHoldTare) {
-                    // Hold-tare: arm auto-start and save cup weight to NVS
-                    displayPtr->arm(preTareWeightCapture);
-                    Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", preTareWeightCapture);
+                    displayPtr->arm(cupWeight);
+                    displayPtr->showArmedMessage();
+                    Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", cupWeight);
                 } else {
-                    // Tap-tare: reset timer if not mid-brew (covers both stopped and paused states)
+                    // Tap-tare: zero the scale and reset timer if not mid-brew.
+                    // Reset the negative flag so case 1 auto re-arm can't fire on 0g after
+                    // an empty-scale tare — only case 2 (cup at full weight) will re-arm.
                     if (!displayPtr->isTimerRunning()) {
                         displayPtr->resetTimer();
                         if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();
                         Serial.println("Timer reset on tare");
                     }
-                    // Auto-re-arm: if pre-tare weight matches saved cup weight ±5g
-                    float saved = displayPtr->getSavedTareWeight();
-                    if (saved > 5.0f && fabs(preTareWeightCapture - saved) <= 5.0f) {
-                        displayPtr->arm(saved); // re-arm with existing saved weight
-                        Serial.printf("Auto-re-armed: %.1fg matches saved %.1fg\n",
-                                      preTareWeightCapture, saved);
-                    } else {
-                        displayPtr->showTaredMessage();
-                    }
+                    displayPtr->resetNegativeFlag();
+                    displayPtr->showTaredMessage();
                 }
             }
         } else {

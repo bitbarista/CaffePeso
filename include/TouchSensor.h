@@ -31,16 +31,19 @@ private:
     unsigned long touchStartTime;
     unsigned long debounceDelay;
     bool longPressDetected;
-    
+
     // Delayed tare functionality for mounted touch sensors
     bool delayedTarePending;
     unsigned long delayedTareTime;
-    static const unsigned long TARE_DELAY    = 1500; // delay before tare executes
-    static const unsigned long HOLD_TARE_MS  = 500;  // hold duration to trigger arm+save
+    static const unsigned long TARE_DELAY        = 1500; // delay before tap-tare executes
+    static const unsigned long HOLD_TARE_MS      = 1500; // hold duration to show "Release!"
+    static const unsigned long HOLD_FEEDBACK_MS  = 500;  // show "Taring..." at this point
+    static const unsigned long HOLD_SETTLE_MS    = 600;  // settle time after release before weight capture
 
     // Hold-tare state
-    bool  holdTarePending;       // set when hold detected; cleared in checkDelayedTare
-    float preTareWeightCapture;  // weight captured at button event time, before tare
+    bool  holdTarePending;            // set when hold+release detected; cleared in checkDelayedTare
+    bool  holdFeedbackShown;          // true once the "Taring..." intermediate message has been shown
+    bool  holdWaitingForRelease;      // true once hold threshold reached; waiting for button release
 
     void handleTouch();
     void scheduleDelayedTare();
