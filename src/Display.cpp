@@ -123,6 +123,36 @@ void Display::update() {
         }
     }
     
+    // Auto re-arm: fires whenever the scale reads within ±REARM_STABLE_WINDOW of the saved
+    // cup weight, regardless of what it showed before. No state tracking required.
+    // Always tares the cup in first so armed auto-start correctly detects the first drip.
+    // Does not fire during an active brew.
+    if (scalePtr != nullptr && savedTareWeight > 5.0f) {
+        bool activeBrew = timerRunning && !timerPaused;
+        float weightNow = scalePtr->getCurrentWeight();
+
+        if (weightNow < -5.0f) scaleWentNegative = true;
+
+        // Case 1: scale tared with cup, cup removed then directly replaced → reads ≈0g.
+        //         Requires scaleWentNegative so a tap-tare to 0g doesn't falsely trigger.
+        // Case 2: scale tared empty, cup placed → reads ≈savedTareWeight.
+        bool case1 = scaleWentNegative && fabsf(weightNow) <= REARM_STABLE_WINDOW;
+        bool case2 = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
+
+        if (!activeBrew && (case1 || case2)) {
+            if (reArmStableSince == 0) reArmStableSince = millis();
+            else if (millis() - reArmStableSince >= REARM_STABLE_MS) {
+                reArmStableSince = 0;
+                scalePtr->tare();
+                arm(savedTareWeight);
+                showArmedMessage();
+                Serial.printf("Auto re-armed (case%d): %.1fg\n", case1 ? 1 : 2, savedTareWeight);
+            }
+        } else {
+            reArmStableSince = 0;
+        }
+    }
+
     if (!showingMessage && scalePtr != nullptr) {
         float weight = scalePtr->getCurrentWeight();
 
@@ -497,6 +527,30 @@ void Display::showTaringMessage() {
     display->display();
 }
 
+void Display::showReleaseMessage() {
+    if (!displayConnected) return;
+
+    currentMessage   = "Release message";
+    messageStartTime = millis();
+    messageDuration  = 5000; // stays until overridden by next message
+    showingMessage   = true;
+
+    display->clearDisplay();
+    display->setTextSize(2);
+    display->setTextColor(SSD1306_WHITE);
+    String line1 = "Release";
+    String line2 = "Now!";
+    int16_t x1, y1;
+    uint16_t w1, h1, w2, h2;
+    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
+    display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
+    display->setCursor((SCREEN_WIDTH - w1) / 2, 0);
+    display->print(line1);
+    display->setCursor((SCREEN_WIDTH - w2) / 2, 16);
+    display->print(line2);
+    display->display();
+}
+
 void Display::showTaredMessage() {
     // Return early if display is not connected
     if (!displayConnected) {
@@ -865,10 +919,16 @@ unsigned long Display::getElapsedTime() const {
 }
 
 void Display::arm(float cupWeightBeforeTare) {
-    savedTareWeight = cupWeightBeforeTare;
+    // Only update savedTareWeight when the captured weight is a plausible cup weight.
+    // Guard prevents hold-tare with cup off (scale negative) from corrupting the value.
+    if (cupWeightBeforeTare > 5.0f) {
+        savedTareWeight = cupWeightBeforeTare;
+    }
     armedAutoStart  = true;
     armStartedAt    = millis();
     armWeightAboveThresholdSince = 0;
+    reArmStableSince = 0;
+    scaleWentNegative = false;
     alertFired = false; // fresh brew — reset alert
 
     // Persist saved cup weight across reboots
@@ -898,24 +958,27 @@ void Display::showArmedMessage() {
 
     currentMessage    = "Armed message";
     messageStartTime  = millis();
-    messageDuration   = 2000;
+    messageDuration   = 2500;
     showingMessage    = true;
 
-    display->clearDisplay();
+    // Inverted display (white background) makes armed state unmistakably distinct from "Tared!"
+    display->fillScreen(SSD1306_WHITE);
+    display->setTextColor(SSD1306_BLACK);
+
+    // Large "ARMED" centred on top row, "Ready!" on bottom row
     display->setTextSize(2);
-    display->setTextColor(SSD1306_WHITE);
-
-    String line1 = "Armed";
+    String line1 = "ARMED";
     String line2 = "Ready!";
-
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
     display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-
     display->setCursor((SCREEN_WIDTH - w1) / 2, 0);
     display->print(line1);
     display->setCursor((SCREEN_WIDTH - w2) / 2, 16);
     display->print(line2);
     display->display();
+
+    // Return display to normal after message clears (handled in update() timeout)
+    display->setTextColor(SSD1306_WHITE);
 }

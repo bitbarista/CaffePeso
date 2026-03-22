@@ -25,7 +25,8 @@ public:
     void showSleepMessage(); // Show initial sleep message with big/small text format
     void showGoingToSleepMessage();   // "Touch To / Wake Up" — shown just before deep sleep
     void showSleepCancelledMessage(); // "Sleep / Cancelled" — shown when sleep is interrupted
-    void showTaringMessage();         // "Taring..." — shown during tare operation
+    void showTaringMessage();         // "Taring..." — shown at 500ms hold as "keep holding" cue
+    void showReleaseMessage();        // "Release!" — shown at 1500ms hold, prompts user to release
     void showTaredMessage();          // "Scale / Tared!" — shown after successful tare
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show IP address on boot (replaces "Ready" screen)
@@ -56,7 +57,9 @@ public:
     void  arm(float cupWeightBeforeTare); // Set arm state and save cup weight to NVS
     void  disarm();
     bool  isArmed() const              { return armedAutoStart; }
-    float getSavedTareWeight() const   { return savedTareWeight; }
+    float getSavedTareWeight() const         { return savedTareWeight; }
+    void  setSavedTareWeight(float w)        { savedTareWeight = w; } // restore from NVS without arming
+    void  resetNegativeFlag()  { scaleWentNegative = false; }
     void  showArmedMessage();
 
     // Pre-infusion timing mode (timer starts immediately on arm, not on first drip)
@@ -135,9 +138,13 @@ private:
     float savedTareWeight = 0.0f;
     unsigned long armStartedAt = 0;
     unsigned long armWeightAboveThresholdSince = 0;
-    static constexpr float ARM_TRIGGER_THRESHOLD = 1.0f;
-    static const unsigned long ARM_SUSTAIN_MS    = 500;
-    static const unsigned long ARM_TIMEOUT_MS    = 120000; // 2 minutes
+    bool  scaleWentNegative = false;   // set when weight < -5g; reset by arm() and tap-tare
+    unsigned long reArmStableSince  = 0;
+    static constexpr float ARM_TRIGGER_THRESHOLD   = 1.0f;
+    static constexpr float REARM_STABLE_WINDOW     = 5.0f;  // g — weight must be within ±5g of savedTareWeight
+    static const unsigned long ARM_SUSTAIN_MS      = 500;
+    static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
+    static const unsigned long REARM_STABLE_MS     = 400;   // weight must match for 400ms to re-arm
 
     // Pre-infusion timing mode
     bool preInfusionMode = false;
