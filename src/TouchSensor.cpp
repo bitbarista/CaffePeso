@@ -19,6 +19,19 @@ void TouchSensor::begin() {
 }
 
 void TouchSensor::update() {
+    // Suppress tare input while the sleep button is held AND for 500ms after it is
+    // released. The two adjacent touch sensor pads couple capacitively: the active-HIGH
+    // output on the sleep pad induces a brief spike on the tare pad at the moment of
+    // release (HIGH→LOW transition), which is when the coupling peaks.
+    if (sleepPin != 255) {
+        static unsigned long sleepPinLastHighTime = 0;
+        if (digitalRead(sleepPin) == HIGH) {
+            sleepPinLastHighTime = millis();
+            return;
+        }
+        if (millis() - sleepPinLastHighTime < 500) return;
+    }
+
     bool currentTouchState = isTouched();
     unsigned long currentTime = millis();
     
