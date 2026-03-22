@@ -575,7 +575,9 @@ void Display::showTaredMessage() {
 
     // Hint in size 1 at bottom
     display->setTextSize(1);
-    String hint = "Hold tare: arm";
+    const char* hint = (savedTareWeight > 5.0f && autoReArmEnabled)
+                     ? "Place cup: arm"
+                     : "Hold tare: arm";
     uint16_t wh, hh;
     display->getTextBounds(hint, 0, 0, &x1, &y1, &wh, &hh);
     display->setCursor((SCREEN_WIDTH - wh) / 2, 24);
