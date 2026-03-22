@@ -1,0 +1,2 @@
+# Allow firmware binaries served from GitHub Pages
+!*.bin
