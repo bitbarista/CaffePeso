@@ -57,6 +57,30 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 
 ---
 
+## Timer
+
+The timer button cycles through three states with a single tap:
+
+| State | Display | Tap action |
+|-------|---------|------------|
+| **Stopped** (reset) | `0.0T` | Start timer |
+| **Running** | counting up | Stop / pause timer |
+| **Paused** | frozen time | Reset timer to zero |
+
+**Starting manually:** tap the timer button once. The timer starts from zero (or resumes if previously paused).
+
+**Stopping:** tap the timer button while it is running. The timer freezes and shows the elapsed time. Flow rate is replaced by the final brew ratio on the display.
+
+**Resetting:** tap the timer button a second time while it is paused. The timer returns to zero and is ready for the next brew.
+
+**Automatic start:** when armed (hold tare), the timer starts on its own when the first drip hits the cup. See [Armed Auto-Start](#armed-auto-start).
+
+**Automatic stop:** when cup removal is detected (sudden weight drop) or, if Auto-Stop on Flow Cessation is enabled, when flow drops below 0.5 g/s for 2 seconds. See [Auto-Stop on Flow Cessation](#auto-stop-on-flow-cessation).
+
+**Web UI controls:** the dashboard has **Stop** and **Reset** buttons that act on the timer remotely.
+
+---
+
 ## Workflows
 
 ### Espresso — step by step
