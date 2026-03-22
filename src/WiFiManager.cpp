@@ -51,7 +51,7 @@ static unsigned long lastFilesystemError = 0;
 const unsigned long FILESYSTEM_ERROR_COOLDOWN = 30000; // Show error message every 30 seconds max
 
 // AP credentials
-const char* ap_ssid = "WeighMyBru-AP";
+const char* ap_ssid = "CaffePeso-AP";
 const char* ap_password = "";
 
 unsigned long startAttemptTime = 0;
@@ -379,8 +379,8 @@ void setupWiFiForced() {
         Serial.printf("WiFi TX Power: %d dBm (optimized for battery)\n", WiFi.getTxPower());
         Serial.println("Max Clients: 2 (reduced for power savings)");
         Serial.println("Beacon Interval: 200ms (increased for power savings)");
-        Serial.println("Connect to 'WeighMyBru-AP' to configure WiFi");
-        Serial.println("Access: http://192.168.4.1 or http://weighmybru.local");
+        Serial.println("Connect to 'CaffePeso-AP' to configure WiFi");
+        Serial.println("Access: http://192.168.4.1 or http://caffepeso.local");
         Serial.println("========================================");
         
         // Setup mDNS for AP mode
@@ -391,17 +391,17 @@ void setupWiFiForced() {
 }
 
 void setupmDNS() {
-    // Start mDNS service with hostname "weighmybru"
-    if (MDNS.begin("weighmybru")) {
+    // Start mDNS service with hostname "caffepeso"
+    if (MDNS.begin("caffepeso")) {
         Serial.println("mDNS responder started/updated");
-        Serial.println("Access the scale at: http://weighmybru.local");
+        Serial.println("Access the scale at: http://caffepeso.local");
         
         // Add service to MDNS-SD
         MDNS.addService("http", "tcp", 80);
         MDNS.addService("websocket", "tcp", 81);
         
         // Add some useful service properties
-        MDNS.addServiceTxt("http", "tcp", "device", "WeighMyBru Coffee Scale");
+        MDNS.addServiceTxt("http", "tcp", "device", "CaffePeso Coffee Scale");
         MDNS.addServiceTxt("http", "tcp", "version", "2.0");
         
     } else {
@@ -474,7 +474,7 @@ void maintainWiFi() {
         } else if (currentMode == WIFI_AP) {
             // We're in AP mode - just ensure it's still running properly
             if (WiFi.softAPgetStationNum() == 0) {
-                Serial.println("AP mode active - 'WeighMyBru-AP' ready for configuration");
+                Serial.println("AP mode active - 'CaffePeso-AP' ready for configuration");
             } else {
                 Serial.println("AP mode active - " + String(WiFi.softAPgetStationNum()) + " clients connected");
             }
@@ -578,7 +578,7 @@ void switchToAPMode() {
         Serial.println("SSID: " + String(ap_ssid));
         Serial.println("IP: " + WiFi.softAPIP().toString());
         Serial.println("Config URL: http://192.168.4.1");
-        Serial.println("mDNS: http://weighmybru.local");
+        Serial.println("mDNS: http://caffepeso.local");
         Serial.println("Max Clients: 2 (optimized for battery)");
         Serial.println("==================");;
         

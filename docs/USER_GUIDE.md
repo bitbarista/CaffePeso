@@ -251,7 +251,7 @@ OTA firmware upload. Upload a new `.bin` file directly from the browser without 
 
 | Setting | Value |
 |---------|-------|
-| SSID | `WeighMyBru-AP` |
+| SSID | `CaffePeso-AP` |
 | Default IP | `192.168.4.1` |
 
 **Connecting to your home network:**
@@ -260,7 +260,7 @@ OTA firmware upload. Upload a new `.bin` file directly from the browser without 
 3. Go to Settings → Wi-Fi Configuration
 4. Enter your SSID and password and save
 
-Once connected to your home network, find the device's assigned IP address from your router's DHCP table, or read it from the OLED on the next boot (the boot screen shows the IP address below "CaffePeso").
+Once connected to your home network the device is accessible at `http://caffepeso.local` from any browser on the same network. You can also find the IP address from your router's DHCP table, or read it from the OLED on the next boot (the boot screen shows the IP address).
 
 ---
 
