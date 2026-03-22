@@ -34,7 +34,7 @@ FlowRate flowRate;
 BluetoothScale bluetoothScale;
 TouchSensor touchSensor(touchPin, &scale);
 Display oledDisplay(sdaPin, sclPin, &scale, &flowRate);
-PowerManager powerManager(sleepTouchPin, &oledDisplay);
+PowerManager powerManager(sleepTouchPin, touchPin, &oledDisplay);
 BatteryMonitor batteryMonitor(batteryPin);
 
 void setup() {
