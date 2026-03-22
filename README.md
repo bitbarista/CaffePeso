@@ -77,7 +77,7 @@ The hardware is identical to the original WeighMyBru² project. See the [origina
 
 No software installation required — flash directly from your browser:
 
-1. Visit the [flash page](https://bitbarista.github.io/CaffePeso) *(available once the repo is public)*
+1. Visit the [flash page](https://bitbarista.github.io/CaffePeso/flash.html) *(available once the repo is public)*
 2. Connect your ESP32 board via USB
 3. Click **Install Firmware** and select your board
 4. Follow the prompts
