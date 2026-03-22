@@ -23,6 +23,8 @@ public:
     void stopTimer();            // Explicit pause (web UI)
     void resetTimer();           // Explicit reset (web UI)
     void resetTimerState();      // Reset internal state enum without touching display
+    void syncTimerRunning();     // Notify that timer started independently (armed auto-start)
+    void syncTimerPaused();      // Notify that timer stopped independently (cup removal etc.)
     void notifyActivity();  // Call on any user/weight activity to reset inactivity timer
 
     // Inactivity sleep settings

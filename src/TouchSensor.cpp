@@ -188,14 +188,13 @@ void TouchSensor::checkDelayedTare() {
                     Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", cupWeight);
                 } else {
                     // Tap-tare: zero the scale and reset timer if not mid-brew.
-                    // Reset the negative flag so case 1 auto re-arm can't fire on 0g after
-                    // an empty-scale tare — only case 2 (cup at full weight) will re-arm.
+                    // setTapTaredEmpty() blocks case-1 re-arm (≈0g after tap-tare) while
+                    // leaving case-2 (cup placed at savedTareWeight) intact.
                     if (!displayPtr->isTimerRunning()) {
                         displayPtr->resetTimer();
                         if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();
                         Serial.println("Timer reset on tare");
                     }
-                    displayPtr->resetNegativeFlag();
                     displayPtr->showTaredMessage();
                 }
             }

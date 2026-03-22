@@ -168,6 +168,29 @@ void savePreInfusionMode(bool enabled, Display& display) {
 static bool autoStopCached        = false;
 static bool cachedAutoStopEnabled = false;
 
+// Auto re-arm (cup weight detection) cache
+static bool autoReArmCached        = false;
+static bool cachedAutoReArmEnabled = true;  // on by default
+
+void loadAutoReArmSettings(Display& display) {
+    if (autoReArmCached) return;
+    if (preferences.begin("display", false)) {
+        cachedAutoReArmEnabled = preferences.getBool("rearm_en", true);
+        preferences.end();
+    }
+    autoReArmCached = true;
+    display.setAutoReArmEnabled(cachedAutoReArmEnabled);
+}
+
+void saveAutoReArmSettings(bool enabled, Display& display) {
+    cachedAutoReArmEnabled = enabled;
+    if (preferences.begin("display", false)) {
+        preferences.putBool("rearm_en", enabled);
+        preferences.end();
+    }
+    display.setAutoReArmEnabled(enabled);
+}
+
 void loadAutoStopSettings(Display& display) {
     if (autoStopCached) return;
     if (preferences.begin("display", false)) {
@@ -216,12 +239,10 @@ void loadSavedTareWeight(Display& display) {
     if (preferences.begin("display", false)) {
         float saved = preferences.getFloat("saved_tare", 0.0f);
         preferences.end();
-        // Inject into Display so arm() comparisons work after reboot
-        // (arm state itself is NOT persisted — user must hold-tare again after boot)
+        // Restore savedTareWeight so re-arm comparisons work after reboot.
+        // Device is NOT armed on boot — user must hold-tare to arm.
         if (saved > 5.0f) {
-            // Directly set via a temporary arm call then disarm so savedTareWeight is populated
-            display.arm(saved);
-            display.disarm();
+            display.setSavedTareWeight(saved);
         }
     }
 }
@@ -401,6 +422,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   loadIdleResetSettings(display);   // Cache and apply idle-reset settings
   loadPreInfusionMode(display);     // Cache and apply pre-infusion mode
   loadAutoStopSettings(display);    // Cache and apply auto-stop on flow cessation
+  loadAutoReArmSettings(display);   // Cache and apply cup-weight auto re-arm
   getCachedTargetRatio();          // Cache target ratio
   display.setTargetRatio(getCachedTargetRatio()); // Push to display
   loadSavedTareWeight(display);    // Restore saved cup weight for auto-re-arm
@@ -805,6 +827,41 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
               request->getParam("enabled", true)->value() == "true";
     saveAutoStopSettings(en, display);
     request->send(200, "text/plain", "Auto-stop settings saved.");
+  });
+
+  server.on("/api/auto-rearm-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"enabled\":" + String(cachedAutoReArmEnabled ? "true" : "false") + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/auto-rearm-settings", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    saveAutoReArmSettings(en, display);
+    request->send(200, "text/plain", "Auto re-arm settings saved.");
+  });
+
+  server.on("/api/cup-weight", HTTP_GET, [&display](AsyncWebServerRequest *request) {
+    String json = "{\"cup_weight\":" + String(display.getSavedTareWeight(), 1) + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/cup-weight", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    if (request->hasParam("weight", true)) {
+      float w = request->getParam("weight", true)->value().toFloat();
+      if (w >= 5.0f && w <= 500.0f) {
+        display.setSavedTareWeight(w);
+        if (preferences.begin("display", false)) {
+          preferences.putFloat("saved_tare", w);
+          preferences.end();
+        }
+        request->send(200, "text/plain", "Cup weight saved.");
+      } else {
+        request->send(400, "text/plain", "Weight out of range (5-500g).");
+      }
+    } else {
+      request->send(400, "text/plain", "Missing weight parameter.");
+    }
   });
 
   server.on("/api/flowrate", HTTP_GET, [&flowRate](AsyncWebServerRequest *request) {
