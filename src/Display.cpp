@@ -789,8 +789,12 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         display->setCursor(SCREEN_WIDTH - w, 24);
         display->print(buf);
     } else if (!timerRunning && !timerPaused && !armedAutoStart) {
-        // Idle state — hint at armed auto-start instead of showing 0.0F
-        const char* hint = "hold tare:arm";
+        // Idle state — hint at how to arm.
+        // If cup weight is saved and auto re-arm is on, placing the cup will arm automatically.
+        // Otherwise guide the user to hold tare.
+        const char* hint = (savedTareWeight > 5.0f && autoReArmEnabled)
+                         ? "place cup:arm"
+                         : "hold tare:arm";
         uint16_t w, h;
         display->getTextBounds(hint, 0, 0, &x1, &y1, &w, &h);
         display->setCursor(SCREEN_WIDTH - w, 24);
