@@ -160,7 +160,7 @@ jobs:
                 },
                 {
                   "path": "weighmybru-${BOARD_SUFFIX}-v${VERSION}-littlefs.bin",
-                  "offset": 2686976
+                  "offset": 3211264
                 }
               ]
             }
@@ -313,7 +313,7 @@ jobs:
                 },
                 {
                   "path": "weighmybru-${BOARD}-v${VERSION}-littlefs.bin",
-                  "offset": 2686976
+                  "offset": 3211264
                 }
               ]
             }
