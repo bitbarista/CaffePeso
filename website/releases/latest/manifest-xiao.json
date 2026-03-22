@@ -1,25 +1,25 @@
 {
   "name": "CaffePeso - XIAO ESP32S3",
   "version": "0.1.0",
-  "funding_url": "https://github.com/bitbarista/caffepeso",
+  "funding_url": "https://github.com/bitbarista/CaffePeso",
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "https://github.com/bitbarista/caffepeso/releases/download/v0.1.0/weighmybru-xiao-v0.1.0-bootloader.bin",
+          "path": "weighmybru-xiao-v0.1.0-bootloader.bin",
           "offset": 0
         },
         {
-          "path": "https://github.com/bitbarista/caffepeso/releases/download/v0.1.0/weighmybru-xiao-v0.1.0-partitions.bin",
+          "path": "weighmybru-xiao-v0.1.0-partitions.bin",
           "offset": 32768
         },
         {
-          "path": "https://github.com/bitbarista/caffepeso/releases/download/v0.1.0/weighmybru-xiao-v0.1.0.bin",
+          "path": "weighmybru-xiao-v0.1.0.bin",
           "offset": 65536
         },
         {
-          "path": "https://github.com/bitbarista/caffepeso/releases/download/v0.1.0/weighmybru-xiao-v0.1.0-littlefs.bin",
+          "path": "weighmybru-xiao-v0.1.0-littlefs.bin",
           "offset": 2686976
         }
       ]

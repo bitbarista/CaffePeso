@@ -265,10 +265,9 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         ref: master
 
-    - name: Update website manifests with absolute release URLs
+    - name: Copy binaries and update website manifests with relative paths
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
-        BASE_URL="https://github.com/bitbarista/caffepeso/releases/download/v${VERSION}"
 
         for BOARD in supermini xiao; do
           if [[ "$BOARD" == "supermini" ]]; then
@@ -276,29 +275,41 @@ jobs:
           else
             BOARD_NAME="CaffePeso - XIAO ESP32S3"
           fi
+
+          # Copy binaries into website so they're served from GitHub Pages (same origin = no CORS)
+          cp weighmybru-${BOARD}-v${VERSION}/weighmybru-${BOARD}-v${VERSION}-bootloader.bin \
+             website/releases/latest/weighmybru-${BOARD}-v${VERSION}-bootloader.bin
+          cp weighmybru-${BOARD}-v${VERSION}/weighmybru-${BOARD}-v${VERSION}-partitions.bin \
+             website/releases/latest/weighmybru-${BOARD}-v${VERSION}-partitions.bin
+          cp weighmybru-${BOARD}-v${VERSION}/weighmybru-${BOARD}-v${VERSION}.bin \
+             website/releases/latest/weighmybru-${BOARD}-v${VERSION}.bin
+          cp weighmybru-${BOARD}-v${VERSION}/weighmybru-${BOARD}-v${VERSION}-littlefs.bin \
+             website/releases/latest/weighmybru-${BOARD}-v${VERSION}-littlefs.bin
+
+          # Write manifest with relative paths (same directory as manifest = same Pages origin)
           cat > website/releases/latest/manifest-${BOARD}.json << EOF
         {
           "name": "${BOARD_NAME}",
           "version": "${VERSION}",
-          "funding_url": "https://github.com/bitbarista/caffepeso",
+          "funding_url": "https://github.com/bitbarista/CaffePeso",
           "builds": [
             {
               "chipFamily": "ESP32-S3",
               "parts": [
                 {
-                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-bootloader.bin",
+                  "path": "weighmybru-${BOARD}-v${VERSION}-bootloader.bin",
                   "offset": 0
                 },
                 {
-                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-partitions.bin",
+                  "path": "weighmybru-${BOARD}-v${VERSION}-partitions.bin",
                   "offset": 32768
                 },
                 {
-                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}.bin",
+                  "path": "weighmybru-${BOARD}-v${VERSION}.bin",
                   "offset": 65536
                 },
                 {
-                  "path": "${BASE_URL}/weighmybru-${BOARD}-v${VERSION}-littlefs.bin",
+                  "path": "weighmybru-${BOARD}-v${VERSION}-littlefs.bin",
                   "offset": 2686976
                 }
               ]
@@ -308,10 +319,10 @@ jobs:
         EOF
         done
 
-    - name: Commit and push updated manifests
+    - name: Commit and push binaries and manifests
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add website/releases/latest/manifest-supermini.json website/releases/latest/manifest-xiao.json
-        git commit -m "Update flash manifests for v${{ steps.version.outputs.VERSION }}"
+        git add website/releases/latest/
+        git commit -m "Update flash binaries and manifests for v${{ steps.version.outputs.VERSION }}"
         git push origin master
