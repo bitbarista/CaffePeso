@@ -916,6 +916,10 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   server.on("/js/alpine.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/js/alpine.min.js", "application/javascript");
   });
+
+  server.on("/chart.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/chart.min.js", "application/javascript");
+  });
   
   server.on("/webfonts/fa-solid-900.woff2", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/webfonts/fa-solid-900.woff2", "font/woff2");
