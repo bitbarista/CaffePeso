@@ -581,16 +581,12 @@ void Display::drawBluetoothStatus() {
         return;
     }
     
-    // Draw "BT" text with rectangle border when connected
-    if (bluetoothPtr) {
+    // Only draw when connected — no indicator when scanning/disconnected
+    if (bluetoothPtr && bluetoothPtr->isConnected()) {
         display->setTextSize(1);
-        display->setCursor(115, 0); // Position at top right
+        display->setCursor(115, 0);
         display->print("BT");
-        
-        // If connected, draw rectangle around "BT"
-        if (bluetoothPtr->isConnected()) {
-            display->drawRect(113, -1, 16, 10, SSD1306_WHITE); // Rectangle around "BT"
-        }
+        display->drawRect(113, 0, 15, 9, SSD1306_WHITE);
     }
 }
 
