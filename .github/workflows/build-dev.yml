@@ -6,10 +6,13 @@ on:
   pull_request:
     branches: [ main, master, develop ]
     
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test-build:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         environment: [esp32s3-supermini, esp32s3-xiao]
