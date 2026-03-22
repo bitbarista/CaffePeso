@@ -327,8 +327,26 @@ void checkPendingShotSave(Display& display, Scale& scale) {
         float dose    = display.getDoseWeight();
         float yield   = display.getLastBrewYield();
         float timeSec = display.getLastBrewTime();
-        if (dose > 0.5f && yield > 5.0f && timeSec > 3.0f) {
-            saveShotToHistory(dose, yield, timeSec, yield / dose);
+        float ratio   = (dose > 0.5f) ? yield / dose : 0.0f;
+
+        // Only save if this looks like a real espresso or pour-over:
+        //   dose  >  0.5g  — requires dose to be set
+        //   yield >= 10g   — rules out cup residue / empty scale
+        //   time  >= 15s   — rules out accidental starts, tare tests
+        //   time  <= 600s  — sanity cap (10 min max pour-over)
+        //   ratio  0.5–25  — espresso ~1:1.5–1:3, pour-over ~1:10–1:17
+        bool legitimate = dose    >  0.5f
+                       && yield   >= 10.0f
+                       && timeSec >= 15.0f
+                       && timeSec <= 600.0f
+                       && ratio   >= 0.5f
+                       && ratio   <= 25.0f;
+
+        if (legitimate) {
+            saveShotToHistory(dose, yield, timeSec, ratio);
+        } else {
+            Serial.printf("Shot discarded (not legitimate): dose=%.1f yield=%.1f time=%.1fs ratio=%.2f\n",
+                          dose, yield, timeSec, ratio);
         }
         display.clearPendingShot();
     }
