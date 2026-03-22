@@ -231,6 +231,14 @@ void PowerManager::resetTimerState() {
     Serial.println("PowerManager timer state reset");
 }
 
+void PowerManager::syncTimerRunning() {
+    timerState = TimerState::RUNNING;
+}
+
+void PowerManager::syncTimerPaused() {
+    timerState = TimerState::PAUSED;
+}
+
 void PowerManager::startTimer() {
     if (displayPtr == nullptr) return;
     displayPtr->startTimer();

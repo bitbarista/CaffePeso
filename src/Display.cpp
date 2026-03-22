@@ -123,32 +123,28 @@ void Display::update() {
         }
     }
     
-    // Auto re-arm: fires whenever the scale reads within ±REARM_STABLE_WINDOW of the saved
-    // cup weight, regardless of what it showed before. No state tracking required.
-    // Always tares the cup in first so armed auto-start correctly detects the first drip.
-    // Does not fire during an active brew.
-    if (scalePtr != nullptr && savedTareWeight > 5.0f) {
+    // Auto re-arm: when the saved cup weight is detected on the scale and stable for
+    // REARM_STABLE_MS, tare the cup in, arm, and reset the timer.
+    // Condition: weight ≈ savedTareWeight (within ±REARM_STABLE_WINDOW).
+    // This requires the user to have tared the empty scale first (tap tare after removing cup),
+    // so the cup reads its full weight when placed back. This avoids false triggers from:
+    //   - scale lifted (reads very negative, not ≈ savedTareWeight)
+    //   - scale at 0g for any other reason (empty scale, just tared, etc.)
+    if (scalePtr != nullptr && savedTareWeight > 5.0f && autoReArmEnabled) {
         bool activeBrew = timerRunning && !timerPaused;
         float weightNow = scalePtr->getCurrentWeight();
+        bool cupDetected = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
 
-        if (weightNow < -5.0f) scaleWentNegative = true;
-
-        // Case 1: scale tared with cup, cup removed then directly replaced → reads ≈0g.
-        //         Requires scaleWentNegative so a tap-tare to 0g doesn't falsely trigger.
-        // Case 2: scale tared empty, cup placed → reads ≈savedTareWeight.
-        bool case1 = scaleWentNegative && fabsf(weightNow) <= REARM_STABLE_WINDOW;
-        bool case2 = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
-
-        if (!activeBrew && (case1 || case2)) {
+        if (!activeBrew && cupDetected) {
             if (reArmStableSince == 0) reArmStableSince = millis();
             else if (millis() - reArmStableSince >= REARM_STABLE_MS) {
                 reArmStableSince = 0;
-                resetTimer(); // fresh slate for the next shot
-                if (flowRatePtr) flowRatePtr->resetTimerAveraging();
                 scalePtr->tare();
                 arm(savedTareWeight);
+                resetTimer();
+                if (flowRatePtr) flowRatePtr->resetTimerAveraging();
                 showArmedMessage();
-                Serial.printf("Auto re-armed (case%d): %.1fg\n", case1 ? 1 : 2, savedTareWeight);
+                Serial.printf("Auto re-armed: cup %.1fg detected\n", savedTareWeight);
             }
         } else {
             reArmStableSince = 0;
@@ -191,7 +187,8 @@ void Display::update() {
         }
 
         // --- Post-brew idle reset ---
-        if (idleResetEnabled && timerPaused && !timerRunning) {
+        // timerPaused=true after stopTimer() (timerRunning stays true); fire on paused state only.
+        if (idleResetEnabled && timerPaused) {
             if (idleResetWeightStableFrom == 0) {
                 idleResetWeightStableFrom = millis();
                 idleResetLastWeight = weight;
@@ -761,7 +758,7 @@ void Display::showWeightWithFlowAndTimer(float weight) {
     display->print("T");
 
     // --- Centre: running ratio (timer running, dose set, weight positive) ---
-    bool showRunningRatio = !timerPaused && doseWeight > 1.0f && weight > 0.5f;
+    bool showRunningRatio = timerRunning && !timerPaused && doseWeight > 1.0f && weight > 0.5f;
     if (showRunningRatio) {
         char buf[10];
         snprintf(buf, sizeof(buf), "1:%.1f", weight / doseWeight);
@@ -831,15 +828,17 @@ void Display::startTimer() {
         if (flowRatePtr != nullptr && !flowRatePtr->isTimerAveragingActive()) {
             flowRatePtr->startTimerAveraging();
         }
+        if (powerManagerPtr != nullptr) powerManagerPtr->syncTimerRunning();
     } else if (timerPaused) {
         // Resume from paused state
         timerStartTime = millis() - timerPausedTime;
         timerPaused = false;
-        
+
         // Resume flow rate averaging when timer resumes
         if (flowRatePtr != nullptr) {
             flowRatePtr->startTimerAveraging();
         }
+        if (powerManagerPtr != nullptr) powerManagerPtr->syncTimerRunning();
     }
     // If timer is already running and not paused, do nothing
 }
@@ -858,6 +857,12 @@ void Display::stopTimer() {
         if (flowRatePtr != nullptr) {
             flowRatePtr->stopTimerAveraging();
         }
+
+        // Clear armed state — brew is done, no longer waiting for first drip
+        disarm();
+
+        // Sync PowerManager so the next button tap correctly stops/resets rather than starts
+        if (powerManagerPtr != nullptr) powerManagerPtr->syncTimerPaused();
     }
 }
 
@@ -931,6 +936,7 @@ void Display::arm(float cupWeightBeforeTare) {
     armWeightAboveThresholdSince = 0;
     reArmStableSince = 0;
     scaleWentNegative = false;
+    tapTaredEmpty     = false;
     alertFired = false; // fresh brew — reset alert
 
     // Persist saved cup weight across reboots
@@ -942,10 +948,13 @@ void Display::arm(float cupWeightBeforeTare) {
     Serial.printf("Armed: cup weight = %.1fg\n", savedTareWeight);
 
     if (preInfusionMode) {
-        // Pre-infusion mode: start timer immediately so total shot time includes pre-infusion
+        // Pre-infusion mode: start timer immediately so total shot time includes pre-infusion.
+        // armedAutoStart is left true — resetTimer() in the auto re-arm path clears the timer
+        // but must leave armedAutoStart intact so first-drip detection still works after re-arm.
+        // The auto-start check guards on !timerRunning, so it can't double-fire while the
+        // timer is already running from a manual hold-tare arm.
         if (timerPaused) resetTimer();
         startTimer();
-        armedAutoStart = false;
         Serial.println("Pre-infusion mode: timer started immediately");
     }
 }

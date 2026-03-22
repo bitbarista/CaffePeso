@@ -59,7 +59,10 @@ public:
     bool  isArmed() const              { return armedAutoStart; }
     float getSavedTareWeight() const         { return savedTareWeight; }
     void  setSavedTareWeight(float w)        { savedTareWeight = w; } // restore from NVS without arming
+    void  setAutoReArmEnabled(bool en)       { autoReArmEnabled = en; }
+    bool  getAutoReArmEnabled() const        { return autoReArmEnabled; }
     void  resetNegativeFlag()  { scaleWentNegative = false; }
+    void  setTapTaredEmpty()   { tapTaredEmpty = true; }  // tap-tare: block case-1, keep case-2
     void  showArmedMessage();
 
     // Pre-infusion timing mode (timer starts immediately on arm, not on first drip)
@@ -134,17 +137,19 @@ private:
     static const unsigned long ALERT_FLASH_MS = 1000;
 
     // Armed auto-start
-    bool  armedAutoStart  = false;
-    float savedTareWeight = 0.0f;
+    bool  armedAutoStart   = false;
+    bool  autoReArmEnabled = true;
+    float savedTareWeight  = 0.0f;
     unsigned long armStartedAt = 0;
     unsigned long armWeightAboveThresholdSince = 0;
-    bool  scaleWentNegative = false;   // set when weight < -5g; reset by arm() and tap-tare
+    bool  scaleWentNegative = false;   // set when weight < -5g; reset by arm()
+    bool  tapTaredEmpty     = false;   // set by tap-tare; blocks case-1 (≈0g) until cup removed again
     unsigned long reArmStableSince  = 0;
     static constexpr float ARM_TRIGGER_THRESHOLD   = 1.0f;
     static constexpr float REARM_STABLE_WINDOW     = 5.0f;  // g — weight must be within ±5g of savedTareWeight
     static const unsigned long ARM_SUSTAIN_MS      = 500;
     static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
-    static const unsigned long REARM_STABLE_MS     = 400;   // weight must match for 400ms to re-arm
+    static const unsigned long REARM_STABLE_MS     = 200;   // weight must match for 200ms to re-arm
 
     // Pre-infusion timing mode
     bool preInfusionMode = false;

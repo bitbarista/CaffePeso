@@ -183,6 +183,19 @@
       <h2 class="text-2xl font-semibold mb-4">Brew Automation</h2>
 
       <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-sm font-semibold">Cup Weight Auto Re-arm</span>
+            <p class="text-gray-400 text-sm">Arm automatically when the saved cup weight is detected on the tared scale. Disable to arm manually only.</p>
+          </div>
+          <label class="toggle-switch ml-4">
+            <input type="checkbox" id="autoReArmEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-3 p-4 bg-black-background rounded">
         <div class="flex items-center justify-between mb-3">
           <div>
             <span class="text-sm font-semibold">Auto-Tare on Vessel Placement</span>
@@ -271,8 +284,9 @@
       fetch('/api/idle-reset-settings').then(r => r.json()),
       fetch('/api/target-ratio').then(r => r.json()),
       fetch('/api/pre-infusion-mode').then(r => r.json()),
-      fetch('/api/auto-stop-settings').then(r => r.json())
-    ]).then(([settingsData, filterData, sleepData, atData, irData, trData, piData, asData]) => {
+      fetch('/api/auto-stop-settings').then(r => r.json()),
+      fetch('/api/auto-rearm-settings').then(r => r.json())
+    ]).then(([settingsData, filterData, sleepData, atData, irData, trData, piData, asData, arData]) => {
       document.getElementById('ssid').value = settingsData.ssid || '';
       document.getElementById('password').value = settingsData.password || '';
       if (settingsData.decimals !== undefined)
@@ -290,6 +304,7 @@
       document.getElementById('targetRatio').value = trData.target_ratio || 0;
       document.getElementById('preInfusionMode').checked = piData.enabled === true;
       document.getElementById('autoStopEnabled').checked = asData.enabled === true;
+      document.getElementById('autoReArmEnabled').checked = arData.enabled !== false;
     }).catch(err => {
       console.error('Error loading settings:', err);
       loadSettingsIndividually();
@@ -304,8 +319,9 @@
         fetch('/api/sleep-settings').then(r => r.json()),
         fetch('/api/auto-tare-settings').then(r => r.json()),
         fetch('/api/idle-reset-settings').then(r => r.json()),
-        fetch('/api/target-ratio').then(r => r.json())
-      ]).then(([wifiData, decimalData, filterData, sleepData, atData, irData, trData]) => {
+        fetch('/api/target-ratio').then(r => r.json()),
+        fetch('/api/auto-rearm-settings').then(r => r.json())
+      ]).then(([wifiData, decimalData, filterData, sleepData, atData, irData, trData, arData]) => {
         document.getElementById('ssid').value = wifiData.ssid || '';
         document.getElementById('password').value = wifiData.password || '';
         if (decimalData.decimals !== undefined)
@@ -321,6 +337,7 @@
         document.getElementById('idleResetEnabled').checked = irData.enabled === true;
         document.getElementById('idleResetTimeout').value = irData.timeoutSeconds || 30;
         document.getElementById('targetRatio').value = trData.target_ratio || 0;
+        document.getElementById('autoReArmEnabled').checked = arData.enabled !== false;
       }).catch(err => console.error('Error loading individual settings:', err));
     }
 
@@ -343,7 +360,10 @@
             body: 'enabled=' + document.getElementById('preInfusionMode').checked }),
           fetch('/api/auto-stop-settings', { method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'enabled=' + document.getElementById('autoStopEnabled').checked })
+            body: 'enabled=' + document.getElementById('autoStopEnabled').checked }),
+          fetch('/api/auto-rearm-settings', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'enabled=' + document.getElementById('autoReArmEnabled').checked })
         ]);
         document.getElementById('automationMessage').textContent = 'Brew automation settings saved.';
       } catch(err) {
