@@ -225,18 +225,18 @@
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-3 gap-2 mt-2">
-      <div class="flex flex-col items-center gap-1">
-        <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold w-full">
-          Tare
-        </button>
-        <p id="armHint" style="font-size:10px; color:#d1d5db; text-align:center; line-height:1.2;">Hold for<br>auto-start</p>
-      </div>
+      <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">
+        Tare
+      </button>
       <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm">
         <i class="fa fa-stop mr-1"></i>Stop
       </button>
       <button onclick="resetTimer()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg text-sm">
         <i class="fa fa-undo mr-1"></i>Reset
       </button>
+    </div>
+    <div class="grid grid-cols-3 gap-2">
+      <p id="armHint" style="font-size:10px; color:#d1d5db; text-align:center; margin-top:2px;">Hold for auto-start</p>
     </div>
 
     <!-- Shot History -->
