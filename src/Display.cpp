@@ -208,6 +208,26 @@ void Display::update() {
             }
         }
 
+        // Auto-stop on flow cessation
+        if (autoStopEnabled && timerRunning && !timerPaused && flowRatePtr != nullptr) {
+            float fr = flowRatePtr->getFlowRate();
+            unsigned long elapsed = millis() - timerStartTime;
+            if (fr > AUTO_STOP_ACTIVE_THRESHOLD) {
+                autoStopFlowWasActive = true;
+                autoStopBelowThresholdSince = 0;
+            } else if (autoStopFlowWasActive && fr < AUTO_STOP_CEASE_THRESHOLD && elapsed > AUTO_STOP_MIN_BREW_MS) {
+                if (autoStopBelowThresholdSince == 0) {
+                    autoStopBelowThresholdSince = millis();
+                } else if (millis() - autoStopBelowThresholdSince >= AUTO_STOP_SUSTAIN_MS) {
+                    stopTimer();
+                    autoStopBelowThresholdSince = 0;
+                    Serial.println("Auto-stop: flow ceased");
+                }
+            } else if (fr >= AUTO_STOP_CEASE_THRESHOLD) {
+                autoStopBelowThresholdSince = 0;
+            }
+        }
+
         // Target yield alert: invert display for 1s when approaching target yield
         if (timerRunning && !timerPaused && doseWeight > 0.5f && targetRatio > 0.0f && !alertFired) {
             float alertThreshold = doseWeight * targetRatio - 2.0f;
@@ -793,6 +813,8 @@ void Display::resetTimer() {
     // autoTareFired is intentionally NOT reset here — it resets only when the scale
     // returns to near-zero, ensuring a vessel already on the scale never triggers
     // a re-tare just because the timer was reset.
+    autoStopFlowWasActive = false;
+    autoStopBelowThresholdSince = 0;
     idleResetWeightStableFrom = 0;
     prevWeightForRemoval = 0.0f;
     pendingShot = false;
@@ -856,6 +878,14 @@ void Display::arm(float cupWeightBeforeTare) {
         prefs.end();
     }
     Serial.printf("Armed: cup weight = %.1fg\n", savedTareWeight);
+
+    if (preInfusionMode) {
+        // Pre-infusion mode: start timer immediately so total shot time includes pre-infusion
+        if (timerPaused) resetTimer();
+        startTimer();
+        armedAutoStart = false;
+        Serial.println("Pre-infusion mode: timer started immediately");
+    }
 }
 
 void Display::disarm() {

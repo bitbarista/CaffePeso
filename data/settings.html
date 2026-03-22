@@ -184,6 +184,32 @@
         </div>
       </div>
 
+      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <span class="text-sm font-semibold">Pre-Infusion Timing</span>
+            <p class="text-gray-400 text-sm">Start timer immediately when armed, capturing pre-infusion time. Otherwise timer starts on first drip.</p>
+          </div>
+          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+            <input type="checkbox" id="preInfusionMode">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <span class="text-sm font-semibold">Auto-Stop on Flow Cessation</span>
+            <p class="text-gray-400 text-sm">Automatically stop the timer when espresso flow stops. Requires flow to have been active for at least 8 seconds.</p>
+          </div>
+          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+            <input type="checkbox" id="autoStopEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="mb-6 p-4 rounded" style="background:#1a1a1a;">
         <span class="text-sm font-semibold">Target Yield Ratio</span>
         <p class="text-gray-400 text-sm mb-3">Flash OLED and highlight web weight when approaching target yield (0 = disabled)</p>
@@ -212,8 +238,10 @@
       fetch('/api/sleep-settings').then(r => r.json()),
       fetch('/api/auto-tare-settings').then(r => r.json()),
       fetch('/api/idle-reset-settings').then(r => r.json()),
-      fetch('/api/target-ratio').then(r => r.json())
-    ]).then(([settingsData, filterData, sleepData, atData, irData, trData]) => {
+      fetch('/api/target-ratio').then(r => r.json()),
+      fetch('/api/pre-infusion-mode').then(r => r.json()),
+      fetch('/api/auto-stop-settings').then(r => r.json())
+    ]).then(([settingsData, filterData, sleepData, atData, irData, trData, piData, asData]) => {
       document.getElementById('ssid').value = settingsData.ssid || '';
       document.getElementById('password').value = settingsData.password || '';
       if (settingsData.decimals !== undefined)
@@ -229,6 +257,8 @@
       document.getElementById('idleResetEnabled').checked = irData.enabled === true;
       document.getElementById('idleResetTimeout').value = irData.timeoutSeconds || 30;
       document.getElementById('targetRatio').value = trData.target_ratio || 0;
+      document.getElementById('preInfusionMode').checked = piData.enabled === true;
+      document.getElementById('autoStopEnabled').checked = asData.enabled === true;
     }).catch(err => {
       console.error('Error loading settings:', err);
       loadSettingsIndividually();
@@ -276,7 +306,13 @@
                   '&timeoutSeconds=' + document.getElementById('idleResetTimeout').value }),
           fetch('/api/target-ratio', { method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'target_ratio=' + document.getElementById('targetRatio').value })
+            body: 'target_ratio=' + document.getElementById('targetRatio').value }),
+          fetch('/api/pre-infusion-mode', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'enabled=' + document.getElementById('preInfusionMode').checked }),
+          fetch('/api/auto-stop-settings', { method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'enabled=' + document.getElementById('autoStopEnabled').checked })
         ]);
         document.getElementById('automationMessage').textContent = 'Brew automation settings saved.';
       } catch(err) {
