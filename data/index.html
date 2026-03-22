@@ -224,9 +224,12 @@
     <p id="doseHint" style="font-size:11px; color:#d97706; text-align:center; margin-top:4px; display:none;">Set dose for live ratio &amp; shot history</p>
 
     <!-- Action Buttons -->
-    <div class="grid grid-cols-3 gap-2 mt-2">
+    <div class="grid grid-cols-2 gap-2 mt-2">
       <button onclick="tareScale()" class="bg-gray-700 hover:bg-gray-600 py-2 rounded-lg text-sm font-semibold">
         Tare
+      </button>
+      <button id="armBtn" onclick="toggleArm()" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-sm">
+        Arm
       </button>
       <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm">
         <i class="fa fa-stop mr-1"></i>Stop
@@ -234,9 +237,6 @@
       <button onclick="resetTimer()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg text-sm">
         <i class="fa fa-undo mr-1"></i>Reset
       </button>
-    </div>
-    <div class="grid grid-cols-3 gap-2">
-      <p id="armHint" style="font-size:10px; color:#d1d5db; text-align:center; margin-top:2px;">Hold for auto-start</p>
     </div>
 
     <!-- Shot History -->
@@ -280,6 +280,12 @@
       document.getElementById('doseHint').style.display = 'block';
     }
   }).catch(() => {});
+
+  async function toggleArm() {
+    const btn = document.getElementById('armBtn');
+    const armed = btn.dataset.armed === 'true';
+    await fetch(armed ? '/api/disarm' : '/api/arm', { method: 'POST' }).catch(() => {});
+  }
 
   async function saveDose() {
     const val = document.getElementById('doseInput').value;
@@ -763,11 +769,20 @@
             weightEl.style.color = '';
           }
 
-          // Armed indicator — show when armed, hide arm hint when armed or timer running
+          // Armed indicator and Arm button state
           const armedEl = document.getElementById('armedIndicator');
           if (armedEl) armedEl.style.display = data.armed ? 'block' : 'none';
-          const armHint = document.getElementById('armHint');
-          if (armHint) armHint.style.display = (data.armed || data.timer_running) ? 'none' : 'block';
+          const armBtn = document.getElementById('armBtn');
+          if (armBtn) {
+            armBtn.dataset.armed = data.armed ? 'true' : 'false';
+            if (data.armed) {
+              armBtn.textContent = 'Disarm';
+              armBtn.className = 'bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-sm';
+            } else {
+              armBtn.textContent = 'Arm';
+              armBtn.className = 'bg-green-700 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-sm';
+            }
+          }
         }
       })
       .catch(err => console.error("Dashboard fetch error:", err));
