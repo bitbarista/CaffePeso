@@ -780,9 +780,27 @@
             avgFlowRateElement.style.display = 'none';
           }
 
+          // Sync dose and cup weight fields from device (skip if field has focus)
+          const doseEl = document.getElementById('doseInput');
+          if (document.activeElement !== doseEl && data.dose_weight !== undefined) {
+            const serverDose = parseFloat(data.dose_weight);
+            if (serverDose > 0) {
+              doseEl.value = serverDose;
+              document.getElementById('doseHint').style.display = 'none';
+            }
+          }
+          const cupEl = document.getElementById('cupWeightInput');
+          if (document.activeElement !== cupEl && data.cup_weight !== undefined) {
+            const serverCup = parseFloat(data.cup_weight);
+            if (serverCup > 0) {
+              cupEl.value = serverCup;
+              document.getElementById('cupWeightHint').style.display = 'none';
+            }
+          }
+
           // Show brew ratio when timer is stopped and dose is set
           const ratioEl = document.getElementById('brewRatio');
-          const dose = parseFloat(document.getElementById('doseInput').value);
+          const dose = parseFloat(data.dose_weight) || parseFloat(doseEl.value) || 0;
           const yieldW = parseFloat(data.weight);
           if (!data.timer_running && dose > 0 && yieldW > 5) {
             ratioEl.innerText = `Ratio: 1:${(yieldW / dose).toFixed(1)} (${dose.toFixed(1)}g → ${yieldW.toFixed(1)}g)`;
