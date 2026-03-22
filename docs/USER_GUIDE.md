@@ -35,7 +35,6 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 | **Tap** (timer stopped) | Start timer |
 | **Tap** (timer running) | Stop/pause timer |
 | **Tap** (timer paused) | Reset timer |
-| **Hold 1 s** | Toggle status page (battery, scale, BLE, Wi-Fi) |
 | **Hold 3 s** | Start sleep countdown |
 
 ---
@@ -44,12 +43,14 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 
 ```
 ┌──────────────────────────────────┐
-│          18.52                   │  ← weight (centred, large)
+│ 85%      18.52              [BT] │  ← battery% | weight (centred, large) | BT status
 │ 30.2T    1:2.1    1.4F           │  ← timer | running ratio | flow rate
 └──────────────────────────────────┘
 ```
 
-- **Top row (large)** — current weight in grams, centred
+- **Top-left corner** — battery percentage (small)
+- **Top row (large, centred)** — current weight in grams
+- **Top-right corner** — Bluetooth status: `BT` plain when scanning, `[BT]` boxed when connected
 - **Bottom left** — elapsed timer. Format: `SS.t` under 60 s, `M:SS` over 60 s, followed by `T`
 - **Bottom centre** — live brew ratio (`1:X`) while weight is building, if dose is set
 - **Bottom right** — live flow rate (`g/s`) while brewing; final brew ratio (`1:X R`) after timer stops
@@ -204,7 +205,7 @@ OTA firmware upload. Upload a new `.bin` file directly from the browser without 
 3. Go to Settings → Wi-Fi Configuration
 4. Enter your SSID and password and save
 
-Once connected to your home network, find the device's assigned IP address from your router's DHCP table, or check the OLED status page (hold timer button 1 s).
+Once connected to your home network, find the device's assigned IP address from your router's DHCP table, or read it from the OLED on the next boot (the boot screen shows the IP address below "CaffePeso").
 
 ---
 
@@ -215,19 +216,6 @@ Once connected to your home network, find the device's assigned IP address from 
 - **Cancel sleep:** Touch either button during the countdown.
 - **Wake:** Touch either button. Device restarts from boot.
 - **Battery low:** OLED shows "Bat Low" with voltage on boot. Device sleeps immediately if voltage is below 3.2 V.
-
----
-
-## Status Page
-
-Hold the timer button for 1 s to toggle the status page. It shows:
-
-- Battery percentage
-- HX711 scale connection status
-- Bluetooth connection status
-- Wi-Fi mode and IP address
-
-The status page closes automatically after 10 seconds.
 
 ---
 

@@ -91,9 +91,6 @@ void PowerManager::update() {
                     if (held >= HOLD_SLEEP_MS) {
                         Serial.println("Hold 3s release: sleep");
                         handleSleepTouch();
-                    } else if (held >= HOLD_STATUS_MS) {
-                        Serial.println("Hold 1s release: status page");
-                        handleStatusPage();
                     } else {
                         Serial.println("Tap: timer control");
                         handleTimerControl();
@@ -171,13 +168,6 @@ void PowerManager::handleSleepTouch() {
     Serial.println("Hold 5s: starting sleep countdown");
     if (displayPtr != nullptr) {
         displayPtr->showSleepMessage();
-    }
-}
-
-void PowerManager::handleStatusPage() {
-    if (displayPtr != nullptr) {
-        displayPtr->toggleStatusPage();
-        Serial.println("Hold 1s: status page toggled");
     }
 }
 
