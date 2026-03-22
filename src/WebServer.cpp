@@ -527,6 +527,19 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });
 
+  server.on("/api/arm", HTTP_POST, [&display, &scale](AsyncWebServerRequest *request){
+    // Tare first so cup weight is zeroed, then arm ready for drip detection
+    scale.tare(20);
+    display.arm(0.0f);
+    display.showArmedMessage();
+    request->send(200, "text/plain", "Armed");
+  });
+
+  server.on("/api/disarm", HTTP_POST, [&display](AsyncWebServerRequest *request){
+    display.disarm();
+    request->send(200, "text/plain", "Disarmed");
+  });
+
   server.on("/api/set-calibrationfactor", HTTP_POST, [&scale](AsyncWebServerRequest *request){
   if (request->hasParam("calibrationfactor", true)) {
     String value = request->getParam("calibrationfactor", true)->value();
