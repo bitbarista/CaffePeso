@@ -214,14 +214,14 @@
     </div>
 
     <!-- Dose entry -->
-    <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+    <div class="flex items-center gap-2 justify-center">
       <label class="text-sm text-gray-400">Dose:</label>
       <input type="number" id="doseInput" step="0.1" min="0" max="100" placeholder="g"
-             style="width:72px; padding:4px 8px; border-radius:6px; color:#000; font-size:14px;" />
-      <button onclick="saveDose()" style="background:#4b5563; color:#fff; padding:4px 12px; border-radius:6px; font-size:13px;">Set</button>
-      <span id="doseMessage" style="font-size:12px; color:#22c55e;"></span>
+             class="w-20 px-2 py-1 rounded text-black text-sm" />
+      <button onclick="saveDose()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-3 py-1 rounded text-sm">Set</button>
+      <span id="doseMessage" class="text-xs text-green-400"></span>
     </div>
-    <p id="doseHint" style="font-size:11px; color:#d97706; text-align:center; margin-top:4px; display:none;">Set dose for live ratio &amp; shot history</p>
+    <p id="doseHint" class="text-xs text-amber-400 text-center mt-1" style="display:none;">Set dose for live ratio &amp; shot history</p>
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-2 gap-2 mt-2">

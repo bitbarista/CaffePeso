@@ -55,74 +55,106 @@
     </nav>
   </div>
   <main class="flex-grow overflow-y-auto p-4 md:p-8">
-    <h1 class="text-3xl text-white font-bold mb-4">Settings</h1>
-    <div class="bg-black-select p-6 rounded shadow max-w-xl">
+    <h1 class="text-3xl text-white font-bold mb-6">Settings</h1>
+
+    <!-- WiFi Configuration -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
       <h2 class="text-2xl font-semibold mb-4">WiFi Configuration</h2>
-      
-      <form id="wifiForm" class="mb-6">
-        <!-- WiFi Network Scanner -->
-        <div class="mb-4 p-3 bg-black-hover rounded">
-          <h3 class="text-lg font-semibold mb-2">Available Networks</h3>
-          <button type="button" onclick="scanNetworks()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded mb-2">Scan Networks</button>
-          <span id="scanStatus" class="text-gray-400 ml-2"></span>
+      <form id="wifiForm">
+        <div class="mb-4 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Available Networks</span>
+          <p class="text-gray-400 text-sm mb-3">Scan for nearby WiFi networks to connect to</p>
+          <button type="button" onclick="scanNetworks()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-3 py-1 rounded mb-2">Scan Networks</button>
+          <span id="scanStatus" class="text-gray-400 ml-2 text-sm"></span>
           <div id="networkList" class="mt-2"></div>
         </div>
-        
-        <label for="ssid" class="block mb-2">SSID:</label>
-        <input type="text" id="ssid" name="ssid" required class="w-full px-3 py-2 mb-4 rounded text-black" placeholder="Enter network name or select from scan above" />
-        <label for="password" class="block mb-2">Password:</label>
-        <input type="password" id="password" name="password" required class="w-full px-3 py-2 mb-4 rounded text-black" />
-        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <div class="mb-4 p-4 bg-black-background rounded">
+          <label for="ssid" class="block mb-2 text-sm font-semibold">SSID:</label>
+          <input type="text" id="ssid" name="ssid" required class="w-full px-3 py-2 mb-3 rounded text-black" placeholder="Enter network name or select from scan above" />
+          <label for="password" class="block mb-2 text-sm font-semibold">Password:</label>
+          <input type="password" id="password" name="password" required class="w-full px-3 py-2 rounded text-black" />
+        </div>
+        <div class="flex flex-wrap gap-2">
           <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save WiFi Settings</button>
           <button type="button" onclick="clearWiFiCredentials()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Clear WiFi Credentials</button>
         </div>
       </form>
-      <div id="message" class="text-green-400 mb-2"></div>
-      <p id="status" class="text-red-400 mb-4"></p>
+      <div id="message" class="text-green-400 mt-3"></div>
+      <p id="status" class="text-red-400"></p>
+    </div>
+
+    <!-- Display Settings -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
       <h2 class="text-2xl font-semibold mb-4">Display Settings</h2>
       <form id="displayForm">
-        <label for="decimals" class="block mb-2">Decimal places:</label>
-        <select id="decimals" name="decimals" class="w-24 px-2 py-1 rounded text-black mb-4">
-          <option value="0">0</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-        </select>
-        <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded ml-2">Save Display Settings</button>
+        <div class="mb-4 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Decimal Places</span>
+          <p class="text-gray-400 text-sm mb-3">Number of decimal places shown on the weight display</p>
+          <select id="decimals" name="decimals" class="w-24 px-2 py-1 rounded text-black">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </div>
+        <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Display Settings</button>
       </form>
-      <div id="displayMessage" class="text-green-400 mb-2"></div>
-      
-      <h2 class="text-2xl font-semibold mb-4 mt-8">Filtering Settings</h2>
-      <form id="filterForm" class="mb-6">
-        <label for="brewingThreshold" class="block mb-2">Brewing Detection Threshold:</label>
-        <input type="number" id="brewingThreshold" name="brewingThreshold" step="0.01" min="0.05" max="1.0" class="w-32 px-3 py-2 mb-2 rounded text-black" />
-        <span class="text-gray-400 ml-2">grams</span>
-        <p class="text-gray-400 text-sm mb-4">Weight change needed to detect brewing activity (0.05-1.0g)</p>
-        
-        <label for="stabilityTimeout" class="block mb-2">Stability Timeout:</label>
-        <input type="number" id="stabilityTimeout" name="stabilityTimeout" step="100" min="500" max="10000" class="w-32 px-3 py-2 mb-2 rounded text-black" />
-        <span class="text-gray-400 ml-2">milliseconds</span>
-        <p class="text-gray-400 text-sm mb-4">Time to wait before returning to stable mode (500-10000ms)</p>
-        
-        <label for="medianSamples" class="block mb-2">Brewing Mode Samples:</label>
-        <input type="number" id="medianSamples" name="medianSamples" step="1" min="1" max="50" class="w-32 px-3 py-2 mb-2 rounded text-black" />
-        <span class="text-gray-400 ml-2">samples</span>
-        <p class="text-gray-400 text-sm mb-4">Number of samples for median filter during brewing (1-50)</p>
-        
-        <label for="averageSamples" class="block mb-2">Stable Mode Samples:</label>
-        <input type="number" id="averageSamples" name="averageSamples" step="1" min="1" max="50" class="w-32 px-3 py-2 mb-2 rounded text-black" />
-        <span class="text-gray-400 ml-2">samples</span>
-        <p class="text-gray-400 text-sm mb-4">Number of samples for average filter when stable (1-50)</p>
-        
-        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+      <div id="displayMessage" class="text-green-400 mt-3"></div>
+    </div>
+
+    <!-- Filtering Settings -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Filtering Settings</h2>
+      <form id="filterForm">
+        <div class="mb-3 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Brewing Detection Threshold</span>
+          <p class="text-gray-400 text-sm mb-3">Weight change needed to detect brewing activity (0.05–1.0g)</p>
+          <div class="flex items-center gap-2">
+            <input type="number" id="brewingThreshold" name="brewingThreshold" step="0.01" min="0.05" max="1.0" class="w-32 px-3 py-2 rounded text-black" />
+            <span class="text-gray-400 text-sm">grams</span>
+          </div>
+        </div>
+
+        <div class="mb-3 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Stability Timeout</span>
+          <p class="text-gray-400 text-sm mb-3">Time to wait before returning to stable mode (500–10000ms)</p>
+          <div class="flex items-center gap-2">
+            <input type="number" id="stabilityTimeout" name="stabilityTimeout" step="100" min="500" max="10000" class="w-32 px-3 py-2 rounded text-black" />
+            <span class="text-gray-400 text-sm">milliseconds</span>
+          </div>
+        </div>
+
+        <div class="mb-3 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Brewing Mode Samples</span>
+          <p class="text-gray-400 text-sm mb-3">Number of samples for median filter during brewing (1–50)</p>
+          <div class="flex items-center gap-2">
+            <input type="number" id="medianSamples" name="medianSamples" step="1" min="1" max="50" class="w-32 px-3 py-2 rounded text-black" />
+            <span class="text-gray-400 text-sm">samples</span>
+          </div>
+        </div>
+
+        <div class="mb-4 p-4 bg-black-background rounded">
+          <span class="text-sm font-semibold">Stable Mode Samples</span>
+          <p class="text-gray-400 text-sm mb-3">Number of samples for average filter when stable (1–50)</p>
+          <div class="flex items-center gap-2">
+            <input type="number" id="averageSamples" name="averageSamples" step="1" min="1" max="50" class="w-32 px-3 py-2 rounded text-black" />
+            <span class="text-gray-400 text-sm">samples</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
           <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Filter Settings</button>
+          <button type="button" onclick="resetFilterSettings()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Reset Defaults</button>
         </div>
       </form>
-      <div id="filterMessage" class="text-green-400 mb-2"></div>
+      <div id="filterMessage" class="text-green-400 mt-3"></div>
       <p id="filterStatus" class="text-red-400"></p>
+    </div>
 
-      <h2 class="text-2xl font-semibold mb-4 mt-8">Sleep Settings</h2>
-      <form id="sleepForm" class="mb-6">
-        <div class="mb-4 p-4 bg-black-hover rounded">
+    <!-- Sleep Settings -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Sleep Settings</h2>
+      <form id="sleepForm">
+        <div class="mb-4 p-4 bg-black-background rounded">
           <div class="flex items-center justify-between mb-3">
             <div>
               <span class="text-sm font-semibold">Auto Sleep</span>
@@ -134,99 +166,98 @@
             </label>
           </div>
           <label for="sleepTimeout" class="block mb-2 text-sm">Timeout Duration:</label>
-          <div class="flex items-center">
+          <div class="flex items-center gap-2">
             <input type="number" id="sleepTimeout" name="sleepTimeout" step="1" min="1" max="60" value="10" class="w-24 px-3 py-2 rounded text-black" />
-            <span class="text-gray-400 ml-2">minutes</span>
+            <span class="text-gray-400">minutes</span>
           </div>
           <p class="text-gray-400 text-sm mt-2">Time without weight change or touch input before sleeping (1–60 min)</p>
         </div>
         <button type="submit" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Sleep Settings</button>
       </form>
-      <div id="sleepMessage" class="text-green-400 mb-2"></div>
+      <div id="sleepMessage" class="text-green-400 mt-3"></div>
       <p id="sleepStatus" class="text-red-400"></p>
+    </div>
 
-      <h2 class="text-2xl font-semibold mb-4 mt-8">Brew Automation</h2>
+    <!-- Brew Automation -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Brew Automation</h2>
 
-      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between mb-3">
           <div>
             <span class="text-sm font-semibold">Auto-Tare on Vessel Placement</span>
             <p class="text-gray-400 text-sm">Automatically tare when a stable weight is placed on the scale</p>
           </div>
-          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+          <label class="toggle-switch ml-4">
             <input type="checkbox" id="autoTareEnabled">
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <label for="autoTareThreshold" class="block mb-1 text-sm">Minimum weight to trigger (g):</label>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <label for="autoTareThreshold" class="block mb-1 text-sm">Minimum weight to trigger:</label>
+        <div class="flex items-center gap-2">
           <input type="number" id="autoTareThreshold" step="1" min="5" max="500" value="20" class="w-24 px-3 py-2 rounded text-black" />
           <span class="text-gray-400 text-sm">grams</span>
         </div>
         <p class="text-gray-400 text-sm mt-2">Weight must be stable for ~0.6s before taring</p>
       </div>
 
-      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between mb-3">
           <div>
             <span class="text-sm font-semibold">Post-Brew Idle Reset</span>
             <p class="text-gray-400 text-sm">After brew finishes, auto-reset and re-tare if no weight change</p>
           </div>
-          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+          <label class="toggle-switch ml-4">
             <input type="checkbox" id="idleResetEnabled">
             <span class="toggle-slider"></span>
           </label>
         </div>
         <label for="idleResetTimeout" class="block mb-1 text-sm">Idle timeout:</label>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flex items-center gap-2">
           <input type="number" id="idleResetTimeout" step="5" min="5" max="300" value="30" class="w-24 px-3 py-2 rounded text-black" />
           <span class="text-gray-400 text-sm">seconds</span>
         </div>
       </div>
 
-      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between">
           <div>
             <span class="text-sm font-semibold">Pre-Infusion Timing</span>
             <p class="text-gray-400 text-sm">Start timer immediately when armed, capturing pre-infusion time. Otherwise timer starts on first drip.</p>
           </div>
-          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+          <label class="toggle-switch ml-4">
             <input type="checkbox" id="preInfusionMode">
             <span class="toggle-slider"></span>
           </label>
         </div>
       </div>
 
-      <div class="mb-4 p-4 rounded" style="background:#1a1a1a;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between">
           <div>
             <span class="text-sm font-semibold">Auto-Stop on Flow Cessation</span>
             <p class="text-gray-400 text-sm">Automatically stop the timer when espresso flow stops. Requires flow to have been active for at least 8 seconds.</p>
           </div>
-          <label class="toggle-switch" style="margin-left:16px; flex-shrink:0;">
+          <label class="toggle-switch ml-4">
             <input type="checkbox" id="autoStopEnabled">
             <span class="toggle-slider"></span>
           </label>
         </div>
       </div>
 
-      <div class="mb-6 p-4 rounded" style="background:#1a1a1a;">
+      <div class="mb-4 p-4 bg-black-background rounded">
         <span class="text-sm font-semibold">Target Yield Ratio</span>
         <p class="text-gray-400 text-sm mb-3">Flash OLED and highlight web weight when approaching target yield (0 = disabled)</p>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flex items-center gap-2">
           <input type="number" id="targetRatio" step="0.1" min="0" max="20" value="0" class="w-24 px-3 py-2 rounded text-black" />
           <span class="text-gray-400 text-sm">e.g. 2.0 for a 1:2 ratio</span>
         </div>
       </div>
 
       <button type="button" onclick="saveBrewAutomation()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Brew Automation</button>
-      <div id="automationMessage" class="text-green-400 mt-2 mb-4"></div>
-
-      <div class="mt-8 pt-6 border-t border-gray-700">
-        <button type="button" onclick="resetFilterSettings()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Reset Filter Defaults</button>
-        <p class="text-gray-400 text-sm mt-2">Resets filtering settings to factory defaults</p>
-      </div>
+      <div id="automationMessage" class="text-green-400 mt-3"></div>
     </div>
+
   </main>
   <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
