@@ -28,9 +28,7 @@ public:
     void showTaringMessage();         // "Taring..." — shown during tare operation
     void showTaredMessage();          // "Scale / Tared!" — shown after successful tare
     void clearMessageState(); // Clear message state to return to weight display
-    void showIPAddresses(); // Show startup ready message
-    void showStatusPage(); // Show status page with battery, BLE, WiFi, and scale status
-    void toggleStatusPage(); // Toggle between main display and status page
+    void showIPAddresses(); // Show IP address on boot (replaces "Ready" screen)
     void clear();
     void setBrightness(uint8_t brightness);
     void setWeightDecimals(int decimals) { weightDecimals = decimals; }
@@ -154,11 +152,6 @@ private:
     unsigned long timerPausedTime;
     bool timerRunning;
     bool timerPaused;
-    
-    // Status page system
-    bool showingStatusPage;
-    unsigned long statusPageStartTime;
-    static const unsigned long STATUS_PAGE_TIMEOUT = 10000; // 10 seconds timeout
     
     void showWeightWithFlowAndTimer(float weight); // Two-row layout: weight top, timer+flow/ratio bottom
     void setupDisplay();

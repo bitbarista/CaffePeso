@@ -11,8 +11,7 @@
 Display::Display(uint8_t sdaPin, uint8_t sclPin, Scale* scale, FlowRate* flowRate)
     : sdaPin(sdaPin), sclPin(sclPin), scalePtr(scale), flowRatePtr(flowRate), bluetoothPtr(nullptr), powerManagerPtr(nullptr), batteryPtr(nullptr),
       messageStartTime(0), messageDuration(2000), showingMessage(false), 
-      timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false),
-      showingStatusPage(false), statusPageStartTime(0) {
+      timerStartTime(0), timerPausedTime(0), timerRunning(false), timerPaused(false) {
     display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 }
 
@@ -110,12 +109,6 @@ void Display::update() {
         return;
     }
     
-    // Check if status page timeout has elapsed
-    if (showingStatusPage && millis() - statusPageStartTime > STATUS_PAGE_TIMEOUT) {
-        showingStatusPage = false;
-        Serial.println("Status page timeout, returning to main display");
-    }
-    
     // Check if message duration has elapsed
     if (showingMessage) {
         int effectiveDuration = messageDuration;
@@ -130,12 +123,7 @@ void Display::update() {
         }
     }
     
-    // Show status page if active
-    if (showingStatusPage) {
-        showStatusPage();
-    }
-    // Show normal weight display when not showing message or status page
-    else if (!showingMessage && scalePtr != nullptr) {
+    if (!showingMessage && scalePtr != nullptr) {
         float weight = scalePtr->getCurrentWeight();
 
         // --- Auto-tare on vessel placement ---
@@ -527,28 +515,30 @@ void Display::showIPAddresses() {
     if (!displayConnected) {
         return;
     }
-    
-    display->clearDisplay();
-    display->setTextSize(2);
-    display->setTextColor(SSD1306_WHITE);
-    String line1 = "CaffePeso";
-    String line2 = "Ready";
-    
-    int16_t x1, y1;
-    uint16_t w1, h1, w2, h2;
-    
-    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
-    display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    int centerX1 = (SCREEN_WIDTH - w1) / 2;
-    int centerX2 = (SCREEN_WIDTH - w2) / 2;
 
-    display->setCursor(centerX1, 0);
-    display->print(line1);
-    display->setCursor(centerX2, 16);
-    display->print(line2);
-    
+    display->clearDisplay();
+    display->setTextColor(SSD1306_WHITE);
+
+    // Top row: project name (size 2, centred)
+    display->setTextSize(2);
+    String name = "CaffePeso";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display->getTextBounds(name, 0, 0, &x1, &y1, &w, &h);
+    display->setCursor((SCREEN_WIDTH - w) / 2, 0);
+    display->print(name);
+
+    // Bottom row: IP address (size 1, centred) — STA IP if connected, AP IP otherwise
+    display->setTextSize(1);
+    String ip = (WiFi.status() == WL_CONNECTED)
+        ? WiFi.localIP().toString()
+        : WiFi.softAPIP().toString();
+    display->getTextBounds(ip, 0, 0, &x1, &y1, &w, &h);
+    display->setCursor((SCREEN_WIDTH - w) / 2, 24);
+    display->print(ip);
+
     display->display();
-    delay(2000); // Show ready message long enough to read
+    delay(2000);
 }
 
 void Display::clear() {
@@ -734,6 +724,11 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         display->print(buf);
     }
 
+    // --- Persistent status indicators in the weight row corners (size 1, y=0) ---
+    // Drawn last so they sit on top of any partial weight text overlap at the edges.
+    drawBatteryStatus();    // top-left: battery %
+    drawBluetoothStatus();  // top-right: BT with box when connected
+
     display->display();
 }
 
@@ -823,73 +818,6 @@ float Display::getTimerSeconds() const {
     }
 }
 
-void Display::showStatusPage() {
-    // Return early if display is not connected
-    if (!displayConnected) {
-        return;
-    }
-
-    display->clearDisplay();
-    display->setTextColor(SSD1306_WHITE);
-    
-    // Top line: Battery %, Scale icon, BLE icon
-    display->setTextSize(1);
-    
-    // Battery percentage (left) - without "BAT:" prefix
-    if (batteryPtr != nullptr) {
-        int batteryPercent = batteryPtr->getBatteryPercentage();
-        display->setCursor(0, 0);
-        display->print(batteryPercent);
-        display->print("%");
-    } else {
-        display->setCursor(0, 0);
-        display->print("N/A");
-    }
-    
-    // Scale status (center) - HX711 text with rectangle border when connected
-    bool scaleConnected = (scalePtr != nullptr && scalePtr->isHX711Connected());
-    display->setCursor(50, 0);
-    display->print("HX711");
-    if (scaleConnected) {
-        // Draw rectangle around "HX711" when connected (with proper spacing)
-        display->drawRect(48, -1, 34, 10, SSD1306_WHITE); // Rectangle around "HX711"
-    }
-    
-    // Bluetooth status (right) - BT text with rectangle border when connected
-    display->setCursor(110, 0);
-    display->print("BT");
-    if (bluetoothPtr != nullptr && bluetoothPtr->isConnected()) {
-        // Draw rectangle around "BT" when connected (with proper spacing)
-        display->drawRect(108, -1, 16, 10, SSD1306_WHITE); // Rectangle around "BT"
-    }
-    
-    // Bottom line: WiFi mode and IP address (moved to very bottom)
-    display->setTextSize(1);
-    
-    if (WiFi.status() == WL_CONNECTED) {
-        display->setCursor(0, 24);  // Bottom of 32-pixel display
-        display->print("STA: ");
-        display->print(WiFi.localIP().toString());
-    } else {
-        // AP mode is active
-        display->setCursor(0, 24);  // Bottom of 32-pixel display
-        display->print("AP: ");
-        display->print(WiFi.softAPIP().toString());
-    }
-    
-    display->display();
-}
-
-void Display::toggleStatusPage() {
-    showingStatusPage = !showingStatusPage;
-    if (showingStatusPage) {
-        statusPageStartTime = millis();
-        showingMessage = false; // Clear any active message
-        Serial.println("Showing status page");
-    } else {
-        Serial.println("Returning to main display");
-    }
-}
 
 unsigned long Display::getElapsedTime() const {
     if (!timerRunning) {

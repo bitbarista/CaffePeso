@@ -59,10 +59,8 @@ private:
     
     void handleSleepTouch();
     void showSleepCountdown(int seconds);
-    void handleStatusPage();
 
-    static const unsigned long HOLD_STATUS_MS = 1000; // hold for status page
-    static const unsigned long HOLD_SLEEP_MS  = 3000; // hold for sleep
+    static const unsigned long HOLD_SLEEP_MS = 3000; // hold for sleep
 };
 
 #endif
