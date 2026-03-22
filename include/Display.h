@@ -59,6 +59,14 @@ public:
     float getSavedTareWeight() const   { return savedTareWeight; }
     void  showArmedMessage();
 
+    // Pre-infusion timing mode (timer starts immediately on arm, not on first drip)
+    void setPreInfusionMode(bool en) { preInfusionMode = en; }
+    bool getPreInfusionMode() const  { return preInfusionMode; }
+
+    // Auto-stop on flow cessation
+    void setAutoStopEnabled(bool en) { autoStopEnabled = en; }
+    bool getAutoStopEnabled() const  { return autoStopEnabled; }
+
     // Shot stats capture (for shot history)
     bool  hasPendingShot() const   { return pendingShot; }
     float getLastBrewYield() const { return lastBrewYield; }
@@ -125,11 +133,23 @@ private:
     // Armed auto-start
     bool  armedAutoStart  = false;
     float savedTareWeight = 0.0f;
-    unsigned long armStartedAt = 0;               // millis() when arm() was called — used for ARM_TIMEOUT_MS
-    unsigned long armWeightAboveThresholdSince = 0; // millis() when weight first exceeded threshold — used for ARM_SUSTAIN_MS
+    unsigned long armStartedAt = 0;
+    unsigned long armWeightAboveThresholdSince = 0;
     static constexpr float ARM_TRIGGER_THRESHOLD = 1.0f;
     static const unsigned long ARM_SUSTAIN_MS    = 500;
     static const unsigned long ARM_TIMEOUT_MS    = 120000; // 2 minutes
+
+    // Pre-infusion timing mode
+    bool preInfusionMode = false;
+
+    // Auto-stop on flow cessation
+    bool  autoStopEnabled               = false;
+    bool  autoStopFlowWasActive         = false;
+    unsigned long autoStopBelowThresholdSince = 0;
+    static constexpr float AUTO_STOP_ACTIVE_THRESHOLD  = 1.0f;  // g/s — flow must exceed this to be "active"
+    static constexpr float AUTO_STOP_CEASE_THRESHOLD   = 0.5f;  // g/s — flow below this is considered stopped
+    static const unsigned long AUTO_STOP_SUSTAIN_MS    = 2000;  // flow must be below threshold for 2s
+    static const unsigned long AUTO_STOP_MIN_BREW_MS   = 8000;  // don't auto-stop within first 8s of brew
 
     // Shot stats capture
     float currentWeightForCapture = 0.0f;

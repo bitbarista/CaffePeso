@@ -141,6 +141,52 @@ void saveIdleResetSettings(bool enabled, unsigned long ms, Display& display) {
     display.setIdleResetTimeout(ms);
 }
 
+// Pre-infusion mode cache
+static bool preInfusionCached = false;
+static bool cachedPreInfusion = false;
+
+void loadPreInfusionMode(Display& display) {
+    if (preInfusionCached) return;
+    if (preferences.begin("display", false)) {
+        cachedPreInfusion = preferences.getBool("pre_inf", false);
+        preferences.end();
+    }
+    preInfusionCached = true;
+    display.setPreInfusionMode(cachedPreInfusion);
+}
+
+void savePreInfusionMode(bool enabled, Display& display) {
+    cachedPreInfusion = enabled;
+    if (preferences.begin("display", false)) {
+        preferences.putBool("pre_inf", enabled);
+        preferences.end();
+    }
+    display.setPreInfusionMode(enabled);
+}
+
+// Auto-stop on flow cessation cache
+static bool autoStopCached        = false;
+static bool cachedAutoStopEnabled = false;
+
+void loadAutoStopSettings(Display& display) {
+    if (autoStopCached) return;
+    if (preferences.begin("display", false)) {
+        cachedAutoStopEnabled = preferences.getBool("as_en", false);
+        preferences.end();
+    }
+    autoStopCached = true;
+    display.setAutoStopEnabled(cachedAutoStopEnabled);
+}
+
+void saveAutoStopSettings(bool enabled, Display& display) {
+    cachedAutoStopEnabled = enabled;
+    if (preferences.begin("display", false)) {
+        preferences.putBool("as_en", enabled);
+        preferences.end();
+    }
+    display.setAutoStopEnabled(enabled);
+}
+
 // Target ratio — for target yield alert (0 = disabled)
 static float cachedTargetRatio = 0.0f;
 static bool  targetRatioCached = false;
@@ -351,8 +397,10 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   getCachedDecimals();        // This will cache the decimal setting
   display.setWeightDecimals(getCachedDecimals()); // Push cached value to display
   display.setDoseWeight(getCachedDoseWeight()); // Restore persisted dose weight
-  loadAutoTareSettings(display);   // Cache and apply auto-tare settings
-  loadIdleResetSettings(display);  // Cache and apply idle-reset settings
+  loadAutoTareSettings(display);    // Cache and apply auto-tare settings
+  loadIdleResetSettings(display);   // Cache and apply idle-reset settings
+  loadPreInfusionMode(display);     // Cache and apply pre-infusion mode
+  loadAutoStopSettings(display);    // Cache and apply auto-stop on flow cessation
   getCachedTargetRatio();          // Cache target ratio
   display.setTargetRatio(getCachedTargetRatio()); // Push to display
   loadSavedTareWeight(display);    // Restore saved cup weight for auto-re-arm
@@ -733,6 +781,30 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     if (secs > 300) secs = 300;
     saveIdleResetSettings(en, secs * 1000UL, display);
     request->send(200, "text/plain", "Idle reset settings saved.");
+  });
+
+  server.on("/api/pre-infusion-mode", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"enabled\":" + String(cachedPreInfusion ? "true" : "false") + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/pre-infusion-mode", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    savePreInfusionMode(en, display);
+    request->send(200, "text/plain", "Pre-infusion mode saved.");
+  });
+
+  server.on("/api/auto-stop-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"enabled\":" + String(cachedAutoStopEnabled ? "true" : "false") + "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/auto-stop-settings", HTTP_POST, [&display](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    saveAutoStopSettings(en, display);
+    request->send(200, "text/plain", "Auto-stop settings saved.");
   });
 
   server.on("/api/flowrate", HTTP_GET, [&flowRate](AsyncWebServerRequest *request) {
