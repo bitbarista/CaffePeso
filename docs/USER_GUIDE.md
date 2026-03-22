@@ -50,7 +50,7 @@ CaffePeso is an ESP32-S3 based coffee scale with a real-time OLED display, brew 
 
 - **Top-left corner** — battery percentage (small)
 - **Top row (large, centred)** — current weight in grams
-- **Top-right corner** — Bluetooth status: `BT` plain when scanning, `[BT]` boxed when connected
+- **Top-right corner** — `[BT]` shown only when Bluetooth is connected; blank otherwise
 - **Bottom left** — elapsed timer. Format: `SS.t` under 60 s, `M:SS` over 60 s, followed by `T`
 - **Bottom centre** — live brew ratio (`1:X`) while weight is building, if dose is set
 - **Bottom right** — live flow rate (`g/s`) while brewing; final brew ratio (`1:X R`) after timer stops
