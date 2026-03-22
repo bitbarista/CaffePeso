@@ -9,7 +9,7 @@ class Display; // Forward declaration
 
 class PowerManager {
 public:
-    PowerManager(uint8_t sleepTouchPin, Display* display = nullptr);
+    PowerManager(uint8_t sleepTouchPin, uint8_t tareTouchPin, Display* display = nullptr);
     void begin();
     void update();
     void enterDeepSleep();
@@ -33,6 +33,7 @@ public:
 
 private:
     uint8_t sleepTouchPin;
+    uint8_t tareTouchPin;
     Display* displayPtr;
     uint16_t sleepTouchThreshold;
     bool lastSleepTouchState;

@@ -1,8 +1,8 @@
 #include "PowerManager.h"
 #include "Display.h"
 
-PowerManager::PowerManager(uint8_t sleepTouchPin, Display* display) 
-    : sleepTouchPin(sleepTouchPin), displayPtr(display), sleepTouchThreshold(0),
+PowerManager::PowerManager(uint8_t sleepTouchPin, uint8_t tareTouchPin, Display* display)
+    : sleepTouchPin(sleepTouchPin), tareTouchPin(tareTouchPin), displayPtr(display), sleepTouchThreshold(0),
       lastSleepTouchState(false), lastSleepTouchTime(0), touchStartTime(0),
       debounceDelay(50), sleepCountdownStart(0), sleepCountdownActive(false),
       cancelledRecently(false), cancelTime(0),
@@ -15,9 +15,10 @@ void PowerManager::begin() {
     // This prevents false triggers when no touch sensor is connected
     pinMode(sleepTouchPin, INPUT_PULLDOWN);
     
-    // Configure external wake-up on the touch pin
-    // Wake up when pin goes HIGH (touch sensor outputs HIGH when touched)
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)sleepTouchPin, 1);
+    // Wake from deep sleep on either touch button — EXT1 supports multiple pins.
+    // Any pin going HIGH (touch sensor output) will trigger the wake.
+    uint64_t wakePinMask = (1ULL << sleepTouchPin) | (1ULL << tareTouchPin);
+    esp_sleep_enable_ext1_wakeup(wakePinMask, ESP_EXT1_WAKEUP_ANY_HIGH);
     
     // Load persisted inactivity settings (false = read-write so namespace is created on first boot)
     preferences.begin("power", false);
@@ -27,9 +28,8 @@ void PowerManager::begin() {
     Serial.printf("Sleep timeout: %s, %lums\n", inactivityEnabled ? "enabled" : "disabled", inactivityTimeout);
 
     lastActivityTime = millis();
-    Serial.println("Power Manager initialized. Sleep touch sensor on GPIO" + String(sleepTouchPin));
-    Serial.println("Using EXT0 wake-up (digital touch sensor) with pull-down resistor");
-    Serial.println("Device will wake up when touch sensor outputs HIGH");
+    Serial.printf("Power Manager initialized. Wake pins: GPIO%d (sleep) + GPIO%d (tare)\n", sleepTouchPin, tareTouchPin);
+    Serial.println("Using EXT1 wake-up — either touch button will wake the device");
 }
 
 void PowerManager::update() {
