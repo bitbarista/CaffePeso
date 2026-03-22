@@ -488,24 +488,25 @@ void Display::showTaredMessage() {
     showingMessage = true;
     
     display->clearDisplay();
-    display->setTextSize(2);
     display->setTextColor(SSD1306_WHITE);
-    String line1 = "Scale";
-    String line2 = "Tared!";
-    
-    int16_t x1, y1;
-    uint16_t w1, h1, w2, h2;
-    
-    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
-    display->getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
-    int centerX1 = (SCREEN_WIDTH - w1) / 2;
-    int centerX2 = (SCREEN_WIDTH - w2) / 2;
 
-    display->setCursor(centerX1, 0);
+    // "Tared!" prominent in size 2
+    display->setTextSize(2);
+    String line1 = "Tared!";
+    int16_t x1, y1;
+    uint16_t w1, h1;
+    display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
+    display->setCursor((SCREEN_WIDTH - w1) / 2, 0);
     display->print(line1);
-    display->setCursor(centerX2, 16);
-    display->print(line2);
-    
+
+    // Hint in size 1 at bottom
+    display->setTextSize(1);
+    String hint = "Hold tare: arm";
+    uint16_t wh, hh;
+    display->getTextBounds(hint, 0, 0, &x1, &y1, &wh, &hh);
+    display->setCursor((SCREEN_WIDTH - wh) / 2, 24);
+    display->print(hint);
+
     display->display();
 }
 
@@ -713,6 +714,13 @@ void Display::showWeightWithFlowAndTimer(float weight) {
         display->getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
         display->setCursor(SCREEN_WIDTH - w, 24);
         display->print(buf);
+    } else if (!timerRunning && !timerPaused && !armedAutoStart) {
+        // Idle state — hint at armed auto-start instead of showing 0.0F
+        const char* hint = "ARM?";
+        uint16_t w, h;
+        display->getTextBounds(hint, 0, 0, &x1, &y1, &w, &h);
+        display->setCursor(SCREEN_WIDTH - w, 24);
+        display->print(hint);
     } else {
         float absFlow = fabs(currentFlowRate);
         int flowInt = (int)absFlow;
