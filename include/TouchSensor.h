@@ -15,11 +15,13 @@ public:
     void setTouchThreshold(uint16_t threshold);
     uint16_t getTouchValue();
     bool isTouched();
-    void setDisplay(Display* display); // Set display reference
-    void setFlowRate(FlowRate* flowRate); // Set flow rate reference
-    
+    void setDisplay(Display* display);
+    void setFlowRate(FlowRate* flowRate);
+    void setSleepPin(uint8_t pin) { sleepPin = pin; } // Suppress tare while sleep button is held
+
 private:
     uint8_t touchPin;
+    uint8_t sleepPin = 255; // 255 = not set; checked in update() to suppress coupling
     Scale* scalePtr;
     Display* displayPtr;
     FlowRate* flowRatePtr;

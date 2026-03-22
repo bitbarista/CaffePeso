@@ -131,7 +131,13 @@ void Display::update() {
         // preventing a re-tare mid-brew when yield crosses the same threshold.
         if (autoTareEnabled) {
             float absW = fabs(weight);
-            if (absW < 2.0f) {
+            // Suppress auto-tare while the sleep/power button is held. Pressing the button
+            // can transfer mechanical force through the device structure to the load cell,
+            // causing a spurious reading above the threshold.
+            bool sleepButtonHeld = powerManagerPtr && powerManagerPtr->isSleepTouchPressed();
+            if (sleepButtonHeld) {
+                autoTareStableSince = 0; // reset stability timer — don't let it accumulate while held
+            } else if (absW < 2.0f) {
                 autoTareStableSince = 0; // Reset stability timer when weight is negligible
             } else if (absW > autoTareThreshold && !autoTareFired) {
                 if (autoTareStableSince == 0) {

@@ -1,5 +1,6 @@
 #include "PowerManager.h"
 #include "Display.h"
+#include "driver/rtc_io.h"
 
 PowerManager::PowerManager(uint8_t sleepTouchPin, uint8_t tareTouchPin, Display* display)
     : sleepTouchPin(sleepTouchPin), tareTouchPin(tareTouchPin), displayPtr(display), sleepTouchThreshold(0),
@@ -19,6 +20,13 @@ void PowerManager::begin() {
     // Any pin going HIGH (touch sensor output) will trigger the wake.
     uint64_t wakePinMask = (1ULL << sleepTouchPin) | (1ULL << tareTouchPin);
     esp_sleep_enable_ext1_wakeup(wakePinMask, ESP_EXT1_WAKEUP_ANY_HIGH);
+
+    // esp_sleep_enable_ext1_wakeup() routes both pins through the RTC_IO module,
+    // which has its own pull registers separate from the digital GPIO domain.
+    // Without this, both pins float in the RTC domain — adjacent floating pins
+    // pick up capacitive coupling from each other, causing false tare triggers.
+    rtc_gpio_pulldown_en((gpio_num_t)sleepTouchPin);
+    rtc_gpio_pulldown_en((gpio_num_t)tareTouchPin);
     
     // Load persisted inactivity settings (false = read-write so namespace is created on first boot)
     preferences.begin("power", false);

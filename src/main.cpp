@@ -191,6 +191,10 @@ void setup() {
   // Link flow rate to touch sensor for averaging reset on tare
   touchSensor.setFlowRate(&flowRate);
 
+  // Tell tare sensor which pin is the sleep button so it can suppress
+  // false tares caused by capacitive coupling between the adjacent pads
+  touchSensor.setSleepPin(sleepTouchPin);
+
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager);
   
 }
