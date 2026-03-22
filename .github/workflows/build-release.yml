@@ -269,6 +269,9 @@ jobs:
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
 
+        # Remove stale binaries from previous releases
+        rm -f website/releases/latest/weighmybru-*.bin
+
         for BOARD in supermini xiao; do
           if [[ "$BOARD" == "supermini" ]]; then
             BOARD_NAME="CaffePeso - ESP32-S3 Supermini"
