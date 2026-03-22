@@ -95,14 +95,8 @@ void PowerManager::update() {
             } else {
                 // Touch ended — fire action based on hold duration
                 if (!sleepCountdownActive && !cancelledRecently) {
-                    unsigned long held = currentTime - touchStartTime;
-                    if (held >= HOLD_SLEEP_MS) {
-                        Serial.println("Hold 3s release: sleep");
-                        handleSleepTouch();
-                    } else {
-                        Serial.println("Tap: timer control");
-                        handleTimerControl();
-                    }
+                    Serial.println("Tap: timer control");
+                    handleTimerControl();
                 }
             }
             lastSleepTouchState = currentSleepTouchState;
@@ -110,7 +104,16 @@ void PowerManager::update() {
         }
     }
     
-    // No during-hold actions — all levels fire on release
+    // Fire sleep during the hold so the user gets immediate feedback at 3s.
+    // sleepCountdownActive guards against double-firing; the release handler
+    // skips all actions when sleepCountdownActive is true, so timer control
+    // cannot accidentally fire when the finger is lifted after a 3s hold.
+    if (currentSleepTouchState && !sleepCountdownActive && !cancelledRecently) {
+        if (currentTime - touchStartTime >= HOLD_SLEEP_MS) {
+            Serial.println("Hold 3s: starting sleep countdown");
+            handleSleepTouch();
+        }
+    }
 
     // Inactivity timeout: sleep after no activity for inactivityTimeout ms
     if (inactivityEnabled && inactivityTimeout > 0 && !sleepCountdownActive && !currentSleepTouchState) {
