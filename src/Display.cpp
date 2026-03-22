@@ -143,6 +143,8 @@ void Display::update() {
             if (reArmStableSince == 0) reArmStableSince = millis();
             else if (millis() - reArmStableSince >= REARM_STABLE_MS) {
                 reArmStableSince = 0;
+                resetTimer(); // fresh slate for the next shot
+                if (flowRatePtr) flowRatePtr->resetTimerAveraging();
                 scalePtr->tare();
                 arm(savedTareWeight);
                 showArmedMessage();
