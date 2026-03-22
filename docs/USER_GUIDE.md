@@ -109,9 +109,18 @@ Armed auto-start removes the need to manually press the timer button at the star
 **Trigger:**
 - The timer starts automatically when the weight on the scale increases by more than 1 g and remains above that threshold for 0.5 s. This corresponds to the first drip hitting the cup.
 
-**Auto re-arm:**
-- On your next shot, place the same cup on the scale and **tap tare** as normal. If the pre-tare weight matches the saved cup weight within ±5 g, the device arms automatically without needing a hold gesture.
-- The saved cup weight persists across reboots (NVS), so this works across power cycles.
+**Auto re-arm — full workflow:**
+
+After arming and completing a shot, the scale is zeroed *with the cup on it*. Removing the cup leaves the scale reading negative. The re-arm check fires on the **second** tap tare of the next shot cycle:
+
+1. Remove cup after shot → scale reads negative
+2. **Tap tare (empty scale)** → zeroes the empty scale — no re-arm here (weight doesn't match saved)
+3. Place cup → scale now reads the cup weight
+4. **Tap tare** → cup weight matches saved weight within ±5 g → **auto re-arms**
+
+Step 2 is the critical one — you must tare the empty scale before placing the cup. This is the natural thing to do anyway (clearing the negative reading between shots).
+
+The saved cup weight persists across reboots (NVS).
 
 > **Important:** Auto re-arm requires **Auto-Tare on Vessel Placement to be disabled**. If auto-tare is on, placing the cup fires an automatic tare and you never tap tare manually — the re-arm check never runs. The two features are mutually exclusive; use one or the other.
 
