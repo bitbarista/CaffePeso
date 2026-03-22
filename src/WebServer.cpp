@@ -487,6 +487,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += ",\"dose_weight\":" + String(display.getDoseWeight(), 1);
     json += ",\"target_ratio\":" + String(display.getTargetRatio(), 2);
     json += ",\"armed\":" + String(display.isArmed() ? "true" : "false");
+    json += ",\"cup_weight\":" + String(display.getSavedTareWeight(), 1);
 
     json += "}";
     request->send(200, "application/json", json);
