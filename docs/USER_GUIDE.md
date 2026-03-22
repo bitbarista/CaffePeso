@@ -115,7 +115,35 @@ Armed auto-start removes the need to manually press the timer button at the star
 **Disarm:**
 - The armed state expires after 2 minutes of no drip activity.
 - Starting the timer manually (timer button) also clears the armed state.
+- Press the **Arm** button on the web UI dashboard to disarm remotely.
 - The saved cup weight persists across reboots.
+
+---
+
+## Pre-Infusion Timing Mode
+
+**Configuration:** Settings → Brew Automation → Pre-Infusion Timing (toggle)
+
+When enabled, the timer starts **immediately when you arm** the scale, rather than waiting for the first drip. This captures the full pre-infusion phase in your shot time.
+
+Use this if your machine has a notable pre-infusion phase and you want total extraction time to include it.
+
+When disabled (default), the timer waits for the first drip (weight increases > 1 g sustained for 0.5 s) before starting.
+
+---
+
+## Auto-Stop on Flow Cessation
+
+**Configuration:** Settings → Brew Automation → Auto-Stop on Flow Cessation (toggle)
+
+When enabled, the timer stops automatically when espresso flow ends — no need to manually stop it.
+
+**Conditions:**
+- Flow must first exceed **1.0 g/s** (confirms brewing is active)
+- Brew must have been running for at least **8 seconds** (prevents false stops during pre-infusion)
+- Flow must then drop below **0.5 g/s** and remain there for **2 seconds**
+
+Works alongside armed auto-start for a fully hands-free timing experience.
 
 ---
 
@@ -165,7 +193,8 @@ Connect to the device's Wi-Fi network, then open a browser to the device's IP ad
 
 - Live weight, flow rate, and timer
 - **Dose** entry — enter your dose in grams and press Set before brewing
-- **Tare** / **Stop** / **Reset** buttons
+- **Tare** / **Arm** / **Stop** / **Reset** buttons
+  - **Arm** tares the scale and arms auto-start; press again to disarm. Turns amber when armed.
 - Real-time weight/flow rate graph (records while timer is running)
 - Brew ratio shown after timer stops
 - Shot history table
@@ -177,7 +206,7 @@ Connect to the device's Wi-Fi network, then open a browser to the device's IP ad
 | Wi-Fi | SSID and password for home network |
 | Display | Decimal places (0/1/2) |
 | Sleep | Inactivity timeout (minutes) |
-| Brew Automation | Auto-tare on vessel placement, post-brew idle reset, target yield ratio |
+| Brew Automation | Auto-tare on vessel placement, post-brew idle reset, pre-infusion timing, auto-stop on flow cessation, target yield ratio |
 | Filter | Advanced HX711 filter tuning |
 
 ### Calibration

@@ -15,7 +15,7 @@
 
 **A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
-Armed auto-start • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Wi-Fi web UI
+Armed auto-start • Pre-infusion timing • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Wi-Fi web UI
 
 [Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
@@ -52,6 +52,14 @@ The last 10 shots are automatically saved to non-volatile memory: dose, yield, t
 
 ### 📱 Wi-Fi Web Interface
 A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot history, OTA firmware updates, and real-time graphs. No app required.
+
+### ⏳ Pre-Infusion Timing Mode
+
+Enable in Settings → Brew Automation. When armed, the timer starts immediately on arm — capturing the pre-infusion phase — rather than waiting for the first drip. Useful for machines with longer pre-infusion.
+
+### 🛑 Auto-Stop on Flow Cessation
+
+Once flow has been active for at least 8 seconds, the timer stops automatically when flow drops below 0.5 g/s and remains there for 2 seconds. No manual stop needed at the end of a shot.
 
 ### 🔵 GaggiMate BLE
 Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate). CaffePeso uses the same BLE protocol as WeighMyBru² — GaggiMate's existing WeighMyBru support works with CaffePeso without any changes on either side.
@@ -133,6 +141,11 @@ Additions in this fork:
 - Shot history: last 10 shots stored in NVS, displayed in web UI
 - Power button redesigned: tap cycles timer (start → pause → reset); hold 1 s = status page; hold 3 s = sleep
 - Wi-Fi always-on: toggle removed; device deep-sleeps to save power instead
+- Pre-infusion timing mode: timer starts on arm rather than first drip (configurable)
+- Auto-stop on flow cessation: timer stops automatically when espresso flow ends
+- Auto-tare on vessel placement: tares automatically when a stable weight is detected (configurable threshold)
+- Post-brew idle reset: auto-resets and re-tares after a configurable idle period
+- Arm button in web UI: arm/disarm directly from the dashboard without touching the physical button
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
