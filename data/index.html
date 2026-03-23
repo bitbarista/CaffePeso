@@ -340,6 +340,7 @@
   
   // Graph recording control - follows timer state
   let isGraphRecording = false;
+  let previousTimerElapsed = 0;
   
   // Initialize Chart.js when page loads
   function initializeChart() {
@@ -758,11 +759,18 @@
           // Sync graph recording state with server timer state
           const previousRecordingState = isGraphRecording;
           isGraphRecording = data.timer_running;
-          
-          // If timer state changed, log it
           if (previousRecordingState !== isGraphRecording) {
             console.log(`Graph recording ${isGraphRecording ? 'started' : 'stopped'} (synced with server timer)`);
           }
+
+          // Detect device-side timer reset (re-arm, idle reset, manual reset from device).
+          // timer_elapsed going from non-zero to zero is the unambiguous reset signal,
+          // regardless of running/paused state.
+          if (previousTimerElapsed > 0 && data.timer_elapsed === 0) {
+            clearChartData();
+            console.log('Graph cleared on device-side timer reset');
+          }
+          previousTimerElapsed = data.timer_elapsed;
           
           // Color code timer based on status
           const timerElement = document.getElementById('timer');

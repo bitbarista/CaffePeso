@@ -139,10 +139,11 @@ void Display::update() {
             if (reArmStableSince == 0) reArmStableSince = millis();
             else if (millis() - reArmStableSince >= REARM_STABLE_MS) {
                 reArmStableSince = 0;
+                resetTimer();               // snap display to 0:00 before tare blocks
                 scalePtr->tare();
-                arm(savedTareWeight);
-                resetTimer();
-                if (flowRatePtr) flowRatePtr->resetTimerAveraging();
+                arm(savedTareWeight);       // in pre-infusion mode arm() calls startTimer()
+                resetTimer();               // stop that timer — auto re-arm waits for first drip
+                                            // armedAutoStart is NOT cleared by resetTimer()
                 showArmedMessage();
                 Serial.printf("Auto re-armed: cup %.1fg detected\n", savedTareWeight);
             }
