@@ -126,6 +126,10 @@ private:
     unsigned long idleResetWeightStableFrom = 0;
     float         idleResetLastWeight       = 0.0f;
 
+    // Auto-zero drift correction
+    unsigned long autoZeroStableSince = 0;
+    static const unsigned long AUTO_ZERO_STABLE_MS = 10000;
+
     // Brew ratio
     float doseWeight = 0.0f;
 

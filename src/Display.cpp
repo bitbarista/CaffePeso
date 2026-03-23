@@ -206,6 +206,29 @@ void Display::update() {
             idleResetWeightStableFrom = 0;
         }
 
+        // --- Auto-zero drift correction ---
+        // When idle (timer stopped) and weight has been within ±0.3g for 10s, re-tare to
+        // correct slow thermal/creep drift. Keeps the zero reference accurate between brews
+        // without a visible snap. The 10s window is short enough that corrections happen while
+        // drift is still imperceptibly small (<0.05g typically).
+        if (!timerRunning && scalePtr != nullptr) {
+            if (fabsf(weight) < 0.3f && fabsf(weight) > 0.01f) {
+                if (autoZeroStableSince == 0) {
+                    autoZeroStableSince = millis();
+                } else if (millis() - autoZeroStableSince >= AUTO_ZERO_STABLE_MS) {
+                    autoZeroStableSince = 0;
+                    float drift = weight;
+                    scalePtr->tare();
+                    weight = 0.0f;
+                    Serial.printf("Auto-zero: drift corrected (was %.3fg)\n", drift);
+                }
+            } else {
+                autoZeroStableSince = 0;
+            }
+        } else {
+            autoZeroStableSince = 0;
+        }
+
         // Cup removal auto-stop — if weight drops faster than any natural flow could cause,
         // the cup has been lifted; stop the timer and preserve stats
         currentWeightForCapture = weight;
