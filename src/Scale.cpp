@@ -124,6 +124,7 @@ void Scale::tare(uint8_t times) {
     if (flowRatePtr != nullptr) {
         delay(100); // Short delay to let scale stabilize
         flowRatePtr->resumeCalculation();
+        flowRatePtr->clearFlowRateBuffer(); // Clear stale readings so old flow values don't persist
     }
 }
 
