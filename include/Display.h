@@ -62,7 +62,7 @@ public:
     void  setAutoReArmEnabled(bool en)       { autoReArmEnabled = en; }
     bool  getAutoReArmEnabled() const        { return autoReArmEnabled; }
     void  resetNegativeFlag()  { scaleWentNegative = false; }
-    void  setTapTaredEmpty()   { tapTaredEmpty = true; }  // tap-tare: block case-1, keep case-2
+    void  setTapTaredEmpty()   { tapTaredEmpty = true; scaleWentNegative = false; }  // tap-tare: disable direct re-arm path
     void  showArmedMessage();
 
     // Pre-infusion timing mode (timer starts immediately on arm, not on first drip)
@@ -151,6 +151,7 @@ private:
     unsigned long reArmStableSince  = 0;
     static constexpr float ARM_TRIGGER_THRESHOLD   = 1.0f;
     static constexpr float REARM_STABLE_WINDOW     = 5.0f;  // g — weight must be within ±5g of savedTareWeight
+    static constexpr float REARM_DIRECT_WINDOW     = 20.0f; // g — direct re-arm: weight within ±20g of 0 after cup removal
     static const unsigned long ARM_SUSTAIN_MS      = 500;
     static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
     static const unsigned long REARM_STABLE_MS     = 200;   // weight must match for 200ms to re-arm
