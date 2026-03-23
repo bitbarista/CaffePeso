@@ -91,7 +91,7 @@ The timer button cycles through three states with a single tap:
 4. Remove portafilter and grind.
 5. **Tap tare** to zero (removes any residual offset).
 6. Place cup under group head.
-7. **Hold tare 0.5 s** — the scale tares and arms. OLED shows **"Armed / Ready!"**\
+7. **Hold tare 1.5 s** — the scale tares and arms. OLED shows **"ARMED / Ready!"**\
    The timer will now start automatically the moment coffee begins to drip (weight increases > 1 g sustained for 0.5 s).
 8. Start your espresso machine.
 9. First drip hits the cup → **timer starts automatically**.
@@ -99,9 +99,11 @@ The timer button cycles through three states with a single tap:
 11. When the target yield alert fires (if configured): OLED flashes inverted for 1 second; web UI weight turns amber.
 12. Remove cup → **timer stops automatically** (cup removal detected).
 13. Display shows elapsed time and brew ratio.
-14. **Tap tare** → timer resets, scale zeroes, device re-arms automatically if the same cup is detected.
+14. **Place a fresh cup directly** — the scale detects it and re-arms automatically. No tap-tare needed.
 
-> **Next shot:** If you place the same cup back on the scale and tap tare, the device recognises the cup weight and arms automatically — no hold gesture needed.
+> **Next shot (auto re-arm):** After removing the cup, simply place the next cup on the scale. The device detects the cup weight returning to near-zero (with the original tare reference intact) and arms automatically within 0.2 s. No button press required.
+>
+> **Alternative:** If you prefer the explicit workflow, tap tare after removing the cup (clears the display), then place the cup — the device recognises the saved cup weight and arms automatically.
 
 ---
 
@@ -136,14 +138,16 @@ Armed auto-start removes the need to manually press the timer button at the star
 
 **Auto re-arm — no button press needed:**
 
-Once a cup weight is saved, the scale re-arms automatically whenever it detects the cup returning. Two scenarios are handled:
+Once a cup weight is saved, the scale re-arms automatically whenever it detects a cup returning after a shot. Two detection paths are active simultaneously:
 
-- **Cup removed and placed straight back** — scale went negative, cup returns to ~0 g → "ARMED" flashes automatically.
-- **Cup removed, empty scale tapped to clear, cup placed back** — scale reads ~saved cup weight → "ARMED" flashes automatically.
+- **Direct placement (preferred):** after a shot, remove the cup (scale goes negative), then place the next cup directly — no tap-tare in between. The scale detects the weight returning to within ±20 g of zero (original tare reference intact) and arms automatically.
+- **Tap-tare path:** remove cup, tap tare to zero the scale, place cup — the scale reads ~savedCupWeight and arms automatically.
+
+If you explicitly tap-tare after cup removal the direct path is disabled for that cycle, switching to the tap-tare path.
 
 The saved cup weight persists across reboots (NVS).
 
-> **Note:** Auto re-arm and Auto-Tare on Vessel Placement are mutually exclusive. If auto-tare is enabled, it fires its own tare on cup placement and the cup weight matching logic cannot run. Disable auto-tare to use auto re-arm.
+> **Note:** Auto re-arm and Auto-Tare on Vessel Placement may conflict if the replacement cup is significantly heavier than the original (> 20 g difference). In that case, auto-tare will fire instead of re-arm. For best results, disable auto-tare when using auto re-arm.
 
 **Disarm:**
 - The armed state expires after 2 minutes of no drip activity.
@@ -202,6 +206,19 @@ Alerts you when the yield in the cup is approaching your target ratio, so you ca
 
 ---
 
+## Auto-Zero Drift Correction
+
+Load cells exhibit slow thermal and creep drift — the displayed weight gradually moves away from zero even when nothing has changed. CaffePeso corrects this automatically.
+
+**How it works:**
+- When the scale is idle (timer stopped) and the displayed weight has been within ±0.3 g of zero for 10 seconds, the scale silently re-tares to correct the drift.
+- The correction is imperceptible on the OLED (rounds to 0.0 g). A small oscillation of ~0.03 g may be visible in the web UI between corrections — this is normal and has no practical effect on measurements.
+- Drift correction is disabled while the timer is running or paused (mid-shot or post-shot yield displayed).
+
+No configuration required. Always active.
+
+---
+
 ## Auto-Tare on Vessel Placement
 
 **Configuration:** Settings → Brew Automation → Auto-Tare on Vessel Placement (toggle + threshold)
@@ -215,7 +232,19 @@ When enabled, the scale tares automatically when a stable weight above the thres
 
 **Threshold guidance:** Set this above your empty cup weight but below any weight you'd place deliberately (e.g. if your cup is 150 g, a threshold of 100 g would work). The default 20 g is intentionally low — raise it if it fires unexpectedly on vibration or light contact.
 
-> **Incompatible with auto re-arm.** If auto-tare is on, placing the cup fires an automatic tare and bypasses the manual tap tare that triggers re-arm. Disable auto-tare if you want to use the cup weight memory / auto re-arm feature.
+> **May conflict with auto re-arm.** If both are enabled and the replacement cup is significantly heavier than the original (> 20 g difference), auto-tare may fire instead of re-arm. For best results, disable auto-tare when using auto re-arm.
+
+---
+
+## Post-Brew Idle Reset
+
+**Configuration:** Settings → Brew Automation → Post-Brew Idle Reset (toggle + timeout)
+
+After a shot completes (timer paused), if the scale is left idle with stable weight for the configured timeout, the timer resets automatically — returning the display to a clean ready state without needing a button press.
+
+**Behaviour when cup re-arm is enabled:** the scale resets the timer but does **not** tare. The original cup tare reference is preserved so that auto re-arm can still detect a fresh cup being placed.
+
+**Behaviour when cup re-arm is disabled:** the scale resets the timer and tares, returning to zero.
 
 ---
 
@@ -223,9 +252,13 @@ When enabled, the scale tares automatically when a stable weight above the thres
 
 The last 10 shots are automatically saved to non-volatile memory and displayed in a table on the dashboard.
 
-**A shot is recorded when:**
-- The timer stops (cup removed or manual stop via timer button or web UI Stop button)
-- Dose > 0.5 g, yield > 5 g, and brew time > 3 s
+**A shot is recorded when all legitimacy criteria are met:**
+- Dose > 0.5 g
+- Yield ≥ 10 g
+- Brew time between 15 s and 600 s
+- Brew ratio between 0.5 and 25
+
+This filters out test activity, accidental starts, and tare operations — only genuine espresso or pour-over shots are saved.
 
 **Table columns:** Shot #, Dose (g), Yield (g), Time (s), Ratio
 
@@ -243,9 +276,11 @@ Connect to the device's Wi-Fi network, then open a browser to the device's IP ad
 
 - Live weight, flow rate, and timer
 - **Dose** entry — enter your dose in grams and press Set before brewing
+- **Cup weight** entry — enter your cup weight and press Set. Used as the reference for auto re-arm detection. Synced live from the device.
 - **Tare** / **Arm** / **Stop** / **Reset** buttons
   - **Arm** tares the scale and arms auto-start; press again to disarm. Turns amber when armed.
-- Real-time weight/flow rate graph (records while timer is running)
+- Real-time weight/flow rate graph (records while timer is running; clears automatically on device-side timer reset)
+- Average flow rate shown after timer stops
 - Brew ratio shown after timer stops
 - Shot history table
 
@@ -256,7 +291,7 @@ Connect to the device's Wi-Fi network, then open a browser to the device's IP ad
 | Wi-Fi | SSID and password for home network |
 | Display | Decimal places (0/1/2) |
 | Sleep | Inactivity timeout (minutes) |
-| Brew Automation | Auto-tare on vessel placement, post-brew idle reset, pre-infusion timing, auto-stop on flow cessation, target yield ratio |
+| Brew Automation | Auto-tare on vessel placement, post-brew idle reset, auto re-arm, pre-infusion timing, auto-stop on flow cessation, target yield ratio |
 | Filter | Advanced HX711 filter tuning |
 
 ### Calibration
