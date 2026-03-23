@@ -604,8 +604,11 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  server.on("/api/tare", HTTP_POST, [&scale, &powerManager, &flowRate](AsyncWebServerRequest *request){
+  server.on("/api/tare", HTTP_POST, [&scale, &display, &powerManager, &flowRate](AsyncWebServerRequest *request){
     scale.tare(20);
+
+    // Clear scaleWentNegative so the direct re-arm path doesn't fire after a manual tare
+    display.setTapTaredEmpty();
 
     // Reset timer through PowerManager to keep touch state in sync
     powerManager.resetTimer();

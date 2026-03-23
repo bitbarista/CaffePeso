@@ -4,7 +4,7 @@
 // Manual version control (update these for releases)
 #define WEIGHMYBRU_VERSION_MAJOR 2
 #define WEIGHMYBRU_VERSION_MINOR 4
-#define WEIGHMYBRU_VERSION_PATCH 1
+#define WEIGHMYBRU_VERSION_PATCH 2
 #define WEIGHMYBRU_VERSION_PRERELEASE  // "", "beta", "rc1", etc.
 
 // Automatic build info (filled by build system)

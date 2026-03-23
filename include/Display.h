@@ -152,7 +152,7 @@ private:
     static constexpr float ARM_TRIGGER_THRESHOLD   = 1.0f;
     static constexpr float REARM_STABLE_WINDOW     = 5.0f;  // g — weight must be within ±5g of savedTareWeight
     static constexpr float REARM_DIRECT_WINDOW     = 20.0f; // g — direct re-arm: weight within ±20g of 0 after cup removal
-    static constexpr float REARM_STEP_THRESHOLD    = 25.0f; // g — min per-cycle step to count as cup placement (not gradual pour)
+    static constexpr float REARM_STEP_THRESHOLD    = 8.0f;  // g — min per-cycle step to count as cup placement (not gradual pour)
     static const unsigned long ARM_SUSTAIN_MS      = 500;
     static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
     static const unsigned long REARM_STABLE_MS     = 200;   // weight must match for 200ms to re-arm

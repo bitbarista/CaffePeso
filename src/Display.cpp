@@ -140,18 +140,23 @@ void Display::update() {
             scaleWentNegative = true;
         }
 
-        // Tared path: require a step change into the window to distinguish cup placement
-        // from gradual weight increase (e.g. milk being poured into a vessel).
-        // Scale.cpp's >5g immediate-response path ensures a placed cup produces a
-        // full-amplitude step in one 100ms cycle; pouring moves <2g per cycle.
+        // Tared path: require a step change to START the stable timer.
+        // Uses reArmStableSince itself as the gate:
+        //   - timer not yet running + first entry into window → require step ≥ threshold
+        //   - timer already running (entered via valid step) → keep it going
+        //   - in window but timer never started (gradual approach) → stay blocked
+        // This prevents milk being poured gradually through the cup weight from triggering re-arm.
         bool cupInWindow  = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
         bool prevInWindow = fabsf(prevWeightForRemoval - savedTareWeight) <= REARM_STABLE_WINDOW;
         bool cupDetectedTared;
-        if (cupInWindow && !prevInWindow) {
-            // Just entered the window — only allow re-arm if weight arrived via a step
-            cupDetectedTared = (weightNow - prevWeightForRemoval) >= REARM_STEP_THRESHOLD;
+        if (!cupInWindow) {
+            cupDetectedTared = false;
+        } else if (reArmStableSince != 0) {
+            cupDetectedTared = true;                                     // timer running — keep going
+        } else if (!prevInWindow) {
+            cupDetectedTared = (weightNow - prevWeightForRemoval) >= REARM_STEP_THRESHOLD; // first entry
         } else {
-            cupDetectedTared = cupInWindow;
+            cupDetectedTared = false;                                    // gradual approach — blocked
         }
         bool cupDetectedDirect = scaleWentNegative && fabsf(weightNow) < REARM_DIRECT_WINDOW;
         bool cupDetected = cupDetectedTared || cupDetectedDirect;
@@ -190,7 +195,10 @@ void Display::update() {
             } else if (absW < 2.0f) {
                 autoTareStableSince = 0; // Reset stability timer when weight is negligible
                 autoTareFired = false;   // Scale is empty again — allow auto-tare on next vessel placement
-            } else if (absW > autoTareThreshold && !autoTareFired && !timerRunning && !armedAutoStart) {
+            } else if (weight > autoTareThreshold && !autoTareFired && !timerRunning && !armedAutoStart) {
+                // Only fire on positive weight — negative weight means a vessel was removed,
+                // not placed. Using fabs() here caused auto-tare to trigger on large negative
+                // readings (e.g. after removing a jug) which then fired again after a tap-tare.
                 if (autoTareStableSince == 0) {
                     autoTareStableSince = millis();
                 } else if (millis() - autoTareStableSince >= AUTO_TARE_STABLE_MS) {
@@ -203,7 +211,7 @@ void Display::update() {
                     showTaredMessage();
                     weight = 0.0f; // reflect post-tare state immediately
                 }
-            } else if (absW <= autoTareThreshold) {
+            } else if (weight <= autoTareThreshold) {
                 autoTareStableSince = 0;
             }
         }
