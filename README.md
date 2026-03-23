@@ -1,9 +1,8 @@
 # CaffePeso ☕
 
-> [!WARNING]
-> **This project is under active development and is not yet ready for general use.**
-> Hardware design, firmware, and documentation may change significantly.
-> Flash at your own risk.
+> [!NOTE]
+> **This project is under active development.** Features and hardware design may evolve.
+> Feedback and contributions welcome.
 
 <div align="center">
 
