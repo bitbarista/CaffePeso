@@ -242,18 +242,17 @@ jobs:
 
           ### 🚀 Installation Options
 
-          1. **Web-based (Recommended):** Use the [flash page](https://bitbarista.github.io/caffepeso)
+          1. **Web-based (Recommended):** Use the [flash page](https://bitbarista.github.io/CaffePeso/flash.html)
           2. **Manual:** Download binaries and flash with esptool or PlatformIO
 
           ### 📋 Requirements
           - ESP32-S3 Supermini or XIAO ESP32S3 board
           - Load cell and HX711 amplifier
-          - See [README.md](https://github.com/bitbarista/caffepeso/blob/master/README.md) for wiring
+          - See [README.md](https://github.com/bitbarista/CaffePeso/blob/master/README.md) for wiring
 
           ### 🔧 Build Information
           - Build: #${{ github.run_number }}
           - Commit: ${{ github.sha }}
-          - Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         draft: false
         prerelease: false
       env:
