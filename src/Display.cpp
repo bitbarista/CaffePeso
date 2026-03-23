@@ -123,17 +123,26 @@ void Display::update() {
         }
     }
     
-    // Auto re-arm: when the saved cup weight is detected on the scale and stable for
-    // REARM_STABLE_MS, tare the cup in, arm, and reset the timer.
-    // Condition: weight ≈ savedTareWeight (within ±REARM_STABLE_WINDOW).
-    // This requires the user to have tared the empty scale first (tap tare after removing cup),
-    // so the cup reads its full weight when placed back. This avoids false triggers from:
-    //   - scale lifted (reads very negative, not ≈ savedTareWeight)
-    //   - scale at 0g for any other reason (empty scale, just tared, etc.)
+    // Auto re-arm: tare + arm when a cup is detected after the previous shot.
+    // Two detection paths:
+    //   Case 1 (tap-tare workflow): user tap-tares after removing cup; fresh cup reads
+    //           ≈ savedTareWeight because the tare reference is now at empty-scale.
+    //   Case 2 (direct placement): user removes cup after shot (scale goes very negative),
+    //           then places fresh cup directly — no tap-tare needed. Scale reads ≈ 0g
+    //           because the original cup-tare reference is still intact.
+    //           scaleWentNegative guards against false triggers on empty scale.
     if (scalePtr != nullptr && savedTareWeight > 5.0f && autoReArmEnabled) {
         bool activeBrew = timerRunning && !timerPaused;
         float weightNow = scalePtr->getCurrentWeight();
-        bool cupDetected = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
+
+        // Track cup removal: set flag when scale goes deeply negative while paused
+        if (timerPaused && weightNow < -(savedTareWeight * 0.5f)) {
+            scaleWentNegative = true;
+        }
+
+        bool cupDetectedTared  = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
+        bool cupDetectedDirect = scaleWentNegative && fabsf(weightNow) < REARM_DIRECT_WINDOW;
+        bool cupDetected = cupDetectedTared || cupDetectedDirect;
 
         if (!activeBrew && cupDetected) {
             if (reArmStableSince == 0) reArmStableSince = millis();
@@ -198,10 +207,13 @@ void Display::update() {
                 idleResetLastWeight = weight;
             } else if (millis() - idleResetWeightStableFrom >= idleResetTimeout) {
                 resetTimer();
-                scalePtr->tare();
-                if (flowRatePtr) flowRatePtr->resetTimerAveraging();
+                if (!autoReArmEnabled) {
+                    // Only tare if cup re-arm is disabled — taring with cup re-arm enabled
+                    // corrupts the HX711 reference and prevents re-arm from detecting the cup.
+                    scalePtr->tare();
+                    weight = 0.0f;
+                }
                 idleResetWeightStableFrom = 0;
-                weight = 0.0f;
             }
         } else if (!timerPaused) {
             idleResetWeightStableFrom = 0;
