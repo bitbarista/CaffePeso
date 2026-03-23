@@ -773,7 +773,7 @@
           if (!data.timer_running && data.timer_avg_flowrate !== null && data.timer_avg_flowrate > 0) {
             avgFlowRateElement.innerText = `Avg Flow Rate: ${data.timer_avg_flowrate.toFixed(2)} g/s`;
             avgFlowRateElement.style.display = 'block';
-          } else if (data.timer_running) {
+          } else {
             avgFlowRateElement.style.display = 'none';
           }
 
