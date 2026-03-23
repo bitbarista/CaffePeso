@@ -197,28 +197,36 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      
+    - name: Checkout repository to update manifests
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: master
+
     - name: Extract version from tag
       id: version
       run: |
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
     - name: Organize release files
       run: |
         mkdir -p release-final
-        
+
         # Combine all artifacts into one release folder
-        find . -name "*.bin" -o -name "*.json" | while read file; do
+        find artifacts/ \( -name "*.bin" -o -name "*.json" \) | while read file; do
           cp "$file" release-final/
         done
-        
+
         ls -la release-final/
-        
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -258,12 +266,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Checkout repository to update manifests
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        ref: master
-
     - name: Copy binaries and update website manifests with relative paths
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
@@ -279,13 +281,13 @@ jobs:
           fi
 
           # Copy binaries into website so they're served from GitHub Pages (same origin = no CORS)
-          cp caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-bootloader.bin \
+          cp artifacts/caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-bootloader.bin \
              website/releases/latest/caffepeso-${BOARD}-v${VERSION}-bootloader.bin
-          cp caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-partitions.bin \
+          cp artifacts/caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-partitions.bin \
              website/releases/latest/caffepeso-${BOARD}-v${VERSION}-partitions.bin
-          cp caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}.bin \
+          cp artifacts/caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}.bin \
              website/releases/latest/caffepeso-${BOARD}-v${VERSION}.bin
-          cp caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-littlefs.bin \
+          cp artifacts/caffepeso-${BOARD}-v${VERSION}/caffepeso-${BOARD}-v${VERSION}-littlefs.bin \
              website/releases/latest/caffepeso-${BOARD}-v${VERSION}-littlefs.bin
 
           # Write manifest with relative paths (same directory as manifest = same Pages origin)
