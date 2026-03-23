@@ -140,7 +140,19 @@ void Display::update() {
             scaleWentNegative = true;
         }
 
-        bool cupDetectedTared  = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
+        // Tared path: require a step change into the window to distinguish cup placement
+        // from gradual weight increase (e.g. milk being poured into a vessel).
+        // Scale.cpp's >5g immediate-response path ensures a placed cup produces a
+        // full-amplitude step in one 100ms cycle; pouring moves <2g per cycle.
+        bool cupInWindow  = fabsf(weightNow - savedTareWeight) <= REARM_STABLE_WINDOW;
+        bool prevInWindow = fabsf(prevWeightForRemoval - savedTareWeight) <= REARM_STABLE_WINDOW;
+        bool cupDetectedTared;
+        if (cupInWindow && !prevInWindow) {
+            // Just entered the window — only allow re-arm if weight arrived via a step
+            cupDetectedTared = (weightNow - prevWeightForRemoval) >= REARM_STEP_THRESHOLD;
+        } else {
+            cupDetectedTared = cupInWindow;
+        }
         bool cupDetectedDirect = scaleWentNegative && fabsf(weightNow) < REARM_DIRECT_WINDOW;
         bool cupDetected = cupDetectedTared || cupDetectedDirect;
 
