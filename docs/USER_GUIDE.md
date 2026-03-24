@@ -578,7 +578,8 @@ CaffePeso implements the same Bluetooth Low Energy (BLE) scale protocol as Weigh
 
 **What GaggiMate can do:**
 - Read real-time weight from CaffePeso
-- Start and stop the CaffePeso brew timer in synchronisation with its own shot control
+
+CaffePeso also implements the WeighMyBru² command characteristic, which handles timer start/stop/reset instructions if GaggiMate sends them. Whether GaggiMate uses this in practice depends on the GaggiMate firmware version.
 
 **Note:** BLE and Wi-Fi operate simultaneously on the ESP32-S3 without conflict. Both features are available at all times.
 
