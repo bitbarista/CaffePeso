@@ -7,10 +7,11 @@
 #include "Display.h"
 #include "BatteryMonitor.h"
 #include "PowerManager.h"
+#include "SmartSwitch.h"
 
 extern float calibrationFactor;
 
-void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery, PowerManager &powerManager);
+void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery, PowerManager &powerManager, SmartSwitch &smartSwitch);
 void startWebServer();
 void stopWebServer();
 void checkPendingWiFiDisable();   // Call from loop() for OTA restart

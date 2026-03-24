@@ -271,6 +271,43 @@
       <div id="automationMessage" class="text-green-400 mt-3"></div>
     </div>
 
+    <!-- Smart Switch -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Smart Switch</h2>
+
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-sm font-semibold">Enable Smart Switch</span>
+            <p class="text-gray-400 text-sm">Cut pump power via a Shelly relay when the target yield is reached</p>
+          </div>
+          <label class="toggle-switch ml-4">
+            <input type="checkbox" id="shellyEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <span class="text-sm font-semibold">Shelly IP Address</span>
+        <p class="text-gray-400 text-sm mb-2">Local IP of your Shelly device — assign a static IP via your router</p>
+        <input type="text" id="shellyIP" placeholder="192.168.1.100" class="w-full px-3 py-2 rounded text-black" />
+      </div>
+
+      <div class="mb-4 p-4 bg-black-background rounded">
+        <span class="text-sm font-semibold">Learned Stop Offset</span>
+        <p class="text-gray-400 text-sm mb-2">How long (seconds) the weight keeps rising after the switch cuts power. Learned automatically from shot to shot for your configured dose and ratio.</p>
+        <div class="flex items-center gap-3">
+          <span id="shellyASTDisplay" class="text-sm text-white font-mono">—</span>
+          <button type="button" onclick="resetShellyLearning()" class="bg-gray-600 hover:bg-red-700 active:bg-red-900 text-white px-3 py-1 rounded text-sm">Reset</button>
+        </div>
+        <p class="text-gray-500 text-xs mt-2">Uses Dose Weight (set on dashboard) and Target Yield Ratio from Brew Automation above</p>
+      </div>
+
+      <button type="button" onclick="saveSmartSwitch()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Smart Switch Settings</button>
+      <div id="shellyMessage" class="text-green-400 mt-3"></div>
+    </div>
+
   </main>
   <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
@@ -370,6 +407,52 @@
         document.getElementById('automationMessage').textContent = 'Error: ' + err.message;
       }
     }
+
+    // Smart switch load / save / reset
+    async function loadSmartSwitch() {
+      try {
+        const data = await fetch('/api/smart-switch-settings').then(r => r.json());
+        document.getElementById('shellyEnabled').checked = data.enabled === true;
+        document.getElementById('shellyIP').value = data.ip || '';
+        const astEl = document.getElementById('shellyASTDisplay');
+        if (data.ast_default) {
+          astEl.textContent = data.ast + 's (default — no shots learned yet)';
+        } else {
+          astEl.textContent = data.ast + 's (learned)';
+        }
+      } catch(err) {
+        console.error('Error loading smart switch settings:', err);
+      }
+    }
+
+    async function saveSmartSwitch() {
+      try {
+        await fetch('/api/smart-switch-settings', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: 'enabled=' + document.getElementById('shellyEnabled').checked +
+                '&ip=' + encodeURIComponent(document.getElementById('shellyIP').value.trim())
+        });
+        document.getElementById('shellyMessage').textContent = 'Smart switch settings saved.';
+        setTimeout(() => { document.getElementById('shellyMessage').textContent = ''; }, 3000);
+      } catch(err) {
+        document.getElementById('shellyMessage').textContent = 'Error: ' + err.message;
+      }
+    }
+
+    async function resetShellyLearning() {
+      if (!confirm('Reset all learned stop-offset data? The default 0.50s will be used until new shots are recorded.')) return;
+      try {
+        await fetch('/api/smart-switch/reset-learning', { method: 'POST' });
+        await loadSmartSwitch();
+        document.getElementById('shellyMessage').textContent = 'Learning data reset.';
+        setTimeout(() => { document.getElementById('shellyMessage').textContent = ''; }, 3000);
+      } catch(err) {
+        document.getElementById('shellyMessage').textContent = 'Error: ' + err.message;
+      }
+    }
+
+    loadSmartSwitch();
 
     // Handle WiFi form submission
     document.getElementById('wifiForm').addEventListener('submit', async (e) => {
