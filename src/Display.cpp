@@ -192,9 +192,11 @@ void Display::update() {
             bool sleepButtonHeld = powerManagerPtr && powerManagerPtr->isSleepTouchPressed();
             if (sleepButtonHeld) {
                 autoTareStableSince = 0; // reset stability timer — don't let it accumulate while held
+            } else if (weight < -2.0f) {
+                autoTareStableSince = 0;
+                autoTareFired = false;   // Scale went negative — vessel removed, allow auto-tare on next placement
             } else if (absW < 2.0f) {
-                autoTareStableSince = 0; // Reset stability timer when weight is negligible
-                autoTareFired = false;   // Scale is empty again — allow auto-tare on next vessel placement
+                autoTareStableSince = 0; // Weight near zero — vessel just got tared, keep autoTareFired locked
             } else if (weight > autoTareThreshold && !autoTareFired && !timerRunning && !armedAutoStart) {
                 // Only fire on positive weight — negative weight means a vessel was removed,
                 // not placed. Using fabs() here caused auto-tare to trigger on large negative
@@ -208,7 +210,7 @@ void Display::update() {
                     resetTimer();                        // resets autoTareFired to false
                     autoTareFired = true;                // re-lock after reset so brew crossing won't re-tare
                     if (flowRatePtr) flowRatePtr->resetTimerAveraging();
-                    showTaredMessage();
+                    showTaredMessage(true); // inverted to match auto re-arm visual style
                     weight = 0.0f; // reflect post-tare state immediately
                 }
             } else if (weight <= autoTareThreshold) {
@@ -606,19 +608,24 @@ void Display::showReleaseMessage() {
     display->display();
 }
 
-void Display::showTaredMessage() {
+void Display::showTaredMessage(bool inverted) {
     // Return early if display is not connected
     if (!displayConnected) {
         return;
     }
-    
+
     // Set message state to prevent weight display interference
     currentMessage = "Tared message";
     messageStartTime = millis();
     showingMessage = true;
-    
-    display->clearDisplay();
-    display->setTextColor(SSD1306_WHITE);
+
+    if (inverted) {
+        display->fillScreen(SSD1306_WHITE);
+        display->setTextColor(SSD1306_BLACK);
+    } else {
+        display->clearDisplay();
+        display->setTextColor(SSD1306_WHITE);
+    }
 
     // "Tared!" prominent in size 2
     display->setTextSize(2);
@@ -640,6 +647,7 @@ void Display::showTaredMessage() {
     display->print(hint);
 
     display->display();
+    display->setTextColor(SSD1306_WHITE); // restore for subsequent draws
 }
 
 
