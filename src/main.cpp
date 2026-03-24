@@ -19,6 +19,7 @@
 #include "BatteryMonitor.h"
 #include "BoardConfig.h"
 #include "Version.h"
+#include "SmartSwitch.h"
 
 // Board-specific pin configuration
 uint8_t dataPin = HX711_DATA_PIN;     // HX711 Data pin
@@ -36,6 +37,7 @@ TouchSensor touchSensor(touchPin, &scale);
 Display oledDisplay(sdaPin, sclPin, &scale, &flowRate);
 PowerManager powerManager(sleepTouchPin, touchPin, &oledDisplay);
 BatteryMonitor batteryMonitor(batteryPin);
+SmartSwitch smartSwitch;
 
 void setup() {
   Serial.begin(115200);
@@ -195,7 +197,8 @@ void setup() {
   // false tares caused by capacitive coupling between the adjacent pads
   touchSensor.setSleepPin(sleepTouchPin);
 
-  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager);
+  smartSwitch.begin();
+  setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager, smartSwitch);
   
 }
 
@@ -216,6 +219,24 @@ void loop() {
       powerManager.notifyActivity();
       lastActivityWeight = weight;
     }
+
+    // Smart switch: reset brew state when timer returns to idle
+    static bool prevBrewIdle = true;
+    bool brewIdle = !oledDisplay.isTimerRunning() && !oledDisplay.isTimerPaused();
+    if (brewIdle && !prevBrewIdle) {
+      smartSwitch.resetForNewBrew();
+    }
+    prevBrewIdle = brewIdle;
+
+    // Smart switch: check trigger every weight cycle
+    smartSwitch.update(
+      weight,
+      flowRate.getFlowRate(),
+      oledDisplay.isTimerRunning() && !oledDisplay.isTimerPaused(),
+      oledDisplay.isArmed(),
+      oledDisplay.getDoseWeight(),
+      oledDisplay.getTargetRatio()
+    );
   }
   
   static unsigned long lastBLEUpdate = 0;

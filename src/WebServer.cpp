@@ -9,6 +9,7 @@
 #include "Calibration.h"
 #include "BluetoothScale.h"
 #include "Version.h"
+#include "SmartSwitch.h"
 
 Preferences preferences;
 
@@ -407,7 +408,7 @@ AsyncWebServer server(80);
  * Response: {"weight":45.23,"flowrate":2.15}
  */
 
-void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery, PowerManager &powerManager) {
+void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothScale, Display &display, BatteryMonitor &battery, PowerManager &powerManager, SmartSwitch &smartSwitch) {
   if (!LittleFS.begin()) {
     Serial.println();
     Serial.println("=====================================");
@@ -445,7 +446,8 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   display.setTargetRatio(getCachedTargetRatio()); // Push to display
   loadSavedTareWeight(display);    // Restore saved cup weight for auto-re-arm
   loadShotHistory();               // Pre-load shot history index
-  getStoredSSID();            // This will cache WiFi credentials
+  getStoredSSID();                 // This will cache WiFi credentials
+  // SmartSwitch settings are loaded by SmartSwitch::begin() in setup()
 
   // Register API route first
   server.on("/api/dashboard", HTTP_GET, [&scale, &flowRate, &display, &battery, &bluetoothScale](AsyncWebServerRequest *request) {
@@ -1079,6 +1081,38 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   server.on("/api/shot-history", HTTP_DELETE, [](AsyncWebServerRequest *request) {
     clearShotHistory();
     request->send(200, "text/plain", "Shot history cleared.");
+  });
+
+  // Smart switch settings
+  server.on("/api/smart-switch-settings", HTTP_GET, [&smartSwitch, &display](AsyncWebServerRequest *request) {
+    float dose  = display.getDoseWeight();
+    float ratio = display.getTargetRatio();
+    float ast   = smartSwitch.getCurrentAST(dose, ratio);
+    bool  isDefault = (fabsf(ast - 0.5f) < 0.01f);
+    String json = "{";
+    json += "\"enabled\":"    + String(smartSwitch.getEnabled() ? "true" : "false") + ",";
+    json += "\"ip\":\""       + smartSwitch.getShellyIP() + "\",";
+    json += "\"ast\":"        + String(ast, 2) + ",";
+    json += "\"ast_default\":" + String(isDefault ? "true" : "false");
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/smart-switch-settings", HTTP_POST, [&smartSwitch](AsyncWebServerRequest *request) {
+    bool en = request->hasParam("enabled", true) &&
+              request->getParam("enabled", true)->value() == "true";
+    String ip = request->hasParam("ip", true) ?
+                request->getParam("ip", true)->value() : "";
+    ip.trim();
+    smartSwitch.setEnabled(en);
+    smartSwitch.setShellyIP(ip);
+    smartSwitch.saveSettings();
+    request->send(200, "text/plain", "Smart switch settings saved.");
+  });
+
+  server.on("/api/smart-switch/reset-learning", HTTP_POST, [&smartSwitch](AsyncWebServerRequest *request) {
+    smartSwitch.resetLearning();
+    request->send(200, "text/plain", "Learning data reset.");
   });
 
   // Serve static files for non-API paths
