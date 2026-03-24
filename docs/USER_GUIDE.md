@@ -84,11 +84,56 @@ It is designed to work seamlessly at the espresso machine without requiring a ph
 | 2 | 100 kΩ 1% resistors (battery voltage divider) |
 | 4 | Self-adhesive rubber feet |
 
-Full purchase links are available in the project repository.
+Purchase links for all components are available in the [WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) — the hardware is identical.
 
 ### 2.4 Wiring
 
-For wiring diagrams, enclosure CAD files, and build video, refer to the original [WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) — the hardware design is identical.
+GPIO pin numbers are identical on both supported boards. The physical pin *locations* differ — refer to the pinout diagram for your specific board when connecting wires.
+
+#### HX711 Load Cell Amplifier
+
+| HX711 Pin | Connect to |
+|-----------|-----------|
+| VCC | 3.3 V |
+| GND | GND |
+| DT | GPIO 5 |
+| SCK | GPIO 6 |
+
+Connect the load cell wires to the HX711 E+/E−/A+/A− terminals. Load cell wire colours vary by manufacturer — consult the datasheet for your specific cell (typically: red = E+, black = E−, white = A−, green = A+).
+
+#### OLED Display (SSD1306, I²C)
+
+| Display Pin | Connect to |
+|-------------|-----------|
+| VCC | 3.3 V |
+| GND | GND |
+| SDA | GPIO 8 |
+| SCL | GPIO 9 |
+
+#### Capacitive Touch Pads
+
+| Touch Pad | Signal Pin | Connect to |
+|-----------|-----------|-----------|
+| Tare button | SIG | GPIO 4 |
+| Sleep/timer button | SIG | GPIO 3 |
+
+Both touch pads share 3.3 V and GND.
+
+#### Battery Voltage Divider
+
+The battery voltage is monitored via a resistor divider on GPIO 7 (ADC). This halves the battery voltage so it falls within the 3.3 V ADC range.
+
+```
+Battery (+) ──┬── 100 kΩ ──┬── 100 kΩ ── GND
+              │             │
+           (switch)       GPIO 7
+```
+
+Use 1% tolerance resistors for accurate readings. The slide switch sits between the battery positive and the rest of the circuit — when open, the device is fully powered off.
+
+#### Power Switch
+
+Wire the 5 mm slide switch in series with the battery positive terminal. One terminal of the switch connects to battery (+); the other to the VCC rail of the circuit (and the top of the voltage divider).
 
 ---
 
