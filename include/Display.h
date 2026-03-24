@@ -27,7 +27,7 @@ public:
     void showSleepCancelledMessage(); // "Sleep / Cancelled" — shown when sleep is interrupted
     void showTaringMessage();         // "Taring..." — shown at 500ms hold as "keep holding" cue
     void showReleaseMessage();        // "Release!" — shown at 1500ms hold, prompts user to release
-    void showTaredMessage();          // "Scale / Tared!" — shown after successful tare
+    void showTaredMessage(bool inverted = false); // "Scale / Tared!" — shown after successful tare; inverted = white bg for auto-tare
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show IP address on boot (replaces "Ready" screen)
     void clear();
