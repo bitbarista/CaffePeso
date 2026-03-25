@@ -119,21 +119,11 @@ Connect the load cell wires to the HX711 E+/E−/A+/A− terminals. Load cell wi
 
 Both touch pads share 3.3 V and GND.
 
-#### Battery Voltage Divider
+#### Battery Voltage Divider and Power Switch
 
-The battery voltage is monitored via a resistor divider on GPIO 7 (ADC). This halves the battery voltage so it falls within the 3.3 V ADC range.
+The battery voltage is monitored via a resistor divider on GPIO 7 (ADC), halving the voltage to fall within the 3.3 V ADC range. The divider connects directly to Battery (+) — before the switch — so the low-battery check can run at boot. Use 1% tolerance resistors for accurate readings.
 
-```
-Battery (+) ── 100 kΩ ──┬── 100 kΩ ── GND
-                        │
-                      GPIO 7
-```
-
-Connect the divider directly to Battery (+), before the power switch. This allows the low-battery check to run at boot even momentarily before the switch state is read. Use 1% tolerance resistors for accurate readings.
-
-#### Power Switch
-
-Wire the 5 mm slide switch in series between Battery (+) and the VCC rail of the circuit. The voltage divider taps Battery (+) directly and is independent of the switch.
+The slide switch is wired in series between Battery (+) and the VCC rail. When open, the device is fully powered off.
 
 ```
 Battery (+) ──┬── [Switch] ── VCC rail
