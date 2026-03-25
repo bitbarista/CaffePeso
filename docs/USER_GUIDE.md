@@ -139,8 +139,8 @@ Wire the 5 mm slide switch in series between Battery (+) and the VCC rail of the
 Battery (+) ──┬── [Switch] ── VCC rail
               │
               └── 100 kΩ ──┬── 100 kΩ ── GND
-                            │
-                          GPIO 7
+                           │
+                         GPIO 7
 ```
 
 ---
