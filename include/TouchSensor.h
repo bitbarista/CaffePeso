@@ -19,6 +19,14 @@ public:
     void setFlowRate(FlowRate* flowRate);
     void setSleepPin(uint8_t pin) { sleepPin = pin; } // Suppress tare while sleep button is held
 
+    // Returns true exactly once after a hold-tare fully completes (arm + tare
+    // executed).  Clears itself on read — poll from main loop each iteration.
+    bool wasHoldTareCompleted() {
+        bool v = holdTareJustCompleted;
+        holdTareJustCompleted = false;
+        return v;
+    }
+
 private:
     uint8_t touchPin;
     uint8_t sleepPin = 255; // 255 = not set; checked in update() to suppress coupling
@@ -44,6 +52,7 @@ private:
     bool  holdTarePending;            // set when hold+release detected; cleared in checkDelayedTare
     bool  holdFeedbackShown;          // true once the "Taring..." intermediate message has been shown
     bool  holdWaitingForRelease;      // true once hold threshold reached; waiting for button release
+    bool  holdTareJustCompleted = false; // strobed true for one loop when hold-tare fully executes
 
     void handleTouch();
     void scheduleDelayedTare();

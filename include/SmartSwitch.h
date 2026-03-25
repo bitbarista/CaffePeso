@@ -20,6 +20,20 @@ public:
     bool          getEnabled()    const          { return enabled; }
     const String& getShellyIP()   const          { return shellyIP; }
 
+    // Post-trigger relay safety
+    // True when the relay was turned off by a trigger and has not yet been
+    // re-enabled by a deliberate hold-tare from the user.
+    bool isPostTriggerRelayOff() const { return postTriggerRelayOff; }
+
+    // Called from main.cpp when a hold-tare completes and postTriggerRelayOff
+    // is set.  Sends the ON command to the Shelly and clears the flag on
+    // success.  Returns false (and leaves the flag set) if the HTTP call fails.
+    bool reEnableRelay();
+
+    // Best-effort ON command — used on boot/wake and when the feature is
+    // disabled.  Always clears postTriggerRelayOff regardless of HTTP result.
+    void ensureRelayOn();
+
     // Returns the learned after-stop time for the given dose/ratio (or DEFAULT_AST if unknown)
     float getCurrentAST(float dose, float ratio) const;
 
@@ -32,6 +46,11 @@ public:
 private:
     bool   enabled  = false;
     String shellyIP = "";
+
+    // Safety: relay was turned off by a trigger; stays set until a deliberate
+    // hold-tare re-enables it via reEnableRelay().  NOT cleared by
+    // resetForNewBrew() — it must survive the brew-idle reset cycle.
+    bool  postTriggerRelayOff  = false;
 
     // Per-brew trigger state
     bool  triggered            = false;
@@ -61,7 +80,7 @@ private:
     void  updateAST(float dose, float ratio, float newValue);
     void  turnOn();
     void  turnOff();
-    void  httpCall(bool on);
+    bool  httpCall(bool on);   // Returns true on HTTP 2xx, false on any failure
     void  saveASTData();
     void  loadASTData();
 };

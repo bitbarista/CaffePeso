@@ -1104,9 +1104,15 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     String ip = request->hasParam("ip", true) ?
                 request->getParam("ip", true)->value() : "";
     ip.trim();
+    bool wasEnabled = smartSwitch.getEnabled();
     smartSwitch.setEnabled(en);
     smartSwitch.setShellyIP(ip);
     smartSwitch.saveSettings();
+    // If the feature is being turned off while the relay is in the post-trigger
+    // safety hold, send a best-effort ON command so the pump is not left dead.
+    if (wasEnabled && !en) {
+        smartSwitch.ensureRelayOn();
+    }
     request->send(200, "text/plain", "Smart switch settings saved.");
   });
 
