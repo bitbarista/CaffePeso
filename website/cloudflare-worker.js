@@ -1,4 +1,4 @@
-// WeighMyBru² Cloudflare Worker for GitHub Release Webhook
+// CaffePeso Cloudflare Worker for GitHub Release Webhook
 // This worker automatically syncs new releases to your website
 
 export default {
@@ -16,7 +16,7 @@ export default {
     }
     
     // Default response
-    return new Response('WeighMyBru² Release Sync Service', {
+    return new Response('CaffePeso Release Sync Service', {
       headers: { 'Content-Type': 'text/plain' }
     });
   }

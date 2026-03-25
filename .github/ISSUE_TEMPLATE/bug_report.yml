@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a report to help us improve WeighMyBru
+description: Create a report to help us improve CaffePeso
 title: "[BUG] "
 labels: ["bug"]
 body:
@@ -49,4 +49,4 @@ body:
     id: version
     attributes:
       label: Firmware Version
-      description: What version of WeighMyBru firmware are you running?
+      description: What version of CaffePeso firmware are you running?

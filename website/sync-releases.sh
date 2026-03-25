@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# WeighMyBru² - GitHub Release to Website Sync Script
+# CaffePeso - GitHub Release to Website Sync Script
 # This script syncs the latest GitHub release files to your website
 # Run this after each release or set up as a webhook/cron job
 
 set -e  # Exit on any error
 
 # Configuration
-GITHUB_REPO="031devstudios/weighmybru2"
+GITHUB_REPO="bitbarista/CaffePeso"
 WEBSITE_RELEASES_DIR="./releases"
 LATEST_DIR="$WEBSITE_RELEASES_DIR/latest"
 
@@ -254,7 +254,7 @@ cleanup_old_releases() {
 # Main execution
 main() {
     echo "==============================================="
-    echo "   WeighMyBru² Release Sync Script"
+    echo "   CaffePeso Release Sync Script"
     echo "==============================================="
     echo
     
@@ -299,7 +299,7 @@ main() {
 
 # Show help if requested
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-    echo "WeighMyBru² Release Sync Script"
+    echo "CaffePeso Release Sync Script"
     echo
     echo "This script downloads the latest GitHub release and prepares"
     echo "files for hosting ESP32 Web Tools on your website."
