@@ -133,6 +133,60 @@ Battery (+) ──┬── [Switch] ── VCC rail
                          GPIO 7
 ```
 
+#### Complete Circuit Schematic
+
+```
++=========================================================================+
+|                       CaffePeso -- Circuit Schematic                    |
++=========================================================================+
+
+POWER
+                              .-- [SW1 Power Switch] ----- VCC (3.3V)
+  Battery (+) --------+------'
+                      |
+                      +-- [R1 100k] --+-- [R2 100k] ------- GND
+                                      |
+                                    GPIO7 (ADC)
+
+  Battery (-) -------------------------------------------------- GND
+
+
+LOAD CELL & HX711
+
+  Load Cell             HX711 Module               ESP32-S3
+  +------------+       +-------------+
+  | E+  (RED)  |--E+---| E+  VCC     |------------ 3.3V
+  | E-  (BLK)  |--E----|  E- GND     |------------ GND
+  | A-  (WHT)  |--A----|  A- DT      |------------ GPIO5
+  | A+  (GRN)  |--A+---|  A+ SCK     |------------ GPIO6
+  +------------+       +-------------+
+
+
+OLED DISPLAY (SSD1306, 0.91" I2C)
+
+  +-------+
+  |  VCC  |------ 3.3V
+  |  GND  |------ GND
+  |  SDA  |------ GPIO8
+  |  SCL  |------ GPIO9
+  +-------+
+
+
+TOUCH PADS (TTP223B capacitive modules)
+
+  Tare Button                    Sleep / Timer Button
+  +-------+                      +-------+
+  |  VCC  |------ 3.3V           |  VCC  |------ 3.3V
+  |  GND  |------ GND            |  GND  |------ GND
+  |  SIG  |------ GPIO4          |  SIG  |------ GPIO3
+  +-------+                      +-------+
+
+
+All GND labels share a common ground.
+All 3.3V labels connect to the VCC rail (Battery+ -> SW1 ->
+ESP32-S3 built-in regulator).
+```
+
 ---
 
 ## 3. First-Time Setup
