@@ -125,8 +125,8 @@ The battery voltage is monitored via a resistor divider on GPIO 7 (ADC). This ha
 
 ```
 Battery (+) ── 100 kΩ ──┬── 100 kΩ ── GND
-                         │
-                       GPIO 7
+                        │
+                      GPIO 7
 ```
 
 Connect the divider directly to Battery (+), before the power switch. This allows the low-battery check to run at boot even momentarily before the switch state is read. Use 1% tolerance resistors for accurate readings.
