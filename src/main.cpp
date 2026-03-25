@@ -198,6 +198,9 @@ void setup() {
   touchSensor.setSleepPin(sleepTouchPin);
 
   smartSwitch.begin();
+  // Ensure Shelly relay is ON at boot/wake — clears any stale postTriggerRelayOff
+  // state and sends a best-effort ON command so the relay is in a known state.
+  smartSwitch.ensureRelayOn();
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager, smartSwitch);
   
 }
@@ -228,7 +231,10 @@ void loop() {
     }
     prevBrewIdle = brewIdle;
 
-    // Smart switch: check trigger every weight cycle
+    // Smart switch: check trigger every weight cycle.
+    // Snapshot post-trigger state before update so we can detect the moment
+    // the relay turns off and show a one-shot OLED prompt.
+    bool wasPostTrigger = smartSwitch.isPostTriggerRelayOff();
     smartSwitch.update(
       weight,
       flowRate.getFlowRate(),
@@ -237,6 +243,10 @@ void loop() {
       oledDisplay.getDoseWeight(),
       oledDisplay.getTargetRatio()
     );
+    if (!wasPostTrigger && smartSwitch.isPostTriggerRelayOff()) {
+      // Relay just turned off — tell the user what to do next
+      oledDisplay.showMessage("Relay off-Hold tare", 3000);
+    }
   }
   
   static unsigned long lastBLEUpdate = 0;
@@ -260,7 +270,23 @@ void loop() {
   
   // Update touch sensor
   touchSensor.update();
-  
+
+  // Smart switch safety: re-enable relay only via deliberate hold-tare.
+  // wasHoldTareCompleted() strobes true for exactly one loop iteration after
+  // a hold-tare fully executes, giving us a clean one-shot check here.
+  if (touchSensor.wasHoldTareCompleted() && smartSwitch.isPostTriggerRelayOff()) {
+    if (!oledDisplay.isTimerRunning()) {
+      if (!smartSwitch.reEnableRelay()) {
+        oledDisplay.showMessage("Relay err-check WiFi", 3000);
+      }
+      // On success the normal inverted "Armed" screen was already shown by
+      // the hold-tare itself — no extra message needed.
+    } else {
+      // Timer is still running (e.g. auto-stop hasn't fired yet after trigger)
+      oledDisplay.showMessage("Wait-timer running", 2000);
+    }
+  }
+
   // Update power manager
   powerManager.update();
   

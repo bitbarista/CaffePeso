@@ -186,6 +186,7 @@ void TouchSensor::checkDelayedTare() {
                 if (wasHoldTare) {
                     displayPtr->arm(cupWeight);
                     displayPtr->showArmedMessage();
+                    holdTareJustCompleted = true;
                     Serial.printf("Cup weight saved: %.1fg, armed for auto-start\n", cupWeight);
                 } else {
                     // Tap-tare: zero the scale and reset timer if not mid-brew.

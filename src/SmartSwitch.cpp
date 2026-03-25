@@ -12,9 +12,13 @@ void SmartSwitch::begin() {
 
 void SmartSwitch::update(float weight, float flowRate, bool brewActive, bool armed,
                          float doseWeight, float targetRatio) {
-    // When newly armed: turn Shelly on and clear any previous brew state
+    // When newly armed: clear per-brew state.  Only turn the relay on if we
+    // are NOT in the post-trigger safety hold — in that state the relay must
+    // stay off until the user performs a deliberate hold-tare (reEnableRelay).
     if (armed && !prevArmed) {
-        turnOn();
+        if (!postTriggerRelayOff) {
+            turnOn();
+        }
         resetForNewBrew();
     }
     prevArmed = armed;
@@ -77,6 +81,8 @@ void SmartSwitch::update(float weight, float flowRate, bool brewActive, bool arm
 }
 
 void SmartSwitch::resetForNewBrew() {
+    // Intentionally does NOT clear postTriggerRelayOff — that flag persists
+    // until the user explicitly re-enables the relay via hold-tare.
     triggered         = false;
     learningPending   = false;
     settleStableSince = 0;
@@ -127,13 +133,43 @@ void SmartSwitch::turnOn() {
 }
 
 void SmartSwitch::turnOff() {
-    httpCall(false);
+    // Only set the safety flag when the relay actually turned off.
+    // If the HTTP call fails the pump keeps running and no flag is set —
+    // the user will need to stop it manually.
+    if (httpCall(false)) {
+        postTriggerRelayOff = true;
+    }
 }
 
-void SmartSwitch::httpCall(bool on) {
+bool SmartSwitch::reEnableRelay() {
+    if (!postTriggerRelayOff) return true;  // Nothing to do
+    if (!enabled || shellyIP.isEmpty()) {
+        // Feature not fully configured — just clear the flag
+        postTriggerRelayOff = false;
+        return true;
+    }
+    if (httpCall(true)) {
+        postTriggerRelayOff = false;
+        Serial.println("[SmartSwitch] Relay re-enabled via hold-tare");
+        return true;
+    }
+    // Leave postTriggerRelayOff set so the user can retry with another hold-tare
+    Serial.println("[SmartSwitch] Relay re-enable FAILED — check WiFi / Shelly");
+    return false;
+}
+
+void SmartSwitch::ensureRelayOn() {
+    // Always clears the safety flag — used on boot/wake and when the feature
+    // is disabled, where we want a clean slate regardless of HTTP result.
+    postTriggerRelayOff = false;
+    if (!enabled || shellyIP.isEmpty()) return;
+    httpCall(true);
+}
+
+bool SmartSwitch::httpCall(bool on) {
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("[SmartSwitch] No WiFi — skipping");
-        return;
+        return false;
     }
     HTTPClient http;
     String url = "http://" + shellyIP + "/rpc/Switch.Set?id=0&on=" + (on ? "true" : "false");
@@ -143,6 +179,7 @@ void SmartSwitch::httpCall(bool on) {
     int code = http.GET();
     http.end();
     Serial.printf("[SmartSwitch] %s response: %d\n", on ? "ON" : "OFF", code);
+    return (code >= 200 && code < 300);
 }
 
 void SmartSwitch::saveSettings() {
