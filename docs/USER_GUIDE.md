@@ -124,16 +124,24 @@ Both touch pads share 3.3 V and GND.
 The battery voltage is monitored via a resistor divider on GPIO 7 (ADC). This halves the battery voltage so it falls within the 3.3 V ADC range.
 
 ```
-Battery (+) ──┬── 100 kΩ ──┬── 100 kΩ ── GND
-              │             │
-           (switch)       GPIO 7
+Battery (+) ── 100 kΩ ──┬── 100 kΩ ── GND
+                         │
+                       GPIO 7
 ```
 
-Use 1% tolerance resistors for accurate readings. The slide switch sits between the battery positive and the rest of the circuit — when open, the device is fully powered off.
+Connect the divider directly to Battery (+), before the power switch. This allows the low-battery check to run at boot even momentarily before the switch state is read. Use 1% tolerance resistors for accurate readings.
 
 #### Power Switch
 
-Wire the 5 mm slide switch in series with the battery positive terminal. One terminal of the switch connects to battery (+); the other to the VCC rail of the circuit (and the top of the voltage divider).
+Wire the 5 mm slide switch in series between Battery (+) and the VCC rail of the circuit. The voltage divider taps Battery (+) directly and is independent of the switch.
+
+```
+Battery (+) ──┬── [Switch] ── VCC rail
+              │
+              └── 100 kΩ ──┬── 100 kΩ ── GND
+                            │
+                          GPIO 7
+```
 
 ---
 
