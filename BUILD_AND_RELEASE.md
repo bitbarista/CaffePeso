@@ -1,4 +1,4 @@
-# 🚀 WeighMyBru² Automated Build & Release Workflow
+# 🚀 CaffePeso Automated Build & Release Workflow
 
 This document outlines the improved build and release process that automates website deployment.
 

@@ -1,6 +1,6 @@
 # Website Assets
 
-This directory contains images and other assets for the WeighMyBru² website.
+This directory contains images and other assets for the CaffePeso website.
 
 ## Required Files
 
@@ -11,7 +11,7 @@ Please add these image files to this directory:
 - `xiao-board.jpg` - Photo of XIAO ESP32S3 board (recommended: 400x300px)
 
 ### Branding
-- `logo.png` - WeighMyBru² logo (recommended: 128x128px or larger)
+- `logo.png` - CaffePeso logo (recommended: 128x128px or larger)
 - `favicon.ico` - Website favicon (16x16px, 32x32px)
 
 ## Image Guidelines

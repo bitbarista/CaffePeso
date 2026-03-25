@@ -1,20 +1,20 @@
 @echo off
-REM WeighMyBru² - GitHub Release to Website Sync Script (Windows)
+REM CaffePeso - GitHub Release to Website Sync Script (Windows)
 REM This script syncs the latest GitHub release files to your website
 
 setlocal EnableDelayedExpansion
 
 REM Configuration
-set "GITHUB_REPO=031devstudios/weighmybru2"
+set "GITHUB_REPO=bitbarista/CaffePeso"
 set "WEBSITE_RELEASES_DIR=.\releases"
 set "LATEST_DIR=%WEBSITE_RELEASES_DIR%\latest"
-set "TEMP_DIR=%TEMP%\weighmybru_sync"
+set "TEMP_DIR=%TEMP%\caffepeso_sync"
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 
 echo ===============================================
-echo    WeighMyBru² Release Sync Script (Windows)
+echo    CaffePeso Release Sync Script (Windows)
 echo ===============================================
 echo.
 

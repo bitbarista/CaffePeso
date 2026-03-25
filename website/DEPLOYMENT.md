@@ -1,4 +1,4 @@
-# 🚀 WeighMyBru² Website Deployment Guide
+# 🚀 CaffePeso Website Deployment Guide
 
 This guide will help you deploy the ESP32 Web Tools integration to your Cloudflare-hosted website.
 
@@ -38,10 +38,10 @@ your-website/
 
 ### Step 1: Prepare Your Local Environment
 
-1. **Download the website files** from your WeighMyBru² project:
+1. **Download the website files** from your CaffePeso project:
    ```bash
    # Copy the website directory from your project
-   cp -r /path/to/weighmybru2/website/* /path/to/your-website/
+   cp -r /path/to/caffepeso/website/* /path/to/your-website/
    ```
 
 2. **Make sync scripts executable** (Linux/macOS):
@@ -95,7 +95,7 @@ This will create:
 1. **Update the main page** to link to the flash tool:
    ```html
    <a href="/flash.html" class="btn btn-primary">
-     📥 Flash WeighMyBru² Firmware
+     📥 Flash CaffePeso Firmware
    </a>
    ```
 
