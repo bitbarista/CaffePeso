@@ -125,14 +125,6 @@ The battery voltage is monitored via a resistor divider on GPIO 7 (ADC), halving
 
 The slide switch is wired in series between Battery (+) and the VCC rail. When open, the device is fully powered off.
 
-```
-Battery (+) ──┬── [Switch] ── VCC rail
-              │
-              └── 100 kΩ ──┬── 100 kΩ ── GND
-                           │
-                         GPIO 7
-```
-
 #### Complete Circuit Schematic
 
 ```
