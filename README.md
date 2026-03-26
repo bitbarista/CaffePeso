@@ -14,7 +14,7 @@
 
 **A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
-Armed auto-start • Pre-infusion timing • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Wi-Fi web UI
+Armed auto-start • Pre-infusion timing • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
 
 [Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
@@ -60,8 +60,8 @@ Enable in Settings → Brew Automation. When armed, the timer starts immediately
 
 Once flow has been active for at least 8 seconds, the timer stops automatically when flow drops below 0.5 g/s and remains there for 2 seconds. No manual stop needed at the end of a shot.
 
-### 🔵 GaggiMate BLE
-Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate). CaffePeso uses the same BLE protocol as WeighMyBru² — GaggiMate's existing WeighMyBru support works with CaffePeso without any changes on either side.
+### 🔵 Bluetooth Scale Support
+Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate) and [Beanconqueror](https://beanconqueror.com). CaffePeso uses the same BLE protocol as WeighMyBru² — GaggiMate's existing WeighMyBru support works with CaffePeso without any changes on either side. Beanconqueror can connect to CaffePeso for real-time weight, tare, and timer control.
 
 ---
 
