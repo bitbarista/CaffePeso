@@ -1,6 +1,6 @@
 {
   "name": "CaffePeso - ESP32-S3 Supermini",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "funding_url": "https://github.com/bitbarista/CaffePeso",
   "new_install_prompt_erase": true,
   "builds": [
@@ -8,19 +8,19 @@
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "caffepeso-supermini-v2.4.3-bootloader.bin",
+          "path": "caffepeso-supermini-v2.4.4-bootloader.bin",
           "offset": 0
         },
         {
-          "path": "caffepeso-supermini-v2.4.3-partitions.bin",
+          "path": "caffepeso-supermini-v2.4.4-partitions.bin",
           "offset": 32768
         },
         {
-          "path": "caffepeso-supermini-v2.4.3.bin",
+          "path": "caffepeso-supermini-v2.4.4.bin",
           "offset": 65536
         },
         {
-          "path": "caffepeso-supermini-v2.4.3-littlefs.bin",
+          "path": "caffepeso-supermini-v2.4.4-littlefs.bin",
           "offset": 3211264
         }
       ]
