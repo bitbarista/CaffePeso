@@ -644,6 +644,30 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   }
 });
 
+  // Calibration verification endpoint — must be registered BEFORE /api/calibrate
+  // to prevent ESPAsyncWebServer prefix-matching /api/calibrate/verify to /api/calibrate
+  server.on("/api/calibrate/verify", HTTP_POST, [&scale](AsyncWebServerRequest *request) {
+    if (!request->hasParam("knownWeight", true)) {
+      request->send(400, "text/plain", "Missing knownWeight");
+      return;
+    }
+    float knownWeight = request->getParam("knownWeight", true)->value().toFloat();
+    if (knownWeight <= 0) {
+      request->send(400, "text/plain", "Known weight must be positive");
+      return;
+    }
+    float measured = scale.getCurrentWeight();
+    float error = measured - knownWeight;
+    float errorPct = (error / knownWeight) * 100.0f;
+    String json = "{";
+    json += "\"known\":" + String(knownWeight, 2) + ",";
+    json += "\"measured\":" + String(measured, 2) + ",";
+    json += "\"error\":" + String(error, 2) + ",";
+    json += "\"error_pct\":" + String(errorPct, 2);
+    json += "}";
+    request->send(200, "application/json", json);
+  });
+
   server.on("/api/calibrate", HTTP_POST, [&scale](AsyncWebServerRequest *request){
     if (request->hasParam("knownWeight", true)) {
       String value = request->getParam("knownWeight", true)->value();
@@ -1125,29 +1149,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
         }
       }
     });
-
-  // Calibration verification endpoint (checks accuracy with a second known weight)
-  server.on("/api/calibrate/verify", HTTP_POST, [&scale](AsyncWebServerRequest *request) {
-    if (!request->hasParam("knownWeight", true)) {
-      request->send(400, "text/plain", "Missing knownWeight");
-      return;
-    }
-    float knownWeight = request->getParam("knownWeight", true)->value().toFloat();
-    if (knownWeight <= 0) {
-      request->send(400, "text/plain", "Known weight must be positive");
-      return;
-    }
-    float measured = scale.getCurrentWeight();
-    float error = measured - knownWeight;
-    float errorPct = (error / knownWeight) * 100.0f;
-    String json = "{";
-    json += "\"known\":" + String(knownWeight, 2) + ",";
-    json += "\"measured\":" + String(measured, 2) + ",";
-    json += "\"error\":" + String(error, 2) + ",";
-    json += "\"error_pct\":" + String(errorPct, 2);
-    json += "}";
-    request->send(200, "application/json", json);
-  });
 
   server.begin();
   Serial.println("Web server started - accessible via WiFi");
