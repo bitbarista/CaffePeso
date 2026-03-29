@@ -141,29 +141,6 @@ void saveIdleResetSettings(bool enabled, unsigned long ms, Display& display) {
     display.setIdleResetTimeout(ms);
 }
 
-// Pre-infusion mode cache
-static bool preInfusionCached = false;
-static bool cachedPreInfusion = false;
-
-void loadPreInfusionMode(Display& display) {
-    if (preInfusionCached) return;
-    if (preferences.begin("display", false)) {
-        cachedPreInfusion = preferences.getBool("pre_inf", false);
-        preferences.end();
-    }
-    preInfusionCached = true;
-    display.setPreInfusionMode(cachedPreInfusion);
-}
-
-void savePreInfusionMode(bool enabled, Display& display) {
-    cachedPreInfusion = enabled;
-    if (preferences.begin("display", false)) {
-        preferences.putBool("pre_inf", enabled);
-        preferences.end();
-    }
-    display.setPreInfusionMode(enabled);
-}
-
 // Auto-stop on flow cessation cache
 static bool autoStopCached        = false;
 static bool cachedAutoStopEnabled = false;
@@ -438,7 +415,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   display.setDoseWeight(getCachedDoseWeight()); // Restore persisted dose weight
   loadAutoTareSettings(display);    // Cache and apply auto-tare settings
   loadIdleResetSettings(display);   // Cache and apply idle-reset settings
-  loadPreInfusionMode(display);     // Cache and apply pre-infusion mode
   loadAutoStopSettings(display);    // Cache and apply auto-stop on flow cessation
   loadAutoReArmSettings(display);   // Cache and apply cup-weight auto re-arm
   getCachedTargetRatio();          // Cache target ratio
@@ -849,18 +825,6 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     if (secs > 300) secs = 300;
     saveIdleResetSettings(en, secs * 1000UL, display);
     request->send(200, "text/plain", "Idle reset settings saved.");
-  });
-
-  server.on("/api/pre-infusion-mode", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"enabled\":" + String(cachedPreInfusion ? "true" : "false") + "}";
-    request->send(200, "application/json", json);
-  });
-
-  server.on("/api/pre-infusion-mode", HTTP_POST, [&display](AsyncWebServerRequest *request) {
-    bool en = request->hasParam("enabled", true) &&
-              request->getParam("enabled", true)->value() == "true";
-    savePreInfusionMode(en, display);
-    request->send(200, "text/plain", "Pre-infusion mode saved.");
   });
 
   server.on("/api/auto-stop-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
