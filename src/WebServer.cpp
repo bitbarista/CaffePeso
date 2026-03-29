@@ -595,9 +595,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });
 
-  server.on("/api/arm", HTTP_POST, [&display, &scale](AsyncWebServerRequest *request){
-    // Tare first so cup weight is zeroed, then arm ready for drip detection
-    scale.tare(20);
+  server.on("/api/arm", HTTP_POST, [&display](AsyncWebServerRequest *request){
     display.arm(0.0f);
     display.showArmedMessage();
     request->send(200, "text/plain", "Armed");
