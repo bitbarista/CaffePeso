@@ -441,22 +441,14 @@ The scale monitors weight against the saved cup weight (±5 g window) and requir
 - **Tared path:** After a tap-tare (scale reads 0 g), placing the cup reads approximately the saved cup weight. Step-change detected → stable 200 ms → auto re-arm.
 - **Direct path:** After removing the cup (scale goes very negative), placing it back directly (without tap-taring) reads ~0 g against the original cup-tare reference. Scale went negative → weight returns near 0 → auto re-arm.
 
-### 8.3 Pre-Infusion Timing Mode
-
-When enabled, the timer starts immediately when the scale is armed — capturing the pre-infusion phase. When disabled (default), the timer starts on the first drip.
-
-Enable in **Settings → Brew Automation → Pre-Infusion Timing**.
-
-Use this if your machine has a notable pre-infusion phase (a period of low pressure before full extraction pressure) that you want included in the total shot time.
-
-### 8.4 Auto-Stop on Flow Cessation
+### 8.3 Auto-Stop on Flow Cessation
 
 When enabled, the timer stops automatically when espresso flow ceases — no manual stop needed at the end of a shot.
 
 **How it works:**
 - Flow must first exceed 1.0 g/s (confirming extraction is underway).
 - Flow must then drop below 0.5 g/s and remain there for 2 seconds.
-- This check does not engage within the first 8 seconds of the brew (prevents false stops during pre-infusion or slow starts).
+- This check does not engage within the first 8 seconds of the brew (prevents false stops during slow starts).
 
 Enable in **Settings → Brew Automation → Auto-Stop on Flow Cessation**.
 
@@ -551,7 +543,6 @@ Weight changes of more than 0.5 g reset the inactivity timer. Button presses als
 | **Minimum Weight to Trigger** (auto-tare) | 5–500 g | 20 g | Lightest vessel that triggers auto-tare |
 | **Post-Brew Idle Reset** | Toggle | Off | Auto-reset after brew if no weight change |
 | **Idle Timeout** | 5–300 s | 30 s | Seconds of inactivity before idle reset fires |
-| **Pre-Infusion Timing** | Toggle | Off | Start timer on arm instead of first drip |
 | **Auto-Stop on Flow Cessation** | Toggle | Off | Stop timer automatically when flow ends |
 | **Target Yield Ratio** | 0–20 | 0 | Target ratio for yield alert (0 = disabled) |
 
