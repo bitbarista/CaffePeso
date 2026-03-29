@@ -120,6 +120,7 @@ void Display::update() {
         if (millis() - messageStartTime > effectiveDuration) {
             showingMessage = false;
             Serial.println("Message cleared, returning to main display");
+
         }
     }
     
@@ -167,7 +168,7 @@ void Display::update() {
                 reArmStableSince = 0;
                 resetTimer();               // snap display to 0:00 before tare blocks
                 scalePtr->tare();
-                arm(savedTareWeight);       // in pre-infusion mode arm() calls startTimer()
+                arm(savedTareWeight);
                 resetTimer();               // stop that timer — auto re-arm waits for first drip
                                             // armedAutoStart is NOT cleared by resetTimer()
                 showArmedMessage();
@@ -941,6 +942,7 @@ void Display::resetTimer() {
     timerPausedTime = 0;
     timerRunning = false;
     timerPaused = false;
+
     // autoTareFired is intentionally NOT reset here — it resets only when the scale
     // returns to near-zero, ensuring a vessel already on the scale never triggers
     // a re-tare just because the timer was reset.
@@ -1017,16 +1019,6 @@ void Display::arm(float cupWeightBeforeTare) {
     }
     Serial.printf("Armed: cup weight = %.1fg\n", savedTareWeight);
 
-    if (preInfusionMode) {
-        // Pre-infusion mode: start timer immediately so total shot time includes pre-infusion.
-        // armedAutoStart is left true — resetTimer() in the auto re-arm path clears the timer
-        // but must leave armedAutoStart intact so first-drip detection still works after re-arm.
-        // The auto-start check guards on !timerRunning, so it can't double-fire while the
-        // timer is already running from a manual hold-tare arm.
-        if (timerPaused) resetTimer();
-        startTimer();
-        Serial.println("Pre-infusion mode: timer started immediately");
-    }
 }
 
 void Display::disarm() {
