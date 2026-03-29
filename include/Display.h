@@ -65,10 +65,6 @@ public:
     void  setTapTaredEmpty()   { tapTaredEmpty = true; scaleWentNegative = false; }  // tap-tare: disable direct re-arm path
     void  showArmedMessage();
 
-    // Pre-infusion timing mode (timer starts immediately on arm, not on first drip)
-    void setPreInfusionMode(bool en) { preInfusionMode = en; }
-    bool getPreInfusionMode() const  { return preInfusionMode; }
-
     // Auto-stop on flow cessation
     void setAutoStopEnabled(bool en) { autoStopEnabled = en; }
     bool getAutoStopEnabled() const  { return autoStopEnabled; }
@@ -156,9 +152,6 @@ private:
     static const unsigned long ARM_SUSTAIN_MS      = 500;
     static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
     static const unsigned long REARM_STABLE_MS     = 200;   // weight must match for 200ms to re-arm
-
-    // Pre-infusion timing mode
-    bool preInfusionMode = false;
 
     // Auto-stop on flow cessation
     bool  autoStopEnabled               = false;
