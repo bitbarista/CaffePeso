@@ -42,6 +42,15 @@ void SmartSwitch::update(float weight, float flowRate, bool brewActive, bool arm
                 saveASTData();
                 Serial.printf("[SmartSwitch] Learned AST=%.2fs (gain=%.2fg @ %.2fg/s)\n",
                               measured, weightGain, flowRateAtTrigger);
+            } else if (weightGain <= 0.0f && flowRateAtTrigger > 0.3f) {
+                // Triggered too late — machine had already stopped before us.
+                // Boost AST upward so next shot fires earlier.
+                float current = getAST(lastDoseForLearning, lastRatioForLearning);
+                float boosted = constrain(current + 0.5f, current, 3.0f);
+                updateAST(lastDoseForLearning, lastRatioForLearning, boosted);
+                saveASTData();
+                Serial.printf("[SmartSwitch] Triggered too late (no weight gain) — boosted AST %.2f→%.2fs\n",
+                              current, boosted);
             }
             learningPending   = false;
             settleStableSince = 0;
