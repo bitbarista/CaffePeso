@@ -67,7 +67,7 @@ private:
     static const  unsigned long SETTLE_STABLE_MS = 3000; // 3s stable = settled
     static constexpr float SETTLE_DEADBAND = 0.3f;       // g
 
-    static constexpr float DEFAULT_AST = 0.5f;  // Conservative first-shot default (seconds)
+    static constexpr float DEFAULT_AST = 1.5f;  // Conservative first-shot default — fires early so learning captures real weight gain
 
     // Per dose/ratio learned after-stop times — up to 8 entries
     static const int MAX_AST_ENTRIES = 8;
