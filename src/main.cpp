@@ -210,10 +210,14 @@ void loop() {
     flowRate.update(weight);
     lastWeightUpdate = millis();
 
-    // Reset inactivity timer on significant weight change (>0.5g)
+    // Reset inactivity timer on rapid weight change only (cup placement or active brew).
+    // Thermal drift of the HX711 can exceed 0.5g/hour — checking flow rate (g/s)
+    // distinguishes real events (>0.3 g/s) from slow drift (~0.0001 g/s).
     static float lastActivityWeight = 0.0f;
     if (fabs(weight - lastActivityWeight) > 0.5f) {
-      powerManager.notifyActivity();
+      if (fabsf(flowRate.getFlowRate()) > 0.3f) {
+        powerManager.notifyActivity();
+      }
       lastActivityWeight = weight;
     }
   }
