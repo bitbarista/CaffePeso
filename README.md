@@ -14,7 +14,7 @@
 
 **A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
-Armed auto-start • Pre-infusion timing • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
+Armed auto-start • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
 
 [Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
@@ -51,10 +51,6 @@ The last 10 shots are automatically saved to non-volatile memory: dose, yield, t
 
 ### 📱 Wi-Fi Web Interface
 A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot history, OTA firmware updates, and real-time graphs. No app required.
-
-### ⏳ Pre-Infusion Timing Mode
-
-Enable in Settings → Brew Automation. When armed, the timer starts immediately on arm — capturing the pre-infusion phase — rather than waiting for the first drip. Useful for machines with longer pre-infusion.
 
 ### 🛑 Auto-Stop on Flow Cessation
 
@@ -140,7 +136,6 @@ Additions in this fork:
 - Shot history: last 10 shots stored in NVS, displayed in web UI
 - Power button redesigned: tap cycles timer (start → pause → reset); hold 1 s = status page; hold 3 s = sleep
 - Wi-Fi always-on: toggle removed; device deep-sleeps to save power instead
-- Pre-infusion timing mode: timer starts on arm rather than first drip (configurable)
 - Auto-stop on flow cessation: timer stops automatically when espresso flow ends
 - Auto-tare on vessel placement: tares automatically when a stable weight is detected (configurable threshold)
 - Post-brew idle reset: auto-resets and re-tares after a configurable idle period
