@@ -14,7 +14,7 @@
 
 **A smart, automated espresso scale with a web interface — no custom PCBs required.**
 
-Armed auto-start • Auto-stop • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
+Armed auto-start • Auto-stop • Smart switch • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
 
 [Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
@@ -55,6 +55,22 @@ A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot
 ### 🛑 Auto-Stop on Flow Cessation
 
 Once flow has been active for at least 8 seconds, the timer stops automatically when flow drops below 0.5 g/s and remains there for 2 seconds. No manual stop needed at the end of a shot.
+
+### 🔌 Smart Switch (Shelly Integration)
+
+CaffePeso can automatically stop your espresso machine by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or solenoid valve. No modification to the machine is needed beyond adding the Shelly in series.
+
+When armed with a dose and target ratio, CaffePeso monitors weight and flow rate during the shot and fires a relay-off command when the projected final yield is about to hit the target:
+
+```
+trigger = target_weight − (flow_rate × after_stop_time)
+```
+
+The **After-Stop Time (AST)** — the seconds of drip after the pump cuts — is learned automatically from each shot and stored per dose/ratio combination, improving accuracy over time.
+
+A **post-trigger safety interlock** keeps the relay off until you perform a hold-tare, preventing the pump accidentally restarting between shots.
+
+See [Section 14 of the User Guide](docs/USER_GUIDE.md#14-smart-switch-shelly-integration) for setup instructions.
 
 ### 🔵 Bluetooth Scale Support
 Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggimate) and [Beanconqueror](https://beanconqueror.com). CaffePeso uses the same BLE protocol as WeighMyBru² — GaggiMate's existing WeighMyBru support works with CaffePeso without any changes on either side. Beanconqueror can connect to CaffePeso for real-time weight, tare, and timer control.
@@ -140,6 +156,7 @@ Additions in this fork:
 - Auto-tare on vessel placement: tares automatically when a stable weight is detected (configurable threshold)
 - Post-brew idle reset: auto-resets and re-tares after a configurable idle period
 - Arm button in web UI: arm/disarm directly from the dashboard without touching the physical button
+- Smart switch: predictive Shelly relay control to stop the machine at target yield, with per-dose AST learning and post-trigger safety interlock
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
