@@ -9,6 +9,7 @@ node_modules/
 # Local-only reference files (not for distribution)
 cad/
 BOM.md
+facebook_post.md
 
 # Build outputs
 build-output/
