@@ -23,7 +23,8 @@
 11. [Firmware Updates](#11-firmware-updates)
 12. [Power and Battery](#12-power-and-battery)
 13. [GaggiMate Bluetooth Integration](#13-gaggimate-bluetooth-integration)
-14. [Troubleshooting](#14-troubleshooting)
+14. [Smart Switch (Shelly Integration)](#14-smart-switch-shelly-integration)
+15. [Troubleshooting](#15-troubleshooting)
 
 ---
 
@@ -670,11 +671,68 @@ CaffePeso implements the same Bluetooth Low Energy (BLE) scale protocol as Weigh
 
 CaffePeso also implements the WeighMyBru² command characteristic, which handles timer start/stop/reset instructions if GaggiMate sends them. Whether GaggiMate uses this in practice depends on the GaggiMate firmware version.
 
-**Note:** BLE and Wi-Fi operate simultaneously on the ESP32-S3 without conflict. Both features are available at all times.
+**Note:** The ESP32-S3 has a single shared radio for both BLE and Wi-Fi. They coexist via time-division multiplexing, which works well under normal conditions. However, outgoing HTTP requests (such as those made by the Smart Switch feature) can cause a brief BLE transmission gap of up to a few hundred milliseconds. During this gap, a connected GaggiMate or CaffeRitmo may miss one or two weight updates. For routine BLE scale use this is not noticeable, but if you use the Smart Switch feature alongside a BLE-dependent auto-stop system (GaggiMate, CaffeRitmo), the BLE freeze at the moment of the smart switch trigger can cause the external system to lose flow data and fail to auto-stop correctly. **Do not use the Smart Switch and a BLE-based auto-stop system simultaneously.**
 
 ---
 
-## 14. Troubleshooting
+## 14. Smart Switch (Shelly Integration)
+
+The Smart Switch feature lets CaffePeso stop your espresso machine automatically by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or 3-way solenoid valve. No wiring changes to the machine are needed beyond adding the Shelly in series.
+
+### 14.1 Hardware Setup
+
+1. Fit a Shelly relay (e.g. Shelly Plus 1) inline with the machine's pump power or 3-way solenoid valve so that switching the relay off stops the pump.
+2. Connect the Shelly to your 2.4 GHz Wi-Fi network and note its IP address.
+3. Ensure CaffePeso is on the same Wi-Fi network.
+
+### 14.2 Configuration
+
+In the CaffePeso web interface, open **Settings → Smart Switch**:
+
+| Setting | Description |
+|---|---|
+| **Enable Smart Switch** | Turns the feature on or off. |
+| **Shelly IP Address** | The local IP address of the Shelly relay (e.g. `192.168.1.42`). |
+
+Save settings. CaffePeso will send a relay-ON command at boot and each time the scale is armed, to ensure a known state.
+
+### 14.3 How It Works
+
+When armed with a dose weight and target ratio configured, CaffePeso monitors weight and flow rate during the shot and sends a relay-OFF command to the Shelly when the projected final yield is about to reach the target. The trigger formula is:
+
+```
+trigger_weight = target_weight − (flow_rate × after_stop_time)
+```
+
+**After-Stop Time (AST)** is the number of seconds of continued drip after the pump stops. CaffePeso learns this automatically from each shot and stores one AST value per dose/ratio combination.
+
+- **First shot**: Uses a conservative default of 1.5 s. This intentionally fires slightly early to ensure there is measurable weight gain for the learning system to work with.
+- **Subsequent shots**: AST is refined using an exponential weighted moving average (75% old, 25% new) so accuracy improves gradually.
+
+### 14.4 Relay Safety Interlock
+
+After the relay turns off, CaffePeso enters a **post-trigger hold** state:
+
+- The relay stays off even if the scale is re-armed, until you explicitly release the hold.
+- To release: perform a **hold-tare** (press and hold the tare button for ~2 s) while the timer is stopped.
+- This prevents the pump accidentally restarting mid-session if the scale auto-arms.
+
+### 14.5 Resetting the Learning Data
+
+If your grind, dose, or machine changes significantly, reset the learned AST data so CaffePeso starts fresh:
+
+In the web interface: **Settings → Smart Switch → Reset Learning Data**.
+
+### 14.6 Wi-Fi / BLE Limitation
+
+The smart switch HTTP call and BLE scale output share the same radio. At the moment CaffePeso sends the relay-OFF command, BLE weight transmission pauses for up to a few hundred milliseconds. This means:
+
+- **Do not use the Smart Switch and a BLE-based auto-stop system (GaggiMate, CaffeRitmo) at the same time.** The BLE freeze will cause the external system to lose flow data at the critical moment.
+- Wi-Fi power-save mode is always active (required for battery life). This adds 4–400 ms of latency to each HTTP call. The predictive AST algorithm compensates for typical latency, but extreme latency spikes (>400 ms) may cause the relay to fire slightly late.
+
+---
+
+## 15. Troubleshooting
 
 ### Scale reads incorrectly after setup
 
