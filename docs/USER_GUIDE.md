@@ -670,13 +670,25 @@ CaffePeso also implements the WeighMyBru² command characteristic, which handles
 
 The Smart Switch feature lets CaffePeso stop your espresso machine automatically by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or 3-way solenoid valve. No wiring changes to the machine are needed beyond adding the Shelly in series.
 
-### 14.1 Hardware Setup
+### 14.1 Compatibility
 
-1. Fit a Shelly relay (e.g. Shelly Plus 1) inline with the machine's pump power or 3-way solenoid valve so that switching the relay off stops the pump.
-2. Connect the Shelly to your 2.4 GHz Wi-Fi network and note its IP address.
-3. Ensure CaffePeso is on the same Wi-Fi network.
+CaffePeso uses the **Shelly Gen2/Gen3 RPC API**. Compatible devices include:
 
-### 14.2 Configuration
+- Shelly Plus 1, Plus 1 Mini
+- Shelly Pro 1, Pro 1 PM
+- Shelly 1 Gen3, 1 Mini Gen3
+
+**Gen1 Shelly devices (original Shelly 1, Shelly 1PM) are not compatible** — they use a different HTTP API and will not respond to CaffePeso's commands.
+
+### 14.2 Hardware Setup
+
+1. Fit a Shelly relay inline with the machine's pump power or 3-way solenoid valve so that switching the relay off stops the pump.
+2. Set up the Shelly using the Shelly app — connect it to your 2.4 GHz Wi-Fi network.
+3. Find the Shelly's IP address. In the Shelly app, open the device and look under **Settings → Device Information → IP Address**. Alternatively, check your router's connected devices list.
+4. **Recommended:** Reserve the Shelly's IP address in your router's DHCP settings so it never changes. If the IP changes, CaffePeso will lose contact with it.
+5. Ensure CaffePeso is on the same Wi-Fi network.
+
+### 14.3 Configuration
 
 In the CaffePeso web interface, open **Settings → Smart Switch**:
 
@@ -687,7 +699,7 @@ In the CaffePeso web interface, open **Settings → Smart Switch**:
 
 Save settings. CaffePeso will send a relay-ON command at boot and each time the scale is armed, to ensure a known state.
 
-### 14.3 How It Works
+### 14.4 How It Works
 
 When armed with a dose weight and target ratio configured, CaffePeso monitors weight and flow rate during the shot and sends a relay-OFF command to the Shelly when the projected final yield is about to reach the target. The trigger formula is:
 
@@ -700,7 +712,7 @@ trigger_weight = target_weight − (flow_rate × after_stop_time)
 - **First shot**: Uses a conservative default of 1.5 s. This intentionally fires slightly early to ensure there is measurable weight gain for the learning system to work with.
 - **Subsequent shots**: AST is refined using an exponential weighted moving average (75% old, 25% new) so accuracy improves gradually.
 
-### 14.4 Relay Safety Interlock
+### 14.5 Relay Safety Interlock
 
 After the relay turns off, CaffePeso enters a **post-trigger hold** state:
 
@@ -708,13 +720,13 @@ After the relay turns off, CaffePeso enters a **post-trigger hold** state:
 - To release: perform a **hold-tare** (press and hold the tare button for ~2 s) while the timer is stopped.
 - This prevents the pump accidentally restarting mid-session if the scale auto-arms.
 
-### 14.5 Resetting the Learning Data
+### 14.6 Resetting the Learning Data
 
 If your grind, dose, or machine changes significantly, reset the learned AST data so CaffePeso starts fresh:
 
 In the web interface: **Settings → Smart Switch → Reset Learning Data**.
 
-### 14.6 Wi-Fi / BLE Limitation
+### 14.7 Wi-Fi / BLE Limitation
 
 The smart switch HTTP call and BLE scale output share the same radio. At the moment CaffePeso sends the relay-OFF command, BLE weight transmission pauses for up to a few hundred milliseconds. This means:
 
