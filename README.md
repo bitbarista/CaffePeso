@@ -73,6 +73,8 @@ Once flow has been active for at least 8 seconds, the timer stops automatically 
 
 ### 🔌 Smart Switch (Shelly Integration)
 
+> **⚠️ Safety notice:** This feature requires fitting a Shelly relay into your machine's mains electrical circuit. This work involves mains voltage and must only be carried out by a competent person who understands the risks. The authors of this project accept no liability for damage, injury, or death arising from electrical work carried out in connection with this feature. **This is entirely optional — CaffePeso is fully functional without it.**
+
 CaffePeso can automatically stop your espresso machine by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or solenoid valve. No modification to the machine is needed beyond adding the Shelly in series.
 
 When armed with a dose and target ratio, CaffePeso monitors weight and flow rate during the shot and fires a relay-off command when the projected final yield is about to hit the target:
@@ -174,6 +176,12 @@ Additions in this fork:
 - Smart switch: predictive Shelly relay control to stop the machine at target yield, with per-dose AST learning and post-trigger safety interlock
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+---
+
+## ⚖️ Disclaimer
+
+This project is provided "AS IS" without warranty of any kind. The author makes no representations about suitability, reliability, or fitness for any purpose. Your use is entirely at your own risk. The author shall not be liable for any damages arising from use, including but not limited to direct, indirect, incidental, or consequential damages.
 
 ---
 
