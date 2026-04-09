@@ -129,9 +129,11 @@ jobs:
         if [[ "$BOARD_SUFFIX" == "supermini" ]]; then
           BOARD_NAME="CaffePeso - ESP32-S3 Supermini"
           CHIP_FAMILY="ESP32-S3"
+          LITTLEFS_OFFSET=3211264   # 0x310000 — partitions-supermini.csv
         else
-          BOARD_NAME="CaffePeso - XIAO ESP32S3"  
+          BOARD_NAME="CaffePeso - XIAO ESP32S3"
           CHIP_FAMILY="ESP32-S3"
+          LITTLEFS_OFFSET=6356992   # 0x610000 — partitions-xiao.csv
         fi
         
         # Create ESP32 Web Tools manifest
@@ -160,7 +162,7 @@ jobs:
                 },
                 {
                   "path": "caffepeso-${BOARD_SUFFIX}-v${VERSION}-littlefs.bin",
-                  "offset": 3211264
+                  "offset": $LITTLEFS_OFFSET
                 }
               ]
             }
@@ -276,8 +278,10 @@ jobs:
         for BOARD in supermini xiao; do
           if [[ "$BOARD" == "supermini" ]]; then
             BOARD_NAME="CaffePeso - ESP32-S3 Supermini"
+            LITTLEFS_OFFSET=3211264   # 0x310000 — partitions-supermini.csv
           else
             BOARD_NAME="CaffePeso - XIAO ESP32S3"
+            LITTLEFS_OFFSET=6356992   # 0x610000 — partitions-xiao.csv
           fi
 
           # Copy binaries into website so they're served from GitHub Pages (same origin = no CORS)
@@ -315,7 +319,7 @@ jobs:
                 },
                 {
                   "path": "caffepeso-${BOARD}-v${VERSION}-littlefs.bin",
-                  "offset": 3211264
+                  "offset": ${LITTLEFS_OFFSET}
                 }
               ]
             }
