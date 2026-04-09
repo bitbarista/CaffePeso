@@ -94,8 +94,9 @@
   </style>
   <style>
     #toast { transition: opacity 0.3s ease; }
-    #shotTable th, #shotTable td { text-align: right; padding: 4px 6px; }
-    #shotTable th:first-child, #shotTable td:first-child { text-align: left; }
+    #shotTable th, #shotTable td { text-align: right; padding: 6px 10px; white-space: nowrap; }
+    #shotTable th:first-child, #shotTable td:first-child,
+    #shotTable th:nth-child(2), #shotTable td:nth-child(2) { text-align: left; }
   </style>
 </head>
 <body class="bg-black-background text-white font-sans min-h-screen">
@@ -117,6 +118,7 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg" href="/"><i class="fa fa-tachometer mr-2" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/calibration.html"><i class="fa fa-balance-scale mr-2" style="color: rgb(71, 168, 100);"></i>Calibration</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/settings.html"><i class="fa fa-cogs mr-2" style="color: rgb(71, 168, 100);"></i>Settings</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/history.html"><i class="fa fa-coffee mr-2" style="color: rgb(71, 168, 100);"></i>Shot Log</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/updates.html"><i class="fa fa-upload mr-2" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
@@ -130,6 +132,7 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg" href="/"><i class="fa fa-tachometer mr-2" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/calibration.html"><i class="fa fa-balance-scale mr-2" style="color: rgb(71, 168, 100);"></i>Calibration</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/settings.html"><i class="fa fa-cogs mr-2" style="color: rgb(71, 168, 100);"></i>Settings</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/history.html"><i class="fa fa-coffee mr-2" style="color: rgb(71, 168, 100);"></i>Shot Log</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/updates.html"><i class="fa fa-upload mr-2" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
@@ -246,18 +249,19 @@
       </button>
     </div>
 
-    <!-- Shot History -->
+    <!-- Last Shot -->
     <div class="mt-4">
       <div class="flex justify-between items-center mb-2">
-        <h2 class="text-sm font-semibold text-gray-300">Shot History</h2>
-        <button onclick="clearShotHistory()" class="text-xs text-gray-500 hover:text-red-400">Clear</button>
+        <h2 class="text-sm font-semibold text-gray-300">Last Shot</h2>
+        <a href="/history.html" class="text-xs text-gray-500 hover:text-gray-300">View Shot Log &rsaquo;</a>
       </div>
       <div id="shotHistoryContainer">
         <p class="text-xs text-gray-500 text-center" id="noShotsMsg">No shots recorded yet</p>
-        <table id="shotTable" class="w-full text-xs" style="display:none; border-collapse:collapse;">
+        <table id="shotTable" class="w-full text-sm" style="display:none; border-collapse:collapse;">
           <thead>
             <tr class="text-gray-400 border-b border-gray-700">
               <th class="py-1 text-left">#</th>
+              <th class="py-1 text-left">When</th>
               <th class="py-1 text-right">Dose</th>
               <th class="py-1 text-right">Yield</th>
               <th class="py-1 text-right">Time</th>
@@ -847,7 +851,7 @@
   updateWeight();
 
   // Shot history
-  let lastShotCount = 0;
+  let lastShotNum = -1;
 
   function renderShotHistory(shots) {
     const table   = document.getElementById('shotTable');
@@ -860,16 +864,20 @@
     }
     noMsg.style.display = 'none';
     table.style.display = 'table';
-    tbody.innerHTML = shots.map(s =>
-      `<tr class="border-b border-gray-800">
+    const s = shots[0]; // most recent only
+    const d = s.ts ? new Date(s.ts * 1000) : null;
+    const when = d
+      ? `${d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'2-digit'})}<br>${d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`
+      : '—';
+    tbody.innerHTML = `<tr class="border-b border-gray-800">
          <td class="py-1 text-gray-400">#${s.shot}</td>
+         <td class="date-col text-gray-300 leading-tight">${when}</td>
          <td class="py-1 text-right">${s.dose}g</td>
          <td class="py-1 text-right">${s.yield}g</td>
          <td class="py-1 text-right">${s.time}s</td>
          <td class="py-1 text-right">1:${s.ratio}</td>
-       </tr>`
-    ).join('');
-    lastShotCount = shots.length;
+       </tr>`;
+    lastShotNum = s.shot;
   }
 
   function loadShotHistory() {
@@ -890,7 +898,7 @@
   // Patch updateWeight to also check for timer stop (shot saved)
   setInterval(() => {
     fetch('/api/shot-history').then(r => r.json()).then(shots => {
-      if (shots.length !== lastShotCount) renderShotHistory(shots);
+      if (shots && shots.length > 0 && shots[0].shot !== lastShotNum) renderShotHistory(shots);
     }).catch(() => {});
   }, 5000); // poll every 5s for new shots
 
