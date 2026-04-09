@@ -160,6 +160,7 @@ const MANIFEST_BASE = 'https://bitbarista.github.io/CaffePeso/releases/latest';
 let currentVersion = null;
 let latestVersion  = null;
 let autoUpdatePollTimer = null;
+let autoUpdatePollFailures = 0;
 
 fetch('/api/dashboard')
   .then(r => r.json())
@@ -248,6 +249,7 @@ function pollAutoProgress() {
   fetch('/api/ota/auto-progress')
     .then(r => r.json())
     .then(data => {
+      autoUpdatePollFailures = 0;
       document.getElementById('autoUpdateMessage').textContent = data.message || '';
 
       if (data.phase === 'firmware') {
@@ -271,7 +273,16 @@ function pollAutoProgress() {
         showAutoError(data.message || 'Update failed.');
       }
     })
-    .catch(() => {}); // device may be briefly unreachable during reboot
+    .catch(() => {
+      autoUpdatePollFailures++;
+      if (autoUpdatePollFailures >= 5) {
+        clearInterval(autoUpdatePollTimer);
+        document.getElementById('autoFwBar').style.width = '100%';
+        document.getElementById('autoFwPct').textContent = '100%';
+        document.getElementById('autoUpdateMessage').textContent = 'Device rebooting. Reconnecting...';
+        setTimeout(waitForReconnectAuto, 2000);
+      }
+    });
 }
 
 function waitForReconnectAuto() {
