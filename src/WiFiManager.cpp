@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
+#include <time.h>
 #include "WebServer.h"  // For web server control
 
 // ESP-IDF includes for advanced WiFi power management (SuperMini antenna fix)
@@ -315,7 +316,11 @@ void setupWiFiForced() {
             
             // Setup mDNS for STA mode
             setupmDNS();
-            
+
+            // Sync time via NTP (pool.ntp.org) for shot timestamps
+            configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+            Serial.println("NTP sync initiated");
+
             return; // Exit early - we're connected via STA, no need for AP
         } else {
             Serial.println("\nSTA CONNECTION FAILED");

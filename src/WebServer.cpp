@@ -5,6 +5,9 @@
 #include "Scale.h"
 #include "WiFiManager.h"
 #include <Preferences.h>
+#include <time.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include "FlowRate.h"
 #include "Calibration.h"
 #include "BluetoothScale.h"
@@ -17,6 +20,137 @@ Preferences preferences;
 // Deferred restart — set after OTA completes, actioned in loop()
 static volatile bool restartPending = false;
 static unsigned long restartTime = 0;
+
+// === Auto OTA (download + flash from GitHub Pages) ===
+#define AUTO_OTA_BASE_URL "https://bitbarista.github.io/CaffePeso/releases/latest"
+#ifdef BOARD_SUPERMINI
+  #define AUTO_OTA_BOARD "supermini"
+#else
+  #define AUTO_OTA_BOARD "xiao"
+#endif
+
+enum AutoOtaPhase { AUTO_OTA_IDLE, AUTO_OTA_CHECKING, AUTO_OTA_FIRMWARE, AUTO_OTA_FILESYSTEM, AUTO_OTA_DONE, AUTO_OTA_ERROR };
+static AutoOtaPhase autoOtaPhase = AUTO_OTA_IDLE;
+static int          autoOtaProgress = 0;
+static String       autoOtaMessage  = "";
+static bool         autoOtaRunning  = false;
+
+static bool streamOtaUpdate(const String& url, int updateType) {
+    WiFiClientSecure sc;
+    sc.setInsecure();
+    HTTPClient http;
+    http.begin(sc, url);
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    http.setTimeout(60000);
+    int code = http.GET();
+    if (code != 200) {
+        autoOtaMessage = "Download failed (HTTP " + String(code) + ")";
+        http.end();
+        return false;
+    }
+    int total = http.getSize();
+    if (total <= 0) {
+        autoOtaMessage = "Download failed (unknown size)";
+        http.end();
+        return false;
+    }
+    if (!Update.begin(total, updateType)) {
+        autoOtaMessage = "Flash init failed";
+        http.end();
+        return false;
+    }
+    WiFiClient* stream = http.getStreamPtr();
+    uint8_t buf[1024];
+    int written = 0;
+    unsigned long lastActivity = millis();
+    while (written < total) {
+        int avail = stream->available();
+        if (avail > 0) {
+            int n = stream->readBytes(buf, min(avail, (int)sizeof(buf)));
+            if (Update.write(buf, n) != (size_t)n) {
+                autoOtaMessage = "Flash write error";
+                http.end();
+                return false;
+            }
+            written += n;
+            autoOtaProgress = (written * 100) / total;
+            lastActivity = millis();
+        } else if (millis() - lastActivity > 15000) {
+            autoOtaMessage = "Download timed out";
+            http.end();
+            return false;
+        } else {
+            delay(1);
+        }
+    }
+    http.end();
+    if (!Update.end(true)) {
+        autoOtaMessage = "Flash verify failed";
+        return false;
+    }
+    return true;
+}
+
+static void autoOtaTask(void* param) {
+    autoOtaPhase    = AUTO_OTA_CHECKING;
+    autoOtaProgress = 0;
+    autoOtaMessage  = "Connecting to update server...";
+
+    // Derive filenames from the version embedded in the URL query param
+    // The version string is passed via param (heap-allocated, we own it)
+    String version = param ? String((char*)param) : "";
+    free(param);
+
+    if (version.isEmpty()) {
+        autoOtaPhase   = AUTO_OTA_ERROR;
+        autoOtaMessage = "No version specified";
+        autoOtaRunning = false;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    String base  = String(AUTO_OTA_BASE_URL);
+    String board = AUTO_OTA_BOARD;
+    String fwUrl = base + "/caffepeso-" + board + "-v" + version + ".bin";
+    String fsUrl = base + "/caffepeso-" + board + "-v" + version + "-littlefs.bin";
+
+    Serial.println("Auto OTA firmware URL: " + fwUrl);
+    Serial.println("Auto OTA filesystem URL: " + fsUrl);
+
+    // Flash firmware
+    autoOtaPhase    = AUTO_OTA_FIRMWARE;
+    autoOtaProgress = 0;
+    autoOtaMessage  = "Downloading firmware...";
+    if (!streamOtaUpdate(fwUrl, U_FLASH)) {
+        autoOtaPhase   = AUTO_OTA_ERROR;
+        autoOtaRunning = false;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    // Flash filesystem
+    autoOtaPhase    = AUTO_OTA_FILESYSTEM;
+    autoOtaProgress = 0;
+    autoOtaMessage  = "Downloading web interface...";
+    if (!streamOtaUpdate(fsUrl, U_SPIFFS)) {
+        autoOtaPhase   = AUTO_OTA_ERROR;
+        autoOtaRunning = false;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    autoOtaPhase    = AUTO_OTA_DONE;
+    autoOtaProgress = 100;
+    autoOtaMessage  = "Update complete. Rebooting...";
+    Serial.println("Auto OTA complete — scheduling reboot");
+
+    delay(1000);
+    restartPending = true;
+    restartTime    = millis();
+
+    autoOtaRunning = false;
+    vTaskDelete(NULL);
+}
 
 // Cache for display settings to avoid repeated slow EEPROM reads
 static int cachedDecimals = -1; // -1 indicates not cached yet
@@ -254,6 +388,8 @@ void saveShotToHistory(float dose, float yield, float timeSec, float ratio) {
     snprintf(key, sizeof(key), "t%d", shotHead); p.putFloat(key, timeSec);
     snprintf(key, sizeof(key), "r%d", shotHead); p.putFloat(key, ratio);
     snprintf(key, sizeof(key), "n%d", shotHead); p.putULong(key, shotCounter);
+    uint32_t ts = (uint32_t)time(nullptr);
+    snprintf(key, sizeof(key), "s%d", shotHead); p.putULong(key, ts);
     shotHead = (shotHead + 1) % 10;
     if (shotCount < 10) shotCount++;
     p.putUChar("head",    shotHead);
@@ -277,12 +413,14 @@ String getShotHistoryJSON() {
         snprintf(key, sizeof(key), "t%d", idx); float timeSec = p.getFloat(key, 0.0f);
         snprintf(key, sizeof(key), "r%d", idx); float ratio   = p.getFloat(key, 0.0f);
         snprintf(key, sizeof(key), "n%d", idx); unsigned long num = p.getULong(key, 0);
+        snprintf(key, sizeof(key), "s%d", idx); uint32_t ts = (uint32_t)p.getULong(key, 0);
         if (i > 0) json += ",";
         json += "{\"shot\":" + String(num) +
                 ",\"dose\":"  + String(dose,    1) +
                 ",\"yield\":" + String(yield,   1) +
                 ",\"time\":"  + String(timeSec, 1) +
-                ",\"ratio\":" + String(ratio,   2) + "}";
+                ",\"ratio\":" + String(ratio,   2) +
+                ",\"ts\":"    + String(ts) + "}";
     }
     p.end();
     json += "]";
@@ -1045,6 +1183,38 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "text/plain", "Shot history cleared.");
   });
 
+  server.on("/api/shot-history/csv", HTTP_GET, [](AsyncWebServerRequest *request) {
+    loadShotHistory();
+    Preferences p;
+    String csv = "Shot,Date,Time,Dose (g),Yield (g),Duration (s),Ratio\r\n";
+    if (p.begin("shots", true)) {
+        char key[4];
+        for (int i = 0; i < shotCount; i++) {
+            uint8_t idx = (shotHead - 1 - i + 10) % 10;
+            snprintf(key, sizeof(key), "d%d", idx); float dose    = p.getFloat(key, 0.0f);
+            snprintf(key, sizeof(key), "y%d", idx); float yield   = p.getFloat(key, 0.0f);
+            snprintf(key, sizeof(key), "t%d", idx); float timeSec = p.getFloat(key, 0.0f);
+            snprintf(key, sizeof(key), "r%d", idx); float ratio   = p.getFloat(key, 0.0f);
+            snprintf(key, sizeof(key), "n%d", idx); unsigned long num = p.getULong(key, 0);
+            snprintf(key, sizeof(key), "s%d", idx); uint32_t ts = (uint32_t)p.getULong(key, 0);
+            char dateBuf[11] = "", timeBuf[9] = "";
+            if (ts > 0) {
+                time_t t = (time_t)ts;
+                struct tm* tm_info = localtime(&t);
+                strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d", tm_info);
+                strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", tm_info);
+            }
+            csv += String(num) + "," + dateBuf + "," + timeBuf + "," +
+                   String(dose, 1) + "," + String(yield, 1) + "," +
+                   String(timeSec, 1) + ",1:" + String(ratio, 2) + "\r\n";
+        }
+        p.end();
+    }
+    AsyncWebServerResponse* response = request->beginResponse(200, "text/csv", csv);
+    response->addHeader("Content-Disposition", "attachment; filename=\"caffepeso_shots.csv\"");
+    request->send(response);
+  });
+
   // Smart switch settings
   server.on("/api/smart-switch-settings", HTTP_GET, [&smartSwitch, &display](AsyncWebServerRequest *request) {
     float dose  = display.getDoseWeight();
@@ -1151,6 +1321,47 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
         }
       }
     });
+
+  // Auto OTA — start download+flash task; version passed as query param ?version=X.Y.Z
+  server.on("/api/ota/auto", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (autoOtaRunning) {
+      request->send(409, "application/json", "{\"error\":\"Update already in progress\"}");
+      return;
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+      request->send(400, "application/json", "{\"error\":\"WiFi not connected. Cannot reach update server.\"}");
+      return;
+    }
+    if (!request->hasParam("version", true)) {
+      request->send(400, "application/json", "{\"error\":\"Missing version parameter\"}");
+      return;
+    }
+    String version = request->getParam("version", true)->value();
+    // Heap-allocate so the task owns the string after handler returns
+    char* versionBuf = (char*)malloc(version.length() + 1);
+    strcpy(versionBuf, version.c_str());
+    autoOtaRunning = true;
+    autoOtaPhase   = AUTO_OTA_IDLE;
+    xTaskCreate(autoOtaTask, "autoOTA", 12288, versionBuf, 1, NULL);
+    request->send(200, "application/json", "{\"status\":\"started\"}");
+  });
+
+  // Auto OTA progress polling
+  server.on("/api/ota/auto-progress", HTTP_GET, [](AsyncWebServerRequest *request) {
+    const char* phase = "idle";
+    switch (autoOtaPhase) {
+      case AUTO_OTA_CHECKING:   phase = "checking";   break;
+      case AUTO_OTA_FIRMWARE:   phase = "firmware";   break;
+      case AUTO_OTA_FILESYSTEM: phase = "filesystem"; break;
+      case AUTO_OTA_DONE:       phase = "done";       break;
+      case AUTO_OTA_ERROR:      phase = "error";       break;
+      default: break;
+    }
+    String json = "{\"phase\":\"" + String(phase) + "\",";
+    json += "\"progress\":" + String(autoOtaProgress) + ",";
+    json += "\"message\":\"" + autoOtaMessage + "\"}";
+    request->send(200, "application/json", json);
+  });
 
   server.begin();
   Serial.println("Web server started - accessible via WiFi");

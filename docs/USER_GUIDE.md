@@ -668,6 +668,8 @@ CaffePeso also implements the WeighMyBru² command characteristic, which handles
 
 ## 14. Smart Switch (Shelly Integration)
 
+> **⚠️ Safety notice:** This feature requires fitting a Shelly relay into your machine's mains electrical circuit. This work involves mains voltage and must only be carried out by a competent person who understands the risks. The authors of this project accept no liability for damage, injury, or death arising from electrical work carried out in connection with this feature. **This is entirely optional — CaffePeso is fully functional without it.**
+
 The Smart Switch feature lets CaffePeso stop your espresso machine automatically by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or 3-way solenoid valve. No wiring changes to the machine are needed beyond adding the Shelly in series.
 
 ### 14.1 Compatibility
