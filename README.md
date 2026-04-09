@@ -43,6 +43,9 @@ It is designed to work alongside [GaggiMate](https://github.com/jniebuhr/gaggima
     <td align="center"><img src="docs/assets/screenshot_calibration.png" width="220"/><br/><sub>Calibration</sub></td>
     <td align="center"><img src="docs/assets/screenshot_updates.png" width="220"/><br/><sub>Updates</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/assets/screenshot_shotlog.png" width="220"/><br/><sub>Shot Log</sub></td>
+  </tr>
 </table>
 
 ---
@@ -72,6 +75,8 @@ A full dashboard hosted directly on the ESP32-S3 — calibration, settings, shot
 Once flow has been active for at least 8 seconds, the timer stops automatically when flow drops below 0.5 g/s and remains there for 2 seconds. No manual stop needed at the end of a shot.
 
 ### 🔌 Smart Switch (Shelly Integration)
+
+> **⚠️ Safety notice:** This feature requires fitting a Shelly relay into your machine's mains electrical circuit. This work involves mains voltage and must only be carried out by a competent person who understands the risks. The authors of this project accept no liability for damage, injury, or death arising from electrical work carried out in connection with this feature. **This is entirely optional — CaffePeso is fully functional without it.**
 
 CaffePeso can automatically stop your espresso machine by controlling a [Shelly](https://www.shelly.com) smart relay fitted inline with the pump or solenoid valve. No modification to the machine is needed beyond adding the Shelly in series.
 
@@ -174,6 +179,12 @@ Additions in this fork:
 - Smart switch: predictive Shelly relay control to stop the machine at target yield, with per-dose AST learning and post-trigger safety interlock
 
 This derivative is also released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+---
+
+## ⚖️ Disclaimer
+
+This project is provided "AS IS" without warranty of any kind. The author makes no representations about suitability, reliability, or fitness for any purpose. Your use is entirely at your own risk. The author shall not be liable for any damages arising from use, including but not limited to direct, indirect, incidental, or consequential damages.
 
 ---
 
