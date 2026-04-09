@@ -16,5 +16,6 @@ void startWebServer();
 void stopWebServer();
 void checkPendingWiFiDisable();   // Call from loop() for OTA restart
 void checkPendingShotSave(Display &display, Scale &scale); // Detect timer stop and save shot
+void checkPendingBleDeinit(BluetoothScale &ble); // Call from loop() — stops BLE safely before OTA download
 
 #endif

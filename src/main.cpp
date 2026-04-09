@@ -265,6 +265,7 @@ void loop() {
   maintainWiFi();
   checkPendingWiFiDisable();
   checkPendingShotSave(oledDisplay, scale);
+  checkPendingBleDeinit(bluetoothScale);
   
   // Update Bluetooth less frequently to reduce BLE interference and power usage
   if (millis() - lastBLEUpdate >= 100) { // Reduced from 50ms to 100ms (10Hz from 20Hz)

@@ -8,6 +8,7 @@
 #include <time.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include "OtaDownloader.h"
 #include "FlowRate.h"
 #include "Calibration.h"
 #include "BluetoothScale.h"
@@ -30,66 +31,13 @@ static unsigned long restartTime = 0;
 #endif
 
 enum AutoOtaPhase { AUTO_OTA_IDLE, AUTO_OTA_CHECKING, AUTO_OTA_FIRMWARE, AUTO_OTA_FILESYSTEM, AUTO_OTA_DONE, AUTO_OTA_ERROR };
-static AutoOtaPhase autoOtaPhase = AUTO_OTA_IDLE;
-static int          autoOtaProgress = 0;
-static String       autoOtaMessage  = "";
-static bool         autoOtaRunning  = false;
+static AutoOtaPhase    autoOtaPhase      = AUTO_OTA_IDLE;
+static int             autoOtaProgress   = 0;
+static String          autoOtaMessage    = "";
+static bool            autoOtaRunning    = false;
+static volatile bool   autoOtaBleDeinitRequested = false;
+static SemaphoreHandle_t autoOtaBleDeinitDone = nullptr;
 
-static bool streamOtaUpdate(const String& url, int updateType) {
-    WiFiClientSecure sc;
-    sc.setInsecure();
-    HTTPClient http;
-    http.begin(sc, url);
-    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    http.setTimeout(60000);
-    int code = http.GET();
-    if (code != 200) {
-        autoOtaMessage = "Download failed (HTTP " + String(code) + ")";
-        http.end();
-        return false;
-    }
-    int total = http.getSize();
-    if (total <= 0) {
-        autoOtaMessage = "Download failed (unknown size)";
-        http.end();
-        return false;
-    }
-    if (!Update.begin(total, updateType)) {
-        autoOtaMessage = "Flash init failed";
-        http.end();
-        return false;
-    }
-    WiFiClient* stream = http.getStreamPtr();
-    uint8_t buf[1024];
-    int written = 0;
-    unsigned long lastActivity = millis();
-    while (written < total) {
-        int avail = stream->available();
-        if (avail > 0) {
-            int n = stream->readBytes(buf, min(avail, (int)sizeof(buf)));
-            if (Update.write(buf, n) != (size_t)n) {
-                autoOtaMessage = "Flash write error";
-                http.end();
-                return false;
-            }
-            written += n;
-            autoOtaProgress = (written * 100) / total;
-            lastActivity = millis();
-        } else if (millis() - lastActivity > 15000) {
-            autoOtaMessage = "Download timed out";
-            http.end();
-            return false;
-        } else {
-            delay(1);
-        }
-    }
-    http.end();
-    if (!Update.end(true)) {
-        autoOtaMessage = "Flash verify failed";
-        return false;
-    }
-    return true;
-}
 
 static void autoOtaTask(void* param) {
     autoOtaPhase    = AUTO_OTA_CHECKING;
@@ -117,11 +65,20 @@ static void autoOtaTask(void* param) {
     Serial.println("Auto OTA firmware URL: " + fwUrl);
     Serial.println("Auto OTA filesystem URL: " + fsUrl);
 
+    // Request BLE shutdown from the main loop (safe context) before download
+    autoOtaBleDeinitDone = xSemaphoreCreateBinary();
+    autoOtaBleDeinitRequested = true;
+    Serial.printf("Auto OTA: waiting for BLE shutdown (heap=%u)...\n", ESP.getFreeHeap());
+    xSemaphoreTake(autoOtaBleDeinitDone, pdMS_TO_TICKS(5000)); // wait up to 5s
+    vSemaphoreDelete(autoOtaBleDeinitDone);
+    autoOtaBleDeinitDone = nullptr;
+    Serial.printf("Auto OTA: BLE shutdown complete (heap=%u)\n", ESP.getFreeHeap());
+
     // Flash firmware
     autoOtaPhase    = AUTO_OTA_FIRMWARE;
     autoOtaProgress = 0;
     autoOtaMessage  = "Downloading firmware...";
-    if (!streamOtaUpdate(fwUrl, U_FLASH)) {
+    if (!otaStreamUpdate(fwUrl, U_FLASH, &autoOtaProgress, &autoOtaMessage)) {
         autoOtaPhase   = AUTO_OTA_ERROR;
         autoOtaRunning = false;
         vTaskDelete(NULL);
@@ -132,7 +89,7 @@ static void autoOtaTask(void* param) {
     autoOtaPhase    = AUTO_OTA_FILESYSTEM;
     autoOtaProgress = 0;
     autoOtaMessage  = "Downloading web interface...";
-    if (!streamOtaUpdate(fsUrl, U_SPIFFS)) {
+    if (!otaStreamUpdate(fsUrl, U_SPIFFS, &autoOtaProgress, &autoOtaMessage)) {
         autoOtaPhase   = AUTO_OTA_ERROR;
         autoOtaRunning = false;
         vTaskDelete(NULL);
@@ -1342,7 +1299,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     strcpy(versionBuf, version.c_str());
     autoOtaRunning = true;
     autoOtaPhase   = AUTO_OTA_IDLE;
-    xTaskCreate(autoOtaTask, "autoOTA", 12288, versionBuf, 1, NULL);
+    xTaskCreate(autoOtaTask, "autoOTA", 24576, versionBuf, 1, NULL);
     request->send(200, "application/json", "{\"status\":\"started\"}");
   });
 
@@ -1383,5 +1340,15 @@ void checkPendingWiFiDisable() {
     restartPending = false;
     Serial.println("OTA complete — restarting...");
     ESP.restart();
+  }
+}
+
+void checkPendingBleDeinit(BluetoothScale &ble) {
+  if (autoOtaBleDeinitRequested) {
+    autoOtaBleDeinitRequested = false;
+    Serial.println("Auto OTA: stopping BLE from main loop...");
+    ble.end();
+    Serial.printf("Auto OTA: BLE stopped (heap=%u)\n", ESP.getFreeHeap());
+    if (autoOtaBleDeinitDone) xSemaphoreGive(autoOtaBleDeinitDone);
   }
 }
