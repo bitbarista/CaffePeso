@@ -359,7 +359,7 @@ All persistent settings are configured here. Settings are grouped into sections 
 
 ### 6.4 Updates
 
-Shows the current firmware version, board, and build date. Provides Over-The-Air (OTA) firmware upload. See [Section 11 — Firmware Updates](#11-firmware-updates).
+Shows the current firmware version, board, and build date. Provides one-click update from GitHub and manual OTA firmware upload. See [Section 11 — Firmware Updates](#11-firmware-updates).
 
 ---
 
@@ -589,20 +589,32 @@ The correction factor is applied and stored. Future readings use this correction
 
 ## 11. Firmware Updates
 
-### 11.1 Over-The-Air (OTA) Update
+### 11.1 Update from GitHub (Recommended)
 
-OTA updates allow you to update the firmware without USB access.
+The easiest way to update. CaffePeso can download and install the latest release directly from GitHub — no files to download manually, no USB required.
 
-1. Obtain a `.bin` firmware file (from a PlatformIO build or a release).
+1. Ensure the device is connected to Wi-Fi (STA mode, not AP-only).
 2. Navigate to **Updates** in the web interface.
-3. Click **Choose File** and select the `.bin` file.
-4. Click **Upload Firmware**.
-5. A progress bar shows upload progress.
-6. The device reboots automatically when complete. The page polls for reconnection and confirms the new version.
+3. Click **Check for Updates**. The device fetches the latest release manifest from GitHub and compares it to the running version.
+4. If an update is available, click **Update from GitHub**.
+5. Two progress bars show firmware and web interface download progress separately.
+6. The device reboots automatically when both are complete. The page polls for reconnection and confirms the new version.
 
-> **Important:** Do not close the browser tab or power off the device during upload.
+> **Important:** Do not close the browser tab or power off the device during the update. The download typically takes 20–40 seconds depending on your connection.
 
-### 11.2 Web-Based Flash (Full Reflash)
+### 11.2 Manual OTA Update
+
+If you have a specific `.bin` file (e.g. a development build) you can upload it directly.
+
+1. Navigate to **Updates** in the web interface.
+2. Click **Choose File** and select the `.bin` firmware file.
+3. Click **Upload Firmware**.
+4. A progress bar shows upload progress.
+5. The device reboots automatically when complete.
+
+> **Note:** Manual upload only replaces the firmware binary. If the web interface files also need updating, use the GitHub update method or a full reflash.
+
+### 11.3 Web-Based Flash (Full Reflash)
 
 For a complete reinstall of both firmware and filesystem (web interface files), use the [flash page](https://bitbarista.github.io/CaffePeso/flash.html) — requires a USB connection to a computer running Chrome, Edge, or Opera.
 
