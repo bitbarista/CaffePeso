@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaffePeso – Shot Log</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#197C28">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CaffePeso">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="stylesheet" href="/output.css">
+  <script src="/js/alpine.min.js" defer></script>
+  <link rel="stylesheet" href="/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+    .caffepeso-title { font-family: 'Playfair Display', serif; font-size: clamp(1rem, 2.5vmin, 1.8rem); font-weight: 700; font-style: italic; color: #f5e9dc; text-decoration: none; }
+    html, body { overflow-x: hidden; max-width: 100%; }
+    @media (max-width: 767px) { .content-wrapper { padding-top: 60px; } }
+    #logTable th, #logTable td { text-align: right; padding: 6px 10px; white-space: nowrap; }
+    #logTable th:first-child, #logTable td:first-child,
+    #logTable th:nth-child(2), #logTable td:nth-child(2) { text-align: left; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      #logTable th { color: #555 !important; border-color: #ccc !important; }
+      #logTable td { color: #111 !important; border-color: #eee !important; }
+    }
+  </style>
+</head>
+<body class="bg-black-background text-white font-sans min-h-screen">
+
+  <!-- Mobile Navigation -->
+  <div @click.away="open = false" class="md:hidden fixed top-0 left-0 right-0 z-50 bg-black-discord no-print" x-data="{ open: false }">
+    <div class="flex justify-between items-center px-4 py-3">
+      <a href="/" class="caffepeso-title">CaffePeso</a>
+      <button class="focus:outline-none" @click="open = !open">
+        <svg fill="currentColor" viewBox="0 0 20 20" class="w-6 h-6">
+          <path x-show="!open" fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+          <path x-show="open" fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+    </div>
+    <nav :class="{'block': open, 'hidden': !open}" class="px-4 pb-4 bg-black-discord">
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/"><i class="fa fa-tachometer mr-2" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/calibration.html"><i class="fa fa-balance-scale mr-2" style="color: rgb(71, 168, 100);"></i>Calibration</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/settings.html"><i class="fa fa-cogs mr-2" style="color: rgb(71, 168, 100);"></i>Settings</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg" href="/history.html"><i class="fa fa-coffee mr-2" style="color: rgb(71, 168, 100);"></i>Shot Log</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/updates.html"><i class="fa fa-upload mr-2" style="color: rgb(71, 168, 100);"></i>Updates</a>
+    </nav>
+  </div>
+
+  <!-- Desktop Navigation -->
+  <div class="hidden md:flex md:flex-col md:w-64 md:fixed md:left-0 md:top-0 md:h-full bg-black-discord no-print">
+    <div class="px-8 py-4">
+      <a href="/" class="caffepeso-title">CaffePeso</a>
+    </div>
+    <nav class="flex-grow px-4 pb-4">
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/"><i class="fa fa-tachometer mr-2" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/calibration.html"><i class="fa fa-balance-scale mr-2" style="color: rgb(71, 168, 100);"></i>Calibration</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/settings.html"><i class="fa fa-cogs mr-2" style="color: rgb(71, 168, 100);"></i>Settings</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg" href="/history.html"><i class="fa fa-coffee mr-2" style="color: rgb(71, 168, 100);"></i>Shot Log</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 hover:bg-black-hover" href="/updates.html"><i class="fa fa-upload mr-2" style="color: rgb(71, 168, 100);"></i>Updates</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex flex-col content-wrapper">
+    <div style="max-width: 700px; padding: 20px; margin: 20px auto 0 auto;" class="md:ml-72 bg-black-select rounded-xl">
+
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-xl font-semibold">Shot Log</h1>
+        <div class="flex gap-3 no-print">
+          <a href="/api/shot-history/csv" class="text-xs px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">
+            <i class="fa fa-download mr-1"></i>Download CSV
+          </a>
+          <button onclick="window.print()" class="text-xs px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">
+            <i class="fa fa-print mr-1"></i>Print
+          </button>
+        </div>
+      </div>
+
+      <p id="noShotsMsg" class="text-xs text-gray-500 text-center py-6" style="display:none;">No shots recorded yet</p>
+      <p id="loadingMsg" class="text-xs text-gray-500 text-center py-6">Loading...</p>
+
+      <div class="overflow-x-auto">
+        <table id="logTable" class="w-full text-sm" style="display:none; border-collapse:collapse;">
+          <thead>
+            <tr class="text-gray-400 border-b border-gray-700">
+              <th class="py-2 text-left">#</th>
+              <th class="py-2 text-left">When</th>
+              <th class="py-2">Dose</th>
+              <th class="py-2">Yield</th>
+              <th class="py-2">Duration</th>
+              <th class="py-2">Ratio</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody"></tbody>
+        </table>
+      </div>
+
+      <p class="text-center text-xs mt-6 text-gray-600">Times shown in your local timezone &bull; Last 10 shots stored</p>
+    </div>
+  </div>
+
+<script>
+  function formatDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '—';
+    return new Date(ts * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  fetch('/api/shot-history')
+    .then(r => r.json())
+    .then(shots => {
+      document.getElementById('loadingMsg').style.display = 'none';
+      if (!shots || shots.length === 0) {
+        document.getElementById('noShotsMsg').style.display = 'block';
+        return;
+      }
+      const tbody = document.getElementById('logTableBody');
+      tbody.innerHTML = shots.map(s => `
+        <tr class="border-b border-gray-800">
+          <td class="py-2 text-gray-400">#${s.shot}</td>
+          <td class="py-2 text-gray-300 text-xs leading-tight">${formatDate(s.ts)}<br>${formatTime(s.ts)}</td>
+          <td class="py-2">${s.dose}g</td>
+          <td class="py-2">${s.yield}g</td>
+          <td class="py-2">${s.time}s</td>
+          <td class="py-2">1:${s.ratio}</td>
+        </tr>`
+      ).join('');
+      document.getElementById('logTable').style.display = 'table';
+    })
+    .catch(() => {
+      document.getElementById('loadingMsg').textContent = 'Failed to load shot history.';
+    });
+</script>
+</body>
+</html>

@@ -43,6 +43,9 @@ It is designed to work alongside [GaggiMate](https://github.com/jniebuhr/gaggima
     <td align="center"><img src="docs/assets/screenshot_calibration.png" width="220"/><br/><sub>Calibration</sub></td>
     <td align="center"><img src="docs/assets/screenshot_updates.png" width="220"/><br/><sub>Updates</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/assets/screenshot_shotlog.png" width="220"/><br/><sub>Shot Log</sub></td>
+  </tr>
 </table>
 
 ---

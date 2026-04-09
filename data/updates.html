@@ -46,6 +46,7 @@
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/"><i class="fa fa-tachometer mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Dashboard</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/calibration.html"><i class="fa fa-balance-scale mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Calibration</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/settings.html"><i class="fa fa-cogs mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Settings</a>
+      <a class="block px-4 py-2 mt-2 text-sm font-semibold text-gray-400 bg-transparent rounded-lg hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:bg-black-select focus:outline-none focus:shadow-outline" href="/history.html"><i class="fa fa-coffee mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Shot Log</a>
       <a class="block px-4 py-2 mt-2 text-sm font-semibold text-stone-50 bg-black-select rounded-lg dark-mode:bg-gray-700 dark-mode:hover:bg-black-discord dark-mode:focus:bg-black-select dark-mode:focus:text-stone-50 dark-mode:hover:text-stone-50 dark-mode:text-gray-500 hover:text-stone-50 focus:text-stone-50 hover:bg-black-hover focus:black-select focus:outline-none focus:shadow-outline" href="/updates.html"><i class="fa fa-upload mr-2" aria-hidden="true" style="color: rgb(71, 168, 100);"></i>Updates</a>
     </nav>
   </div>
@@ -65,18 +66,67 @@
       </div>
     </div>
 
-    <!-- OTA Firmware Update -->
+    <!-- Auto Update -->
     <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
-      <h2 class="text-2xl font-semibold mb-3"><i class="fa fa-microchip mr-2" style="color: rgb(71, 168, 100);"></i>Firmware Update (OTA)</h2>
+      <h2 class="text-2xl font-semibold mb-3"><i class="fa fa-upload mr-2" style="color: rgb(71, 168, 100);"></i>Update from GitHub</h2>
 
-      <div class="bg-black-background p-4 rounded mb-4">
-        <h4 class="font-semibold mb-2 text-yellow-400"><i class="fa fa-exclamation-triangle mr-1"></i> Before updating:</h4>
-        <ol class="list-decimal list-inside text-sm space-y-1 text-gray-300">
-          <li>Do <strong>not</strong> power off or close this page during upload</li>
-          <li>The device will reboot automatically when complete</li>
-          <li>Select the <code class="bg-black-hover px-1 rounded">.bin</code> firmware file built by PlatformIO</li>
-        </ol>
+      <div id="autoUpdateIdle">
+        <p class="text-sm text-gray-400 mb-4">Checks for the latest release and updates both firmware and web interface automatically. Device must be connected to your WiFi network.</p>
+        <button onclick="checkForUpdates()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">
+          Check for Updates
+        </button>
       </div>
+
+      <div id="autoUpdateAvailable" class="hidden">
+        <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+          <div class="text-gray-400">Installed:</div>
+          <div id="autoCurrentVersion" class="font-mono text-gray-200"></div>
+          <div class="text-gray-400">Available:</div>
+          <div id="autoLatestVersion" class="font-mono text-green-400"></div>
+        </div>
+        <button onclick="startAutoUpdate()" id="autoUpdateBtn" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">
+          <i class="fa fa-upload mr-2"></i>Update Now
+        </button>
+      </div>
+
+      <div id="autoUpdateCurrent" class="hidden">
+        <div class="flex items-center gap-2 text-green-400 text-sm">
+          <i class="fa fa-check"></i>
+          <span>Already up to date (<span id="autoCurrentVersionUpToDate"></span>)</span>
+        </div>
+      </div>
+
+      <div id="autoUpdateProgress" class="hidden mt-2">
+        <div id="autoUpdateMessage" class="text-sm text-gray-300 mb-3"></div>
+        <!-- Firmware phase -->
+        <div class="mb-3">
+          <div class="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Firmware</span>
+            <span id="autoFwPct">0%</span>
+          </div>
+          <div class="w-full bg-gray-700 rounded-full h-2">
+            <div id="autoFwBar" class="bg-green-500 h-2 rounded-full transition-all" style="width:0%"></div>
+          </div>
+        </div>
+        <!-- Filesystem phase -->
+        <div>
+          <div class="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Web Interface</span>
+            <span id="autoFsPct">0%</span>
+          </div>
+          <div class="w-full bg-gray-700 rounded-full h-2">
+            <div id="autoFsBar" class="bg-green-500 h-2 rounded-full transition-all" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="autoUpdateError" class="hidden mt-3 text-red-400 text-sm"></div>
+    </div>
+
+    <!-- Manual OTA (for developers) -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-xl font-semibold mb-3 text-gray-400">Manual Firmware Upload</h2>
+      <p class="text-xs text-gray-500 mb-4">For developers. Upload a <code class="bg-black-hover px-1 rounded">.bin</code> file built with PlatformIO. Does not update the web interface.</p>
 
       <div id="otaMessage" class="text-green-400 mb-2 hidden"></div>
       <div id="otaError" class="text-red-400 mb-2 hidden"></div>
@@ -106,16 +156,142 @@
   <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
 <script>
+const MANIFEST_BASE = 'https://bitbarista.github.io/CaffePeso/releases/latest';
+let currentVersion = null;
+let latestVersion  = null;
+let autoUpdatePollTimer = null;
+
 fetch('/api/dashboard')
   .then(r => r.json())
   .then(data => {
-    document.getElementById('firmware-version').textContent = data.device_version || 'Unknown';
+    currentVersion = data.device_version || null;
+    document.getElementById('firmware-version').textContent = currentVersion || 'Unknown';
     document.getElementById('firmware-board').textContent = data.device_board || 'Unknown';
     document.getElementById('firmware-date').textContent = data.device_build_date || 'Unknown';
   })
   .catch(() => {
     document.getElementById('firmware-version').textContent = 'Error loading';
   });
+
+// Determine board suffix from the board name reported by the device
+function getBoardSuffix(boardName) {
+  if (!boardName) return 'supermini';
+  return boardName.toLowerCase().includes('xiao') ? 'xiao' : 'supermini';
+}
+
+function parseVersion(v) {
+  const parts = (v || '0.0.0').split('.').map(Number);
+  return { major: parts[0]||0, minor: parts[1]||0, patch: parts[2]||0 };
+}
+
+function isNewer(latest, current) {
+  const l = parseVersion(latest), c = parseVersion(current);
+  if (l.major !== c.major) return l.major > c.major;
+  if (l.minor !== c.minor) return l.minor > c.minor;
+  return l.patch > c.patch;
+}
+
+function checkForUpdates() {
+  const boardName = document.getElementById('firmware-board').textContent;
+  const board = getBoardSuffix(boardName);
+  document.getElementById('autoUpdateIdle').querySelector('button').disabled = true;
+  document.getElementById('autoUpdateIdle').querySelector('button').textContent = 'Checking...';
+  document.getElementById('autoUpdateError').classList.add('hidden');
+
+  fetch(`${MANIFEST_BASE}/manifest-${board}.json`)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(manifest => {
+      latestVersion = manifest.version;
+      document.getElementById('autoUpdateIdle').querySelector('button').disabled = false;
+      document.getElementById('autoUpdateIdle').querySelector('button').textContent = 'Check for Updates';
+
+      if (isNewer(latestVersion, currentVersion)) {
+        document.getElementById('autoCurrentVersion').textContent = currentVersion || 'Unknown';
+        document.getElementById('autoLatestVersion').textContent = latestVersion;
+        document.getElementById('autoUpdateIdle').classList.add('hidden');
+        document.getElementById('autoUpdateAvailable').classList.remove('hidden');
+      } else {
+        document.getElementById('autoCurrentVersionUpToDate').textContent = currentVersion || 'Unknown';
+        document.getElementById('autoUpdateIdle').classList.add('hidden');
+        document.getElementById('autoUpdateCurrent').classList.remove('hidden');
+      }
+    })
+    .catch(err => {
+      document.getElementById('autoUpdateIdle').querySelector('button').disabled = false;
+      document.getElementById('autoUpdateIdle').querySelector('button').textContent = 'Check for Updates';
+      document.getElementById('autoUpdateError').textContent = 'Could not reach update server. Check internet connection.';
+      document.getElementById('autoUpdateError').classList.remove('hidden');
+    });
+}
+
+function startAutoUpdate() {
+  if (!latestVersion) return;
+  document.getElementById('autoUpdateAvailable').classList.add('hidden');
+  document.getElementById('autoUpdateProgress').classList.remove('hidden');
+  document.getElementById('autoUpdateMessage').textContent = 'Starting update...';
+
+  const formData = new FormData();
+  formData.append('version', latestVersion);
+  fetch('/api/ota/auto', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        showAutoError(data.error);
+      } else {
+        autoUpdatePollTimer = setInterval(pollAutoProgress, 1000);
+      }
+    })
+    .catch(() => showAutoError('Failed to start update.'));
+}
+
+function pollAutoProgress() {
+  fetch('/api/ota/auto-progress')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('autoUpdateMessage').textContent = data.message || '';
+
+      if (data.phase === 'firmware') {
+        document.getElementById('autoFwBar').style.width = data.progress + '%';
+        document.getElementById('autoFwPct').textContent = data.progress + '%';
+      } else if (data.phase === 'filesystem') {
+        document.getElementById('autoFwBar').style.width = '100%';
+        document.getElementById('autoFwPct').textContent = '100%';
+        document.getElementById('autoFsBar').style.width = data.progress + '%';
+        document.getElementById('autoFsPct').textContent = data.progress + '%';
+      } else if (data.phase === 'done') {
+        clearInterval(autoUpdatePollTimer);
+        document.getElementById('autoFwBar').style.width = '100%';
+        document.getElementById('autoFsBar').style.width = '100%';
+        document.getElementById('autoFwPct').textContent = '100%';
+        document.getElementById('autoFsPct').textContent = '100%';
+        document.getElementById('autoUpdateMessage').textContent = 'Update complete. Reconnecting...';
+        setTimeout(waitForReconnectAuto, 4000);
+      } else if (data.phase === 'error') {
+        clearInterval(autoUpdatePollTimer);
+        showAutoError(data.message || 'Update failed.');
+      }
+    })
+    .catch(() => {}); // device may be briefly unreachable during reboot
+}
+
+function waitForReconnectAuto() {
+  fetch('/api/dashboard')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('autoUpdateMessage').textContent =
+        '✓ Device back online. Version: ' + (data.device_version || 'Unknown');
+      document.getElementById('firmware-version').textContent = data.device_version || 'Unknown';
+    })
+    .catch(() => setTimeout(waitForReconnectAuto, 2000));
+}
+
+function showAutoError(msg) {
+  document.getElementById('autoUpdateProgress').classList.add('hidden');
+  document.getElementById('autoUpdateAvailable').classList.add('hidden');
+  document.getElementById('autoUpdateIdle').classList.remove('hidden');
+  document.getElementById('autoUpdateError').textContent = '❌ ' + msg;
+  document.getElementById('autoUpdateError').classList.remove('hidden');
+}
 
 function startOTA() {
   const fileInput = document.getElementById('firmwareFile');
