@@ -16,7 +16,7 @@
 
 Armed auto-start • Auto-stop • Smart switch • Live brew ratio • Shot history • Target yield alert • GaggiMate BLE • Beanconqueror BLE • Wi-Fi web UI
 
-[Features](#-features) • [Hardware](#️-hardware) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
+[Features](#-features) • [Hardware](#️-hardware) • [3D Print Files](#-3d-print-files) • [Installation](#-installation) • [Documentation](#-documentation) • [Attribution](#-attribution)
 
 <img src="docs/assets/CaffePeso.png" alt="CaffePeso" width="300"/>
 
@@ -102,11 +102,36 @@ Native Bluetooth scale support for [GaggiMate](https://github.com/jniebuhr/gaggi
 The hardware is identical to the original WeighMyBru² project. See the [original WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) for:
 - Bill of Materials (BOM) with purchase links
 - Wiring guides and pin assignments
-- Enclosure CAD files and print instructions
 
 **Supported boards:**
 - ESP32-S3 SuperMini (4 MB flash) — default
 - XIAO ESP32S3 (8 MB flash)
+
+---
+
+## 🖨️ 3D Print Files
+
+All enclosure files are included in this repository and available as a single download — no need to navigate anywhere else.
+
+[![Download 3D Print Files](https://img.shields.io/badge/Download-3D%20Print%20Files%20(.3mf%20%2B%20.step)-brightgreen?style=for-the-badge)](https://github.com/bitbarista/CaffePeso/releases/download/v2.6.1/CaffePeso-3D-Print-Files.zip)
+
+The ZIP contains:
+
+| File | Purpose |
+|------|---------|
+| `WeighMyBru² - Top.3mf` | Main lid — standard wall thickness |
+| `WeighMyBru² - Top (0.8mm).3mf` | Main lid — 0.8 mm walls (lighter) |
+| `WeighMyBru² - Bottom.3mf` | Base |
+| `WeighMyBru² - Bottom Supported.3mf` | Base with built-in print supports |
+| `WeighMyBru² - ESP32 Clamp.3mf` | Board clamp for ESP32-S3 SuperMini |
+| `WeighMyBru² - XAIO Clamp.3mf` | Board clamp for XIAO ESP32S3 |
+| `WeighMyBru² - Screen Clamp.3mf` | OLED display clamp |
+| `WeighMyBru² - Touch Clamp.3mf` | Touch button clamp |
+| `WeighMyBru² - M2 Washer.3mf` | M2 washer spacer |
+
+Each `.3mf` also has a matching `.step` file for editing in CAD software.
+
+> These files are from the [WeighMyBru²](https://github.com/031devstudios/weighmybru2) project by 031DevStudios and are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ---
 
