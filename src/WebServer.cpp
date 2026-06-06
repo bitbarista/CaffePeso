@@ -155,13 +155,13 @@ void setCachedDecimals(int decimals) {
 }
 
 // Dose weight — manually set by user, persisted so it survives reboots
-static float cachedDoseWeight = 0.0f;
+static float cachedDoseWeight = 18.0f; // default: popular modern-espresso dose
 static bool  doseWeightCached = false;
 
 float getCachedDoseWeight() {
     if (doseWeightCached) return cachedDoseWeight;
     if (preferences.begin("display", false)) {
-        cachedDoseWeight = preferences.getFloat("dose_w", 0.0f);
+        cachedDoseWeight = preferences.getFloat("dose_w", 18.0f);
         preferences.end();
     }
     doseWeightCached = true;
@@ -266,7 +266,7 @@ void saveAutoReArmSettings(bool enabled, Display& display) {
 void loadAutoStopSettings(Display& display) {
     if (autoStopCached) return;
     if (preferences.begin("display", false)) {
-        cachedAutoStopEnabled = preferences.getBool("as_en", false);
+        cachedAutoStopEnabled = preferences.getBool("as_en", true);
         preferences.end();
     }
     autoStopCached = true;
@@ -283,13 +283,13 @@ void saveAutoStopSettings(bool enabled, Display& display) {
 }
 
 // Target ratio — for target yield alert (0 = disabled)
-static float cachedTargetRatio = 0.0f;
+static float cachedTargetRatio = 2.0f; // default: 1:2 modern-espresso ratio
 static bool  targetRatioCached = false;
 
 float getCachedTargetRatio() {
     if (targetRatioCached) return cachedTargetRatio;
     if (preferences.begin("display", false)) {
-        cachedTargetRatio = preferences.getFloat("target_r", 0.0f);
+        cachedTargetRatio = preferences.getFloat("target_r", 2.0f);
         preferences.end();
     }
     targetRatioCached = true;
@@ -681,10 +681,14 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
   });
 
   server.on("/api/tare", HTTP_POST, [&scale, &display, &powerManager, &flowRate](AsyncWebServerRequest *request){
+    // Capture weight before taring so auto-tare's one-shot lock can be latched
+    // when a vessel is present (prevents auto-tare re-firing as contents are added).
+    float preTareWeight = scale.getCurrentWeight();
     scale.tare(20);
 
     // Clear scaleWentNegative so the direct re-arm path doesn't fire after a manual tare
     display.setTapTaredEmpty();
+    display.notifyManualTare(preTareWeight);
 
     // Reset timer through PowerManager to keep touch state in sync
     powerManager.resetTimer();
@@ -907,6 +911,13 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     if (thr < 5.0f) thr = 5.0f;
     if (thr > 500.0f) thr = 500.0f;
     saveAutoTareSettings(en, thr, display);
+    // Mutual exclusion: Auto-Tare and Cup-Weight Auto Re-arm both manipulate the
+    // zero reference and clash (a tared vessel's contents can re-create the saved
+    // cup weight). Enabling one disables the other, enforced here so a stale page
+    // or direct API call can't leave both on.
+    if (en && cachedAutoReArmEnabled) {
+      saveAutoReArmSettings(false, display);
+    }
     request->send(200, "text/plain", "Auto-tare settings saved.");
   });
 
@@ -948,6 +959,10 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     bool en = request->hasParam("enabled", true) &&
               request->getParam("enabled", true)->value() == "true";
     saveAutoReArmSettings(en, display);
+    // Mutual exclusion with Auto-Tare on Placement (see auto-tare-settings POST).
+    if (en && cachedAutoTareEnabled) {
+      saveAutoTareSettings(false, cachedAutoTareThreshold, display);
+    }
     request->send(200, "text/plain", "Auto re-arm settings saved.");
   });
 
@@ -1088,32 +1103,45 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     request->send(200, "application/json", json);
   });
 
-  // Emergency NVS reset endpoint (use with caution)
+  // Settings reset endpoint — restores all behavioural settings to firmware
+  // defaults by clearing their NVS namespaces. WiFi credentials are preserved by
+  // default (so the scale stays on the network); pass wifi=yes to clear those too.
   server.on("/api/reset-nvs", HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("confirm", true) && request->getParam("confirm", true)->value() == "yes") {
-      Serial.println("Resetting NVS storage...");
-      
-      // Clear all preferences
+      Serial.println("Resetting settings to defaults...");
+
+      // All settings namespaces EXCEPT "wifi". On next boot each load function
+      // falls back to its in-code default (dose 18g, ratio 2.0, auto-stop on, etc.).
+      const char* namespaces[] = {
+        "display", "scale", "power", "battery",
+        "shelly", "shelly_ast", "buzzer", "shots", "caffepeso", "test"
+      };
       Preferences clearPrefs;
-      clearPrefs.begin("wifi", false);
-      clearPrefs.clear();
-      clearPrefs.end();
-      
-      clearPrefs.begin("display", false);
-      clearPrefs.clear();
-      clearPrefs.end();
-      
-      clearPrefs.begin("scale", false);
-      clearPrefs.clear();
-      clearPrefs.end();
-      
-      request->send(200, "text/plain", "NVS storage reset. Device will restart in 3 seconds.");
-      
-      // Restart the ESP32 after a short delay
+      for (const char* ns : namespaces) {
+        if (clearPrefs.begin(ns, false)) {
+          clearPrefs.clear();
+          clearPrefs.end();
+        }
+      }
+
+      // Optionally also clear WiFi credentials (reverts to AP-only mode).
+      bool clearWifi = request->hasParam("wifi", true) &&
+                       request->getParam("wifi", true)->value() == "yes";
+      if (clearWifi) {
+        clearPrefs.begin("wifi", false);
+        clearPrefs.clear();
+        clearPrefs.end();
+      }
+
+      request->send(200, "text/plain",
+        String("Settings reset to defaults") +
+        (clearWifi ? " (incl. WiFi)" : " (WiFi preserved)") +
+        ". Device will restart in 3 seconds.");
+
       delay(3000);
       ESP.restart();
     } else {
-      request->send(400, "text/plain", "Missing confirmation parameter. Use 'confirm=yes' to reset NVS.");
+      request->send(400, "text/plain", "Missing confirmation parameter. Use 'confirm=yes' to reset.");
     }
   });
 
