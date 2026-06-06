@@ -14,6 +14,9 @@
 #include "BluetoothScale.h"
 #include "Version.h"
 #include "SmartSwitch.h"
+#include "Buzzer.h"
+
+extern Buzzer buzzer; // defined in main.cpp
 
 Preferences preferences;
 
@@ -689,6 +692,8 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     // Reset flow rate averaging for fresh brew measurement
     flowRate.resetTimerAveraging();
 
+    buzzer.trigger(BuzzerEvent::Tare);
+
     request->send(200, "text/plain", "Scale tared! Timer and flow rate reset for fresh brew.");
   });
 
@@ -1128,6 +1133,38 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     } else {
       request->send(400, "text/plain", "Missing target_ratio parameter");
     }
+  });
+
+  // Piezo buzzer — master enable + per-event toggles (persisted by Buzzer in NVS)
+  server.on("/api/buzzer", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"master\":";
+    json += buzzer.getMasterEnabled() ? "true" : "false";
+    json += ",\"events\":[";
+    for (uint8_t i = 0; i < (uint8_t)BuzzerEvent::COUNT; ++i) {
+      BuzzerEvent ev = (BuzzerEvent)i;
+      if (i) json += ",";
+      json += "{\"key\":\"" + String(Buzzer::eventKey(ev)) + "\"";
+      json += ",\"label\":\"" + String(Buzzer::eventLabel(ev)) + "\"";
+      json += ",\"desc\":\"" + String(Buzzer::eventDescription(ev)) + "\"";
+      json += ",\"on\":" + String(buzzer.getEventEnabled(ev) ? "true" : "false") + "}";
+    }
+    json += "]}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/buzzer", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("master", true)) {
+      buzzer.setMasterEnabled(request->getParam("master", true)->value() == "true");
+    }
+    for (uint8_t i = 0; i < (uint8_t)BuzzerEvent::COUNT; ++i) {
+      BuzzerEvent ev = (BuzzerEvent)i;
+      const char* key = Buzzer::eventKey(ev);
+      if (request->hasParam(key, true)) {
+        buzzer.setEventEnabled(ev, request->getParam(key, true)->value() == "true");
+      }
+    }
+    buzzer.save();
+    request->send(200, "text/plain", "Buzzer settings saved.");
   });
 
   // Shot history
