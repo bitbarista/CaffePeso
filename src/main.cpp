@@ -20,6 +20,7 @@
 #include "BoardConfig.h"
 #include "Version.h"
 #include "SmartSwitch.h"
+#include "Buzzer.h"
 
 // Board-specific pin configuration
 uint8_t dataPin = HX711_DATA_PIN;     // HX711 Data pin
@@ -38,6 +39,7 @@ Display oledDisplay(sdaPin, sclPin, &scale, &flowRate);
 PowerManager powerManager(sleepTouchPin, touchPin, &oledDisplay);
 BatteryMonitor batteryMonitor(batteryPin);
 SmartSwitch smartSwitch;
+Buzzer buzzer(BUZZER_PIN, BUZZER_PIN_INV, BUZZER_LEDC_CHANNEL, BUZZER_RESONANT_HZ);
 
 void setup() {
   Serial.begin(115200);
@@ -197,12 +199,17 @@ void setup() {
   // false tares caused by capacitive coupling between the adjacent pads
   touchSensor.setSleepPin(sleepTouchPin);
 
+  // Initialize piezo sounder (LEDC tone). Harmless if no disc is connected.
+  buzzer.begin();
+
   smartSwitch.begin();
   // Ensure Shelly relay is ON at boot/wake — clears any stale postTriggerRelayOff
   // state and sends a best-effort ON command so the relay is in a known state.
   smartSwitch.ensureRelayOn();
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager, smartSwitch);
-  
+
+  // Startup chime once everything is up.
+  buzzer.trigger(BuzzerEvent::BootReady);
 }
 
 void loop() {
@@ -250,6 +257,24 @@ void loop() {
     if (!wasPostTrigger && smartSwitch.isPostTriggerRelayOff()) {
       // Relay just turned off — tell the user what to do next
       oledDisplay.showMessage("Relay off-Hold tare", 3000);
+      buzzer.trigger(BuzzerEvent::SmartSwitchFired);
+    }
+
+    // Target-yield beep — mirrors the OLED flash (Display.cpp uses the same
+    // dose x ratio - 2g threshold). Fire once per brew; rearm when idle.
+    static bool tyBeeped = false;
+    if (brewIdle) {
+      tyBeeped = false;
+    } else if (!tyBeeped && oledDisplay.isTimerRunning() && !oledDisplay.isTimerPaused()) {
+      float dose  = oledDisplay.getDoseWeight();
+      float ratio = oledDisplay.getTargetRatio();
+      if (dose > 0.5f && ratio > 0.0f) {
+        float threshold = dose * ratio - 2.0f;
+        if (threshold > 0.0f && weight >= threshold) {
+          buzzer.trigger(BuzzerEvent::TargetYield);
+          tyBeeped = true;
+        }
+      }
     }
   }
   
@@ -275,6 +300,32 @@ void loop() {
   
   // Update touch sensor
   touchSensor.update();
+
+  // Drive the piezo pattern player (non-blocking).
+  buzzer.update();
+
+  // Tare beep — fires on every touch tare (tap or hold); strobe self-clears.
+  if (touchSensor.wasTareCompleted()) buzzer.trigger(BuzzerEvent::Tare);
+
+  // --- Audible event detection (edge-triggered) ---
+  // Armed / auto-re-armed for the next shot.
+  static bool prevArmed = false;
+  bool armedNow = oledDisplay.isArmed();
+  if (armedNow && !prevArmed) buzzer.trigger(BuzzerEvent::Armed);
+  prevArmed = armedNow;
+
+  // BLE client connect / disconnect.
+  static bool prevBle = false;
+  bool bleNow = bluetoothScale.isConnected();
+  if (bleNow && !prevBle)      buzzer.trigger(BuzzerEvent::BleConnected);
+  else if (!bleNow && prevBle) buzzer.trigger(BuzzerEvent::BleDisconnected);
+  prevBle = bleNow;
+
+  // Battery entering low/critical (rising edge only, so it beeps once).
+  static bool prevLow = false;
+  bool lowNow = batteryMonitor.isLowBattery() || batteryMonitor.isCriticalBattery();
+  if (lowNow && !prevLow) buzzer.trigger(BuzzerEvent::BatteryLow);
+  prevLow = lowNow;
 
   // Smart switch safety: re-enable relay only via deliberate hold-tare.
   // wasHoldTareCompleted() strobes true for exactly one loop iteration after

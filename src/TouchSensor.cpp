@@ -181,6 +181,7 @@ void TouchSensor::checkDelayedTare() {
 
             scalePtr->tare();
             Serial.println("Scale tared successfully");
+            tareJustCompleted = true; // beep on every tare (tap or hold)
 
             if (displayPtr != nullptr) {
                 if (wasHoldTare) {

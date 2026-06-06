@@ -27,6 +27,7 @@
     .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; top: 2px; background: white; border-radius: 50%; transition: .2s; }
     .toggle-switch input:checked + .toggle-slider { background: #16a34a; }
     .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .info-i { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border: 1px solid #9ca3af; border-radius: 50%; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; line-height: 1; color: #9ca3af; cursor: help; vertical-align: middle; }
     html, body { overflow-x: hidden; max-width: 100%; }
     @media (max-width: 767px) {
       main { padding: 12px !important; }
@@ -296,6 +297,30 @@
       <div id="shellyMessage" class="text-green-400 mt-3"></div>
     </div>
 
+    <!-- Sound (Buzzer) -->
+    <div class="bg-black-select p-6 rounded shadow max-w-xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Sound (Buzzer)</h2>
+
+      <div class="mb-3 p-4 bg-black-background rounded">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-sm font-semibold">Enable Sounds</span>
+            <p class="text-gray-400 text-sm">Master switch for the piezo buzzer. Turn off to silence every beep.</p>
+          </div>
+          <label class="toggle-switch ml-4">
+            <input type="checkbox" id="buzzerMaster" onchange="updateBuzzerMasterUI()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <p class="text-gray-400 text-sm mb-2">Choose which events beep:</p>
+      <div id="buzzerEvents"></div>
+
+      <button type="button" onclick="saveBuzzer()" class="mt-4 bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Sound Settings</button>
+      <div id="buzzerMessage" class="text-green-400 mt-3"></div>
+    </div>
+
   </main>
   <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
@@ -436,6 +461,55 @@
     }
 
     loadSmartSwitch();
+
+    // Sound (Buzzer) load / save — events are rendered from the firmware's list
+    async function loadBuzzer() {
+      try {
+        const data = await fetch('/api/buzzer').then(r => r.json());
+        document.getElementById('buzzerMaster').checked = data.master === true;
+        document.getElementById('buzzerEvents').innerHTML = data.events.map(e => `
+          <div class="mb-3 p-4 bg-black-background rounded">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold">${e.label}<span class="info-i" title="${e.desc}">i</span></span>
+              <label class="toggle-switch ml-4">
+                <input type="checkbox" class="buzzerEvent" data-key="${e.key}" ${e.on ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>`).join('');
+        updateBuzzerMasterUI();
+      } catch(err) {
+        console.error('Error loading buzzer settings:', err);
+      }
+    }
+
+    function updateBuzzerMasterUI() {
+      const on = document.getElementById('buzzerMaster').checked;
+      const ev = document.getElementById('buzzerEvents');
+      ev.style.opacity = on ? '1' : '0.4';
+      ev.style.pointerEvents = on ? 'auto' : 'none';
+    }
+
+    async function saveBuzzer() {
+      try {
+        const params = new URLSearchParams();
+        params.append('master', document.getElementById('buzzerMaster').checked);
+        document.querySelectorAll('.buzzerEvent').forEach(cb => {
+          params.append(cb.dataset.key, cb.checked);
+        });
+        await fetch('/api/buzzer', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: params.toString()
+        });
+        document.getElementById('buzzerMessage').textContent = 'Sound settings saved.';
+        setTimeout(() => { document.getElementById('buzzerMessage').textContent = ''; }, 3000);
+      } catch(err) {
+        document.getElementById('buzzerMessage').textContent = 'Error: ' + err.message;
+      }
+    }
+
+    loadBuzzer();
 
     // Handle WiFi form submission
     document.getElementById('wifiForm').addEventListener('submit', async (e) => {
