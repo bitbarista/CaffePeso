@@ -1059,6 +1059,7 @@ void Display::arm(float cupWeightBeforeTare) {
     tapTaredEmpty     = false;
     armBlockedByPlacement = false; // fresh arm — clear any placement block
     prevWeightForArm = 0.0f;       // scale is tared at arm time; baseline is ~0
+    armJustHappened = true;        // strobe for the arm beep (polled in main loop)
     alertFired = false; // fresh brew — reset alert
 
     // Persist saved cup weight across reboots
