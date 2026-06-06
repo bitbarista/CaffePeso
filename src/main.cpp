@@ -314,12 +314,11 @@ void loop() {
   // Tare beep — fires on every touch tare (tap or hold); strobe self-clears.
   if (touchSensor.wasTareCompleted()) buzzer.trigger(BuzzerEvent::Tare);
 
-  // --- Audible event detection (edge-triggered) ---
-  // Armed / auto-re-armed for the next shot.
-  static bool prevArmed = false;
-  bool armedNow = oledDisplay.isArmed();
-  if (armedNow && !prevArmed) buzzer.trigger(BuzzerEvent::Armed);
-  prevArmed = armedNow;
+  // --- Audible event detection ---
+  // Armed / auto-re-armed: poll the strobe set inside Display::arm(), not an
+  // isArmed() edge — a re-arm while already armed (true->true) has no edge, and
+  // an arm that completes within one loop iteration would be missed.
+  if (oledDisplay.wasArmCompleted()) buzzer.trigger(BuzzerEvent::Armed);
 
   // BLE client connect / disconnect.
   static bool prevBle = false;

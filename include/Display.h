@@ -64,6 +64,10 @@ public:
     void  arm(float cupWeightBeforeTare); // Set arm state and save cup weight to NVS
     void  disarm();
     bool  isArmed() const              { return armedAutoStart; }
+    // True exactly once after any arm/re-arm (set in arm(), clears on read).
+    // Poll from the main loop to beep reliably — isArmed() edge-detection misses
+    // re-arms (true->true) and arms that complete within one loop iteration.
+    bool  wasArmCompleted() { bool v = armJustHappened; armJustHappened = false; return v; }
     float getSavedTareWeight() const         { return savedTareWeight; }
     void  setSavedTareWeight(float w)        { savedTareWeight = w; } // restore from NVS without arming
     void  setAutoReArmEnabled(bool en)       { autoReArmEnabled = en; }
@@ -145,6 +149,7 @@ private:
 
     // Armed auto-start
     bool  armedAutoStart   = false;
+    bool  armJustHappened  = false; // strobed true for one loop on every arm/re-arm
     bool  autoReArmEnabled = true;
     float savedTareWeight  = 0.0f;
     unsigned long armStartedAt = 0;
