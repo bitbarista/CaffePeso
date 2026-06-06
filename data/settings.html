@@ -27,7 +27,15 @@
     .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; top: 2px; background: white; border-radius: 50%; transition: .2s; }
     .toggle-switch input:checked + .toggle-slider { background: #16a34a; }
     .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
-    .info-i { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border: 1px solid #9ca3af; border-radius: 50%; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; line-height: 1; color: #9ca3af; cursor: help; vertical-align: middle; }
+    /* Info tooltip: works on desktop hover AND mobile tap (native title= does not show on tap). */
+    .info-wrap { position: relative; display: inline-block; vertical-align: middle; }
+    .info-i { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border: 1px solid #9ca3af; border-radius: 50%; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; line-height: 1; color: #9ca3af; cursor: pointer; vertical-align: middle; user-select: none; }
+    .info-pop { position: absolute; left: 0; top: 130%; z-index: 50; display: none; width: max-content; max-width: 260px; padding: 8px 10px; background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 6px; font-size: 12px; font-weight: 400; font-style: normal; line-height: 1.4; box-shadow: 0 4px 12px rgba(0,0,0,.4); white-space: normal; text-align: left; }
+    .info-wrap:hover .info-pop, .info-pop.show { display: block; }
+    @media (max-width: 767px) { .info-pop { max-width: 220px; } }
+    /* Inline warning shown under a setting when a dependency/lockout applies. */
+    .setting-warn { color: #fbbf24; font-size: 12px; margin-top: 6px; display: none; }
+    .setting-warn.show { display: block; }
     html, body { overflow-x: hidden; max-width: 100%; }
     @media (max-width: 767px) {
       main { padding: 12px !important; }
@@ -187,27 +195,29 @@
       <div class="mb-3 p-4 bg-black-background rounded">
         <div class="flex items-center justify-between">
           <div>
-            <span class="text-sm font-semibold">Cup Weight Auto Re-arm</span>
+            <span class="text-sm font-semibold">Cup Weight Auto Re-arm<span id="rearmInfo"></span></span>
             <p class="text-gray-400 text-sm">Arm automatically when the saved cup weight is detected on the tared scale. Disable to arm manually only.</p>
           </div>
           <label class="toggle-switch ml-4">
-            <input type="checkbox" id="autoReArmEnabled">
+            <input type="checkbox" id="autoReArmEnabled" onchange="onRearmToggle()">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <p id="rearmWarn" class="setting-warn">Turning this on switches off <strong>Auto-Tare on Vessel Placement</strong> — the two clash because both retare the scale.</p>
       </div>
 
       <div class="mb-3 p-4 bg-black-background rounded">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <span class="text-sm font-semibold">Auto-Tare on Vessel Placement</span>
+            <span class="text-sm font-semibold">Auto-Tare on Vessel Placement<span id="autoTareInfo"></span></span>
             <p class="text-gray-400 text-sm">Automatically tare when a stable weight is placed on the scale</p>
           </div>
           <label class="toggle-switch ml-4">
-            <input type="checkbox" id="autoTareEnabled">
+            <input type="checkbox" id="autoTareEnabled" onchange="onAutoTareToggle()">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <p id="autoTareWarn" class="setting-warn">Turning this on switches off <strong>Cup Weight Auto Re-arm</strong> — the two clash because both retare the scale.</p>
         <label for="autoTareThreshold" class="block mb-1 text-sm">Minimum weight to trigger:</label>
         <div class="flex items-center gap-2">
           <input type="number" id="autoTareThreshold" step="1" min="5" max="500" value="20" class="w-24 px-3 py-2 rounded text-black" />
@@ -248,12 +258,13 @@
       </div>
 
       <div class="mb-4 p-4 bg-black-background rounded">
-        <span class="text-sm font-semibold">Target Yield Ratio</span>
+        <span class="text-sm font-semibold">Target Yield Ratio<span id="targetRatioInfo"></span></span>
         <p class="text-gray-400 text-sm mb-3">Flash OLED and highlight web weight when approaching target yield (0 = disabled)</p>
         <div class="flex items-center gap-2">
-          <input type="number" id="targetRatio" step="0.1" min="0" max="20" value="0" class="w-24 px-3 py-2 rounded text-black" />
+          <input type="number" id="targetRatio" step="0.1" min="0" max="20" value="2.0" oninput="updateDependencyWarnings()" class="w-24 px-3 py-2 rounded text-black" />
           <span class="text-gray-400 text-sm">e.g. 2.0 for a 1:2 ratio</span>
         </div>
+        <p id="targetRatioWarn" class="setting-warn">Also needs a <strong>Dose</strong> set on the dashboard, otherwise no alert fires.</p>
       </div>
 
       <button type="button" onclick="saveBrewAutomation()" class="bg-gray-600 hover:bg-button-green active:bg-green-900 text-white px-4 py-2 rounded">Save Brew Automation</button>
@@ -267,14 +278,15 @@
       <div class="mb-3 p-4 bg-black-background rounded">
         <div class="flex items-center justify-between">
           <div>
-            <span class="text-sm font-semibold">Enable Smart Switch</span>
+            <span class="text-sm font-semibold">Enable Smart Switch<span id="shellyInfo"></span></span>
             <p class="text-gray-400 text-sm">Cut pump power via a Shelly relay when the target yield is reached</p>
           </div>
           <label class="toggle-switch ml-4">
-            <input type="checkbox" id="shellyEnabled">
+            <input type="checkbox" id="shellyEnabled" onchange="updateDependencyWarnings()">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <p id="shellyWarn" class="setting-warn">Smart Switch needs a <strong>Target Yield Ratio</strong> above 0 (set in Brew Automation) and a <strong>Dose</strong> on the dashboard — without both it can't work out when to cut power, so nothing will happen.</p>
       </div>
 
       <div class="mb-3 p-4 bg-black-background rounded">
@@ -325,6 +337,26 @@
   <p class="text-center text-xs mt-6 mb-2" style="color:#6b5f5f;">Based on <a href="https://github.com/031devstudios/weighmybru2" style="color:#a08880;">WeighMyBru²</a> by 031devstudios &mdash; <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" style="color:#a08880;">CC BY-NC-SA 4.0</a></p>
 </div>
 <script>
+    // --- Info tooltips (hover on desktop, tap on mobile) ---
+    // Returns markup for an inline "i" badge with a popover. Pass plain text.
+    function infoTip(text) {
+      const esc = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                              .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return '<span class="info-wrap"><span class="info-i" role="button" tabindex="0" aria-label="More info">i</span>'
+           + '<span class="info-pop">' + esc + '</span></span>';
+    }
+    // Tap/click toggles the popover on touch devices; outside-tap closes it.
+    document.addEventListener('click', (e) => {
+      const badge = e.target.closest('.info-i');
+      document.querySelectorAll('.info-pop.show').forEach(p => {
+        if (!badge || p !== badge.parentElement.querySelector('.info-pop')) p.classList.remove('show');
+      });
+      if (badge) {
+        e.preventDefault();
+        badge.parentElement.querySelector('.info-pop').classList.toggle('show');
+      }
+    });
+
     // Load all settings
     Promise.all([
       fetch('/api/settings').then(r => r.json()),
@@ -353,10 +385,58 @@
       document.getElementById('targetRatio').value = trData.target_ratio || 0;
       document.getElementById('autoStopEnabled').checked = asData.enabled === true;
       document.getElementById('autoReArmEnabled').checked = arData.enabled !== false;
+      initSettingsInfo();
+      updateDependencyWarnings();
     }).catch(err => {
       console.error('Error loading settings:', err);
       loadSettingsIndividually();
     });
+
+    // Populate info-tooltip badges (rendered from JS so the markup stays in one place).
+    function initSettingsInfo() {
+      const tips = {
+        rearmInfo: "When armed, the scale starts the shot timer automatically as soon as your saved cup weight lands on the tared scale. Clashes with Auto-Tare on Placement, so only one can be on.",
+        autoTareInfo: "Automatically zeroes the scale when a vessel heavier than the threshold settles on it. Clashes with Cup Weight Auto Re-arm, so only one can be on.",
+        targetRatioInfo: "Yield alert fires at dose × ratio. Needs a Dose set on the dashboard. Also used by the Smart Switch to decide when to cut power.",
+        shellyInfo: "Fires the relay off when the projected final yield hits dose × Target Yield Ratio. Requires both a Target Yield Ratio above 0 and a Dose set on the dashboard."
+      };
+      for (const [id, text] of Object.entries(tips)) {
+        const el = document.getElementById(id);
+        if (el && !el.innerHTML) el.innerHTML = infoTip(text);
+      }
+    }
+
+    // Client-side mirror of the firmware's Auto-Tare <-> Auto-Re-arm mutual exclusion.
+    // The server enforces this too, but reflecting it here avoids a confusing round-trip.
+    function onRearmToggle() {
+      if (document.getElementById('autoReArmEnabled').checked) {
+        document.getElementById('autoTareEnabled').checked = false;
+      }
+      updateDependencyWarnings();
+    }
+    function onAutoTareToggle() {
+      if (document.getElementById('autoTareEnabled').checked) {
+        document.getElementById('autoReArmEnabled').checked = false;
+      }
+      updateDependencyWarnings();
+    }
+
+    // Show/hide the inline dependency + lockout warnings based on current toggle state.
+    async function updateDependencyWarnings() {
+      const rearm = document.getElementById('autoReArmEnabled').checked;
+      const autoTare = document.getElementById('autoTareEnabled').checked;
+      document.getElementById('rearmWarn').classList.toggle('show', rearm && autoTare);
+      document.getElementById('autoTareWarn').classList.toggle('show', rearm && autoTare);
+
+      // Smart Switch dependency: needs Target Yield Ratio > 0 AND a dose set.
+      const shelly = document.getElementById('shellyEnabled').checked;
+      const ratio = parseFloat(document.getElementById('targetRatio').value) || 0;
+      let dose = 0;
+      try { dose = (await fetch('/api/dose').then(r => r.json())).dose_weight || 0; } catch (e) {}
+      document.getElementById('shellyWarn').classList.toggle('show', shelly && (ratio <= 0 || dose <= 0.5));
+      // Target alert dependency: ratio set but no dose.
+      document.getElementById('targetRatioWarn').classList.toggle('show', ratio > 0 && dose <= 0.5);
+    }
 
     // Fallback function for individual API calls
     function loadSettingsIndividually() {
@@ -386,31 +466,34 @@
         document.getElementById('idleResetTimeout').value = irData.timeoutSeconds || 30;
         document.getElementById('targetRatio').value = trData.target_ratio || 0;
         document.getElementById('autoReArmEnabled').checked = arData.enabled !== false;
+        initSettingsInfo();
+        updateDependencyWarnings();
       }).catch(err => console.error('Error loading individual settings:', err));
     }
 
     async function saveBrewAutomation() {
+      const post = (url, body) => fetch(url, { method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body });
       try {
+        // Auto-tare and auto-rearm are mutually exclusive and the server enforces
+        // it on write, so post them SEQUENTIALLY (rearm last) to avoid a parallel
+        // race where the server-side lockout flips the value the user chose.
+        await post('/api/auto-tare-settings',
+          'enabled=' + document.getElementById('autoTareEnabled').checked +
+          '&threshold=' + document.getElementById('autoTareThreshold').value);
+        await post('/api/auto-rearm-settings',
+          'enabled=' + document.getElementById('autoReArmEnabled').checked);
         await Promise.all([
-          fetch('/api/auto-tare-settings', { method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'enabled=' + document.getElementById('autoTareEnabled').checked +
-                  '&threshold=' + document.getElementById('autoTareThreshold').value }),
-          fetch('/api/idle-reset-settings', { method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'enabled=' + document.getElementById('idleResetEnabled').checked +
-                  '&timeoutSeconds=' + document.getElementById('idleResetTimeout').value }),
-          fetch('/api/target-ratio', { method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'target_ratio=' + document.getElementById('targetRatio').value }),
-          fetch('/api/auto-stop-settings', { method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'enabled=' + document.getElementById('autoStopEnabled').checked }),
-          fetch('/api/auto-rearm-settings', { method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'enabled=' + document.getElementById('autoReArmEnabled').checked })
+          post('/api/idle-reset-settings',
+            'enabled=' + document.getElementById('idleResetEnabled').checked +
+            '&timeoutSeconds=' + document.getElementById('idleResetTimeout').value),
+          post('/api/target-ratio',
+            'target_ratio=' + document.getElementById('targetRatio').value),
+          post('/api/auto-stop-settings',
+            'enabled=' + document.getElementById('autoStopEnabled').checked)
         ]);
         document.getElementById('automationMessage').textContent = 'Brew automation settings saved.';
+        updateDependencyWarnings();
       } catch(err) {
         document.getElementById('automationMessage').textContent = 'Error: ' + err.message;
       }
@@ -428,6 +511,7 @@
         } else {
           astEl.textContent = data.ast + 's (learned)';
         }
+        updateDependencyWarnings();
       } catch(err) {
         console.error('Error loading smart switch settings:', err);
       }
@@ -470,7 +554,7 @@
         document.getElementById('buzzerEvents').innerHTML = data.events.map(e => `
           <div class="mb-3 p-4 bg-black-background rounded">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold">${e.label}<span class="info-i" title="${e.desc}">i</span></span>
+              <span class="text-sm font-semibold">${e.label}${infoTip(e.desc)}</span>
               <label class="toggle-switch ml-4">
                 <input type="checkbox" class="buzzerEvent" data-key="${e.key}" ${e.on ? 'checked' : ''}>
                 <span class="toggle-slider"></span>

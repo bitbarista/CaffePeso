@@ -208,6 +208,13 @@ void setup() {
   smartSwitch.ensureRelayOn();
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager, smartSwitch);
 
+  // First-run guidance: only when no cup weight has ever been saved (genuine
+  // first boot). setupWebServer() has now restored savedTareWeight from NVS, so
+  // this check is reliable. Returning users skip straight to the live screen.
+  if (oledDisplay.isConnected() && oledDisplay.getSavedTareWeight() < 5.0f) {
+    oledDisplay.showFirstRunHint();
+  }
+
   // Startup chime once everything is up.
   buzzer.trigger(BuzzerEvent::BootReady);
 }
