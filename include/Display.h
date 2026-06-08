@@ -30,6 +30,7 @@ public:
     void showTaredMessage(bool inverted = false); // "Scale / Tared!" — shown after successful tare; inverted = white bg for auto-tare
     void clearMessageState(); // Clear message state to return to weight display
     void showIPAddresses(); // Show IP address on boot (replaces "Ready" screen)
+    void showFirstRunHint(); // First-run only: tells a new user the hold-tare gesture
     void clear();
     void setBrightness(uint8_t brightness);
     void setWeightDecimals(int decimals) { weightDecimals = decimals; }
@@ -38,6 +39,12 @@ public:
     void setAutoTareThreshold(float grams) { autoTareThreshold = grams; }
     bool getAutoTareEnabled() const        { return autoTareEnabled; }
     float getAutoTareThreshold() const     { return autoTareThreshold; }
+    // Tell auto-tare that a MANUAL tare just happened. If a vessel was present
+    // (pre-tare weight over the threshold), latch autoTareFired so auto-tare
+    // won't re-fire as that vessel's contents later cross the threshold (e.g.
+    // pouring milk into a manually-tared jug). preTareWeight is the reading
+    // BEFORE the tare zeroed the scale.
+    void notifyManualTare(float preTareWeight);
 
     // Post-brew idle reset
     void setIdleResetEnabled(bool en)          { idleResetEnabled = en; }
@@ -57,6 +64,10 @@ public:
     void  arm(float cupWeightBeforeTare); // Set arm state and save cup weight to NVS
     void  disarm();
     bool  isArmed() const              { return armedAutoStart; }
+    // True exactly once after any arm/re-arm (set in arm(), clears on read).
+    // Poll from the main loop to beep reliably — isArmed() edge-detection misses
+    // re-arms (true->true) and arms that complete within one loop iteration.
+    bool  wasArmCompleted() { bool v = armJustHappened; armJustHappened = false; return v; }
     float getSavedTareWeight() const         { return savedTareWeight; }
     void  setSavedTareWeight(float w)        { savedTareWeight = w; } // restore from NVS without arming
     void  setAutoReArmEnabled(bool en)       { autoReArmEnabled = en; }
@@ -126,11 +137,11 @@ private:
     unsigned long autoZeroStableSince = 0;
     static const unsigned long AUTO_ZERO_STABLE_MS = 10000;
 
-    // Brew ratio
-    float doseWeight = 0.0f;
+    // Brew ratio (default 18g — popular modern-espresso dose)
+    float doseWeight = 18.0f;
 
-    // Target yield alert
-    float targetRatio = 0.0f;
+    // Target yield alert (default 1:2 — popular modern-espresso ratio)
+    float targetRatio = 2.0f;
     bool  alertFired       = false;
     bool  alertFlashActive = false;
     unsigned long alertFlashStart = 0;
@@ -138,10 +149,13 @@ private:
 
     // Armed auto-start
     bool  armedAutoStart   = false;
+    bool  armJustHappened  = false; // strobed true for one loop on every arm/re-arm
     bool  autoReArmEnabled = true;
     float savedTareWeight  = 0.0f;
     unsigned long armStartedAt = 0;
     unsigned long armWeightAboveThresholdSince = 0;
+    float prevWeightForArm = 0.0f;     // previous-cycle weight for placement-step detection
+    bool  armBlockedByPlacement = false; // a vessel was placed (big step) — suppress auto-start until baseline
     bool  scaleWentNegative = false;   // set when weight < -5g; reset by arm()
     bool  tapTaredEmpty     = false;   // set by tap-tare; blocks case-1 (≈0g) until cup removed again
     unsigned long reArmStableSince  = 0;
@@ -153,8 +167,8 @@ private:
     static const unsigned long ARM_TIMEOUT_MS      = 120000; // 2 minutes
     static const unsigned long REARM_STABLE_MS     = 200;   // weight must match for 200ms to re-arm
 
-    // Auto-stop on flow cessation
-    bool  autoStopEnabled               = false;
+    // Auto-stop on flow cessation (default ON — completes the hands-free pipeline)
+    bool  autoStopEnabled               = true;
     bool  autoStopFlowWasActive         = false;
     unsigned long autoStopBelowThresholdSince = 0;
     static constexpr float AUTO_STOP_ACTIVE_THRESHOLD  = 1.0f;  // g/s — flow must exceed this to be "active"

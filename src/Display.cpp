@@ -277,12 +277,25 @@ void Display::update() {
         }
         prevWeightForRemoval = weight;
 
-        // Armed auto-start: trigger timer when weight increases > threshold sustained 500ms
+        // Armed auto-start: trigger timer when weight increases > threshold sustained 500ms.
+        // Guarded against vessel placement: espresso flow rises gradually (<~0.5g per
+        // 100ms cycle), whereas placing a jug/cup jumps many grams in a single cycle.
+        // A step >= REARM_STEP_THRESHOLD (8g/cycle = 80g/s, impossible for coffee) is
+        // treated as a placement and blocks auto-start until the weight returns to
+        // baseline (vessel removed or re-tared), so e.g. weighing milk won't start the timer.
         if (armedAutoStart && !timerRunning) {
+            float armStep = weight - prevWeightForArm;
+            if (armStep >= REARM_STEP_THRESHOLD) {
+                armBlockedByPlacement = true;          // a vessel was just placed
+                armWeightAboveThresholdSince = 0;
+            } else if (weight <= ARM_TRIGGER_THRESHOLD) {
+                armBlockedByPlacement = false;         // back to baseline — re-allow flow detection
+            }
+
             if (millis() - armStartedAt > ARM_TIMEOUT_MS) {
                 disarm();
                 Serial.println("Armed auto-start: timed out");
-            } else if (weight > ARM_TRIGGER_THRESHOLD) {
+            } else if (weight > ARM_TRIGGER_THRESHOLD && !armBlockedByPlacement) {
                 if (armWeightAboveThresholdSince == 0) {
                     armWeightAboveThresholdSince = millis();
                 } else if (millis() - armWeightAboveThresholdSince >= ARM_SUSTAIN_MS) {
@@ -295,6 +308,7 @@ void Display::update() {
                 armWeightAboveThresholdSince = 0;
             }
         }
+        prevWeightForArm = weight;
 
         // Auto-stop on flow cessation
         if (autoStopEnabled && timerRunning && !timerPaused && flowRatePtr != nullptr) {
@@ -689,12 +703,35 @@ void Display::showIPAddresses() {
     delay(2000);
 }
 
+void Display::showFirstRunHint() {
+    // First-run guidance: only the gesture that unlocks the hands-free workflow.
+    // Draws explicit size-1 lines (showMessage's auto-wrap can't do clean line
+    // breaks) but sets the message-state flags so update() auto-expires it back
+    // to the live weight screen. Caller gates this on a genuine first run.
+    if (!displayConnected) return;
+
+    currentMessage   = "First run hint";
+    messageStartTime = millis();
+    messageDuration  = 4000;
+    showingMessage   = true;
+
+    display->clearDisplay();
+    display->setTextColor(SSD1306_WHITE);
+    display->setTextSize(1);
+    const char* lines[] = { "Welcome to CaffePeso", "Hold the tare pad to", "tare + arm, then", "pull your first shot" };
+    for (int i = 0; i < 4; i++) {
+        display->setCursor(0, i * 8);
+        display->print(lines[i]);
+    }
+    display->display();
+}
+
 void Display::clear() {
     // Return early if display is not connected
     if (!displayConnected) {
         return;
     }
-    
+
     display->clearDisplay();
     display->display();
 }
@@ -968,6 +1005,17 @@ void Display::resetTimer() {
     }
 }
 
+void Display::notifyManualTare(float preTareWeight) {
+    // A manual tare with a vessel already on the scale must arm the same one-shot
+    // lock that auto-tare sets itself, otherwise auto-tare re-fires when the
+    // vessel's contents later cross the threshold (e.g. milk poured into a
+    // manually-tared jug). Only latch when a vessel is actually present so that
+    // manually taring an empty scale still lets the next placed vessel auto-tare.
+    if (preTareWeight > autoTareThreshold) {
+        autoTareFired = true;
+    }
+}
+
 bool Display::isTimerRunning() const {
     return timerRunning && !timerPaused;
 }
@@ -1009,6 +1057,9 @@ void Display::arm(float cupWeightBeforeTare) {
     reArmStableSince = 0;
     scaleWentNegative = false;
     tapTaredEmpty     = false;
+    armBlockedByPlacement = false; // fresh arm — clear any placement block
+    prevWeightForArm = 0.0f;       // scale is tared at arm time; baseline is ~0
+    armJustHappened = true;        // strobe for the arm beep (polled in main loop)
     alertFired = false; // fresh brew — reset alert
 
     // Persist saved cup weight across reboots
@@ -1038,10 +1089,14 @@ void Display::showArmedMessage() {
     display->fillScreen(SSD1306_WHITE);
     display->setTextColor(SSD1306_BLACK);
 
-    // Large "ARMED" centred on top row, "Ready!" on bottom row
+    // Large "ARMED" centred on top row. Bottom row normally "Ready!", but if the
+    // yield alert can't work (no dose or no ratio) nudge the user to set them —
+    // otherwise the flash/Smart-Switch silently do nothing. With the shipped
+    // defaults (18g / 1:2) this shows "Ready!"; it only changes if a user zeros them.
+    bool yieldConfigured = doseWeight > 0.5f && targetRatio > 0.0f;
     display->setTextSize(2);
     String line1 = "ARMED";
-    String line2 = "Ready!";
+    String line2 = yieldConfigured ? "Ready!" : "Set dose";
     int16_t x1, y1;
     uint16_t w1, h1, w2, h2;
     display->getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
