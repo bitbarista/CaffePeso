@@ -1,0 +1,81 @@
+name: Traffic Snapshot
+
+# GitHub only retains repository traffic (views/clones) for a rolling 14 days.
+# This workflow snapshots it weekly and merges each day's figures into CSVs keyed
+# by date, so the long-term history is preserved in the repo. Running weekly is
+# well inside the 14-day window; the merge means overlapping pulls just dedupe.
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays 03:17 UTC
+  workflow_dispatch:        # allow manual runs
+
+permissions:
+  contents: write           # needed to commit the CSVs (and read own traffic)
+
+concurrency:
+  group: traffic-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch and merge traffic data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p traffic
+          gh api "repos/${GITHUB_REPOSITORY}/traffic/views"  > /tmp/views.json
+          gh api "repos/${GITHUB_REPOSITORY}/traffic/clones" > /tmp/clones.json
+          python3 - <<'PY'
+          import json, csv, os
+
+          def load(path):
+              rows = {}
+              if os.path.exists(path):
+                  with open(path, newline='') as f:
+                      r = csv.reader(f); next(r, None)
+                      for row in r:
+                          if row:
+                              rows[row[0]] = row
+              return rows
+
+          def save(path, header, rows):
+              with open(path, 'w', newline='') as f:
+                  w = csv.writer(f); w.writerow(header)
+                  for date in sorted(rows):
+                      w.writerow(rows[date])
+
+          # Views (page views + unique visitors), one row per day.
+          rows = load('traffic/views.csv')
+          for d in json.load(open('/tmp/views.json')).get('views', []):
+              date = d['timestamp'][:10]
+              rows[date] = [date, d['count'], d['uniques']]   # latest pull wins
+          save('traffic/views.csv', ['date', 'views', 'unique_visitors'], rows)
+
+          # Clones (git clones + unique cloners), one row per day.
+          rows = load('traffic/clones.csv')
+          for d in json.load(open('/tmp/clones.json')).get('clones', []):
+              date = d['timestamp'][:10]
+              rows[date] = [date, d['count'], d['uniques']]
+          save('traffic/clones.csv', ['date', 'clones', 'unique_cloners'], rows)
+          print('Merged traffic into traffic/views.csv and traffic/clones.csv')
+          PY
+
+      - name: Commit updated CSVs
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add traffic/views.csv traffic/clones.csv
+          if git diff --cached --quiet; then
+            echo "No traffic changes to commit."
+          else
+            git commit -m "Traffic snapshot $(date -u +%Y-%m-%d)"
+            git push
+          fi
