@@ -25,6 +25,14 @@
 #define BATTERY_PIN         7   // GPIO7 - Battery voltage monitoring (ADC1_CH6)
 #define I2C_SDA_PIN         8   // GPIO8 - I2C Data pin for display
 #define I2C_SCL_PIN         9   // GPIO9 - I2C Clock pin for display
+#define BUZZER_PIN          2   // GPIO2 - Piezo sounder, non-inverted half. Free, non-strapping on ESP32-S3.
+#define BUZZER_PIN_INV      1   // GPIO1 - inverted half (differential/BTL drive). Adjacent to GPIO2 for easy wiring. 255 = single-ended.
+// Brownout A/B test: 1 = differential/BTL (loud, GPIO1+GPIO2 antiphase, ~2x swing & current);
+// 0 = single-ended (GPIO1 held at GND, GPIO2 drives) ~half the current — NO rewiring needed.
+// Flip to 0 and reflash; if the beep-time crashes stop, the cause is electrical (add a series resistor).
+#define BUZZER_DIFFERENTIAL 1
+#define BUZZER_LEDC_CHANNEL 0   // LEDC channel for the piezo (LEDC is otherwise unused)
+#define BUZZER_RESONANT_HZ  4200 // 27mm disc resonant frequency (loudest tone)
 
 // Board-specific configurations
 #ifdef BOARD_TYPE_SUPERMINI

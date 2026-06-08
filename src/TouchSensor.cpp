@@ -176,11 +176,15 @@ void TouchSensor::checkDelayedTare() {
         holdTarePending    = false;
 
         if (scalePtr != nullptr) {
-            // For hold-tare: read cup weight BEFORE tare — after tare the scale reads 0g
-            float cupWeight = (wasHoldTare) ? scalePtr->getCurrentWeight() : 0.0f;
+            // Read weight BEFORE tare — after tare the scale reads 0g.
+            // Used for hold-tare cup-weight capture AND to latch the auto-tare
+            // lock on a manual tare when a vessel is present.
+            float preTareWeight = scalePtr->getCurrentWeight();
+            float cupWeight = (wasHoldTare) ? preTareWeight : 0.0f;
 
             scalePtr->tare();
             Serial.println("Scale tared successfully");
+            tareJustCompleted = true; // beep on every tare (tap or hold)
 
             if (displayPtr != nullptr) {
                 if (wasHoldTare) {
@@ -193,6 +197,9 @@ void TouchSensor::checkDelayedTare() {
                     // setTapTaredEmpty() clears scaleWentNegative so the direct re-arm
                     // path doesn't fire immediately after a manual tare.
                     displayPtr->setTapTaredEmpty();
+                    // Latch auto-tare's one-shot lock if a vessel was on the scale,
+                    // so auto-tare won't re-fire as its contents cross the threshold.
+                    displayPtr->notifyManualTare(preTareWeight);
                     if (!displayPtr->isTimerRunning()) {
                         displayPtr->resetTimer();
                         if (flowRatePtr != nullptr) flowRatePtr->resetTimerAveraging();

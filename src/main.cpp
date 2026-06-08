@@ -3,6 +3,8 @@
 #include <LittleFS.h>
 #include <ESPmDNS.h>
 #include <esp_sleep.h>
+#include <esp_system.h>
+#include <Preferences.h>
 #ifdef ESP_IDF_VERSION_MAJOR
     #include "esp_wifi.h"
     #include "esp_err.h"
@@ -20,6 +22,7 @@
 #include "BoardConfig.h"
 #include "Version.h"
 #include "SmartSwitch.h"
+#include "Buzzer.h"
 
 // Board-specific pin configuration
 uint8_t dataPin = HX711_DATA_PIN;     // HX711 Data pin
@@ -38,6 +41,55 @@ Display oledDisplay(sdaPin, sclPin, &scale, &flowRate);
 PowerManager powerManager(sleepTouchPin, touchPin, &oledDisplay);
 BatteryMonitor batteryMonitor(batteryPin);
 SmartSwitch smartSwitch;
+Buzzer buzzer(BUZZER_PIN, BUZZER_PIN_INV, BUZZER_LEDC_CHANNEL, BUZZER_RESONANT_HZ, BUZZER_DIFFERENTIAL);
+
+// --- Crash diagnostics ------------------------------------------------------
+// Captured at boot and persisted to NVS so the reason for an unexpected reset
+// (e.g. a brownout while the buzzer plays) survives the *next* reset — important
+// on the ESP32-S3 because opening the USB serial port itself triggers a reset,
+// which would otherwise overwrite the live esp_reset_reason(). Surfaced over
+// WiFi via /api/device/info so no USB connection is needed to read it.
+esp_reset_reason_t g_lastReset = ESP_RST_UNKNOWN;
+uint32_t           g_bootCount = 0;
+String             g_resetHistory; // most-recent-first CSV of reset-reason codes
+
+const char* resetReasonStr(esp_reset_reason_t r) {
+  switch (r) {
+    case ESP_RST_POWERON:   return "Power-on";
+    case ESP_RST_EXT:       return "External pin / USB-serial reset";
+    case ESP_RST_SW:        return "Software reset";
+    case ESP_RST_PANIC:     return "PANIC / exception (firmware bug)";
+    case ESP_RST_INT_WDT:   return "Interrupt watchdog";
+    case ESP_RST_TASK_WDT:  return "Task watchdog";
+    case ESP_RST_WDT:       return "Other watchdog";
+    case ESP_RST_DEEPSLEEP: return "Deep-sleep wake";
+    case ESP_RST_BROWNOUT:  return "BROWNOUT - power sag (electrical)";
+    case ESP_RST_SDIO:      return "SDIO";
+    default:                return "Unknown";
+  }
+}
+
+static void captureResetReason() {
+  g_lastReset = esp_reset_reason();
+  Preferences diag;
+  diag.begin("diag", false);
+  g_bootCount = diag.getUInt("boots", 0) + 1;
+  diag.putUInt("boots", g_bootCount);
+
+  // Prepend this boot's reason to the history, keep at most 12 entries.
+  String hist = diag.getString("rr", "");
+  hist = String((int)g_lastReset) + (hist.length() ? "," + hist : "");
+  int commas = 0;
+  for (int i = 0; i < (int)hist.length(); ++i) {
+    if (hist[i] == ',' && ++commas == 12) { hist = hist.substring(0, i); break; }
+  }
+  diag.putString("rr", hist);
+  diag.end();
+  g_resetHistory = hist;
+
+  Serial.printf("[BOOT] #%u reset reason: %s (%d)\n",
+                g_bootCount, resetReasonStr(g_lastReset), (int)g_lastReset);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -46,7 +98,10 @@ void setup() {
   // Dropping below this causes radio instability; higher values increase power draw with no benefit here.
   setCpuFrequencyMhz(80);
   Serial.printf("CPU frequency set to: %dMHz for power optimization\n", getCpuFrequencyMhz());
-  
+
+  // Record why we (re)started before anything else can mask it.
+  captureResetReason();
+
   // Version and board identification
   Serial.println("=================================");
   Serial.printf("WeighMyBru² v%s\n", WEIGHMYBRU_VERSION_STRING);
@@ -197,12 +252,24 @@ void setup() {
   // false tares caused by capacitive coupling between the adjacent pads
   touchSensor.setSleepPin(sleepTouchPin);
 
+  // Initialize piezo sounder (LEDC tone). Harmless if no disc is connected.
+  buzzer.begin();
+
   smartSwitch.begin();
   // Ensure Shelly relay is ON at boot/wake — clears any stale postTriggerRelayOff
   // state and sends a best-effort ON command so the relay is in a known state.
   smartSwitch.ensureRelayOn();
   setupWebServer(scale, flowRate, bluetoothScale, oledDisplay, batteryMonitor, powerManager, smartSwitch);
-  
+
+  // First-run guidance: only when no cup weight has ever been saved (genuine
+  // first boot). setupWebServer() has now restored savedTareWeight from NVS, so
+  // this check is reliable. Returning users skip straight to the live screen.
+  if (oledDisplay.isConnected() && oledDisplay.getSavedTareWeight() < 5.0f) {
+    oledDisplay.showFirstRunHint();
+  }
+
+  // Startup chime once everything is up.
+  buzzer.trigger(BuzzerEvent::BootReady);
 }
 
 void loop() {
@@ -250,6 +317,24 @@ void loop() {
     if (!wasPostTrigger && smartSwitch.isPostTriggerRelayOff()) {
       // Relay just turned off — tell the user what to do next
       oledDisplay.showMessage("Relay off-Hold tare", 3000);
+      buzzer.trigger(BuzzerEvent::SmartSwitchFired);
+    }
+
+    // Target-yield beep — mirrors the OLED flash (Display.cpp uses the same
+    // dose x ratio - 2g threshold). Fire once per brew; rearm when idle.
+    static bool tyBeeped = false;
+    if (brewIdle) {
+      tyBeeped = false;
+    } else if (!tyBeeped && oledDisplay.isTimerRunning() && !oledDisplay.isTimerPaused()) {
+      float dose  = oledDisplay.getDoseWeight();
+      float ratio = oledDisplay.getTargetRatio();
+      if (dose > 0.5f && ratio > 0.0f) {
+        float threshold = dose * ratio - 2.0f;
+        if (threshold > 0.0f && weight >= threshold) {
+          buzzer.trigger(BuzzerEvent::TargetYield);
+          tyBeeped = true;
+        }
+      }
     }
   }
   
@@ -275,6 +360,31 @@ void loop() {
   
   // Update touch sensor
   touchSensor.update();
+
+  // Drive the piezo pattern player (non-blocking).
+  buzzer.update();
+
+  // Tare beep — fires on every touch tare (tap or hold); strobe self-clears.
+  if (touchSensor.wasTareCompleted()) buzzer.trigger(BuzzerEvent::Tare);
+
+  // --- Audible event detection ---
+  // Armed / auto-re-armed: poll the strobe set inside Display::arm(), not an
+  // isArmed() edge — a re-arm while already armed (true->true) has no edge, and
+  // an arm that completes within one loop iteration would be missed.
+  if (oledDisplay.wasArmCompleted()) buzzer.trigger(BuzzerEvent::Armed);
+
+  // BLE client connect / disconnect.
+  static bool prevBle = false;
+  bool bleNow = bluetoothScale.isConnected();
+  if (bleNow && !prevBle)      buzzer.trigger(BuzzerEvent::BleConnected);
+  else if (!bleNow && prevBle) buzzer.trigger(BuzzerEvent::BleDisconnected);
+  prevBle = bleNow;
+
+  // Battery entering low/critical (rising edge only, so it beeps once).
+  static bool prevLow = false;
+  bool lowNow = batteryMonitor.isLowBattery() || batteryMonitor.isCriticalBattery();
+  if (lowNow && !prevLow) buzzer.trigger(BuzzerEvent::BatteryLow);
+  prevLow = lowNow;
 
   // Smart switch safety: re-enable relay only via deliberate hold-tare.
   // wasHoldTareCompleted() strobes true for exactly one loop iteration after
