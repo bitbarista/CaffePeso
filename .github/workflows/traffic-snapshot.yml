@@ -26,9 +26,17 @@ jobs:
 
       - name: Fetch and merge traffic data
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The traffic API is NOT accessible to the built-in GITHUB_TOKEN (it
+          # requires push/admin access). Supply a PAT as the TRAFFIC_TOKEN secret:
+          #   - classic PAT with the `repo` scope, OR
+          #   - fine-grained PAT scoped to this repo with Administration: Read.
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::TRAFFIC_TOKEN secret is not set — add a PAT with traffic (Administration:Read / repo) access."
+            exit 1
+          fi
           mkdir -p traffic
           gh api "repos/${GITHUB_REPOSITORY}/traffic/views"  > /tmp/views.json
           gh api "repos/${GITHUB_REPOSITORY}/traffic/clones" > /tmp/clones.json
