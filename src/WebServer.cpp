@@ -15,8 +15,15 @@
 #include "Version.h"
 #include "SmartSwitch.h"
 #include "Buzzer.h"
+#include <esp_system.h>
 
 extern Buzzer buzzer; // defined in main.cpp
+
+// Crash diagnostics, defined in main.cpp (surfaced via /api/device/info).
+extern esp_reset_reason_t g_lastReset;
+extern uint32_t           g_bootCount;
+extern String             g_resetHistory;
+const char* resetReasonStr(esp_reset_reason_t r);
 
 Preferences preferences;
 
@@ -842,7 +849,14 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += "\"cpu_frequency\":" + String(ESP.getCpuFreqMHz()) + ",";
     json += "\"flash_size\":" + String(ESP.getFlashChipSize()) + ",";
     json += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
-    json += "\"sdk_version\":\"" + String(ESP.getSdkVersion()) + "\"";
+    json += "\"sdk_version\":\"" + String(ESP.getSdkVersion()) + "\",";
+    // Crash diagnostics (see main.cpp). reset_reason/_code = the most recent
+    // reset; reset_history = most-recent-first CSV of reason codes across boots,
+    // so a brownout is still visible after a later USB-serial reset.
+    json += "\"boot_count\":" + String(g_bootCount) + ",";
+    json += "\"reset_code\":" + String((int)g_lastReset) + ",";
+    json += "\"reset_reason\":\"" + String(resetReasonStr(g_lastReset)) + "\",";
+    json += "\"reset_history\":\"" + g_resetHistory + "\"";
     json += "}";
     request->send(200, "application/json", json);
   });

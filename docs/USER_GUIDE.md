@@ -83,6 +83,8 @@ It is designed to work seamlessly at the espresso machine without requiring a ph
 | 1 | JST-PH 2.0 male connector |
 | 1 | 5 mm slide switch (power) |
 | 2 | 100 kΩ 1% resistors (battery voltage divider) |
+| 1 | 27 mm piezo disc (~4.2 kHz resonant) — *optional* |
+| 2 | 150 Ω resistors (piezo series, one per lead) — *optional* |
 | 4 | Self-adhesive rubber feet |
 
 Purchase links for all components are available in the [WeighMyBru² repository](https://github.com/031devstudios/weighmybru2) — the hardware is identical.
@@ -125,6 +127,17 @@ Both touch pads share 3.3 V and GND.
 The battery voltage is monitored via a resistor divider on GPIO 7 (ADC), halving the voltage to fall within the 3.3 V ADC range. The divider connects directly to Battery (+) — before the switch — so the low-battery check can run at boot. Use 1% tolerance resistors for accurate readings.
 
 The slide switch is wired in series between Battery (+) and the VCC rail. When open, the device is fully powered off.
+
+#### Piezo Buzzer (differential drive)
+
+> The piezo buzzer is **optional** — CaffePeso is fully functional without it. It adds audible beeps for events such as tare, target yield reached, and arming (each individually toggleable in **Settings → Sound**).
+
+| Piezo Lead | Connect to |
+|-----------|-----------|
+| Lead 1 | 150 Ω resistor → GPIO 1 |
+| Lead 2 | 150 Ω resistor → GPIO 2 |
+
+The 27 mm piezo disc is driven *differentially* (BTL): GPIO 1 and GPIO 2 swing in antiphase, putting roughly twice the voltage across the disc for a noticeably louder tone. A **150 Ω resistor in series with each lead is required.** The bare disc is capacitive (~15–30 nF) and on each switching edge presents a near short-circuit to the GPIO pins; this sags the ESP32-S3's on-board regulator enough to trigger a brown-out reset. The two series resistors limit the inrush current and eliminate the resets. Polarity is not significant, and no transistor is needed (drive current is only a few mA).
 
 #### Complete Circuit Schematic
 
@@ -173,6 +186,23 @@ TOUCH PADS (TTP223B capacitive modules)
   |  GND  |------ GND            |  GND  |------ GND
   |  SIG  |------ GPIO4          |  SIG  |------ GPIO3
   +-------+                      +-------+
+
+
+PIEZO BUZZER (27mm disc, differential / BTL drive)
+
+  ESP32-S3
+  GPIO1 ----[ R3 150R ]----+
+                           |
+                          (+)
+                          === 27mm piezo disc
+                          (-)
+                           |
+  GPIO2 ----[ R4 150R ]----+
+
+  GPIO1 and GPIO2 are driven in antiphase (~2x voltage swing across
+  the disc => louder). The 150R series resistors are REQUIRED: they
+  limit the capacitive inrush current that would otherwise sag the
+  regulator and brown-out / reset the board. No transistor needed.
 
 
 All GND labels share a common ground.
