@@ -87,8 +87,10 @@ const char* Buzzer::eventDescription(BuzzerEvent ev) {
     }
 }
 
-Buzzer::Buzzer(uint8_t pin, uint8_t invPin, uint8_t ledcChannel, uint16_t resonantHz)
-    : pin(pin), invPin(invPin), channel(ledcChannel), resonant(resonantHz) {
+Buzzer::Buzzer(uint8_t pin, uint8_t invPin, uint8_t ledcChannel, uint16_t resonantHz,
+               bool differential)
+    : pin(pin), invPin(invPin), channel(ledcChannel), resonant(resonantHz),
+      differential(differential) {
     for (uint8_t i = 0; i < (uint8_t)BuzzerEvent::COUNT; ++i) enabled[i] = true;
 }
 
@@ -119,9 +121,10 @@ void Buzzer::begin() {
 
 void Buzzer::silence() {
     ledcWriteTone(channel, 0);
-    if (invPin != 255) {
+    if (invPin != 255 && differential) {
         // Detach the inverted matrix and park the pin low so the disc sits at 0V
-        // when idle (no standing DC bias across the ceramic).
+        // when idle (no standing DC bias across the ceramic). In single-ended mode
+        // invPin is never matrix-attached — it stays a static GND, so nothing to do.
         pinMatrixOutDetach(invPin, false, false);
         digitalWrite(invPin, LOW);
     }
@@ -136,29 +139,44 @@ void Buzzer::play(const Tone* seq, uint8_t len) {
     curIdx = 0;
     stepStart = millis();
     playing = true;
-    if (invPin != 255) {
+    if (invPin != 255 && differential) {
         // Differential drive: route the same LEDC channel to invPin, inverted, so
         // the disc sees +V then -V across its terminals (~2x swing => louder).
         // One timer drives both pins, keeping them perfectly 180° apart.
         uint8_t sig = LEDC_LS_SIG_OUT0_IDX + (channel % SOC_LEDC_CHANNEL_NUM);
         pinMatrixOutAttach(invPin, sig, true /*invertOut*/, false);
     }
+    // Single-ended mode leaves invPin held LOW (set in begin()), so the disc's
+    // second terminal is a real ground reference and only `pin` swings (~half the
+    // current of differential) — the same wiring, for a brownout A/B test.
     // Apply first step immediately.
     if (seq[0].freq > 0) ledcWriteTone(channel, seq[0].freq);
     else                 ledcWriteTone(channel, 0);
 }
 
 void Buzzer::trigger(BuzzerEvent ev) {
-    if (!masterEnabled) return;
     if ((uint8_t)ev >= (uint8_t)BuzzerEvent::COUNT) return;
-    if (!enabled[(uint8_t)ev]) return;
-    uint8_t len = 0;
-    const Tone* seq = patternFor(ev, len);
-    play(seq, len); // a new trigger overrides any in-progress beep
+    // Safe to call from any task: only record the request. update() (loop task)
+    // applies the enable checks and starts playback, so no two tasks ever touch
+    // the LEDC peripheral or playback state at once. Last write wins, which
+    // matches the old "a new trigger overrides any in-progress beep" behaviour.
+    pendingEvent   = (uint8_t)ev;
+    pendingTrigger = true;
 }
 
 void Buzzer::update() {
-    if (!playing) return;
+    // Consume a pending trigger first — all state/peripheral changes happen here.
+    if (pendingTrigger) {
+        pendingTrigger = false;
+        BuzzerEvent ev = (BuzzerEvent)pendingEvent;
+        if (masterEnabled && enabled[(uint8_t)ev]) {
+            uint8_t len = 0;
+            const Tone* seq = patternFor(ev, len);
+            play(seq, len); // a new trigger overrides any in-progress beep
+        }
+    }
+
+    if (!playing || curSeq == nullptr) return;
     if (millis() - stepStart < curSeq[curIdx].ms) return;
 
     // Current step elapsed — advance.
