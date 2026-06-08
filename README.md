@@ -64,6 +64,9 @@ Set your dose once. The OLED displays a live 1:X ratio as yield builds in the cu
 ### 🔔 Target Yield Alert
 Configure a target ratio (e.g. 1:2.0). When yield approaches your target, the OLED flashes and the web UI turns amber — giving you time to stop the shot.
 
+### 🔊 Audible Beeps (Piezo Buzzer)
+An optional piezo buzzer adds sound to the key moments — tare, armed/re-armed, target yield reached, smart-switch stop, low battery, and Bluetooth connect/disconnect. Every beep is individually toggleable in **Settings → Sound**, so you can keep just the cues you want. This is an optional add-on that requires fitting the piezo (see the [wiring guide](docs/USER_GUIDE.md#24-wiring)); CaffePeso is fully functional without it.
+
 ### 📜 Shot History
 The last 10 shots are automatically saved to non-volatile memory: dose, yield, time, and ratio. Survives reboots and power loss. Displayed in the web UI dashboard.
 
