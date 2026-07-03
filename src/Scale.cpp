@@ -107,8 +107,18 @@ void Scale::tare(uint8_t times) {
     }
     
     Serial.println("Taring scale...");
-    hx711.tare(times);
-    Serial.println("Tare complete");
+    // hx711.tare() busy-waits per sample with no timeout, so a stuck HX711 would
+    // hang the whole device here. Confirm the chip is producing samples first; if
+    // not, recover it and skip this tare rather than freezing forever.
+    if (hx711.wait_ready_timeout(1000)) {
+        hx711.tare(times);
+        Serial.println("Tare complete");
+    } else {
+        recover();
+        hx711Recoveries++;
+        notReadySince = 0;
+        Serial.println("Tare skipped: HX711 not ready, power-cycled it");
+    }
     
     // Reset smart filter state after taring - return to stable mode
     currentFilterState = STABLE;
@@ -166,9 +176,30 @@ float Scale::getWeight() {
 
     // Check if HX711 is ready before attempting to read
     if (!hx711.is_ready()) {
-        return currentWeight;  // Return last known value if not ready
+        // Self-heal: a healthy HX711 produces a sample every ~100ms. If it stays
+        // not-ready far longer than that, an electrical glitch (e.g. espresso-machine
+        // pump EMI) has likely latched it up or into power-down. Pulse it back to
+        // life instead of returning a stale reading forever — that stale-0 loop is
+        // exactly the "weight won't increase, scale frozen" symptom. Measure the
+        // continuously-observed not-ready span (not time-since-last-read) so a busy
+        // loop that skipped getWeight() can't trigger a false recovery.
+        if (notReadySince == 0) {
+            notReadySince = currentTime;          // first not-ready poll of this span
+        } else if (currentTime - notReadySince > HX711_STALL_TIMEOUT_MS &&
+                   (lastRecoverMs == 0 || currentTime - lastRecoverMs > HX711_RECOVERY_COOLDOWN_MS)) {
+            // Stalled long enough AND the previous recovery has had time to settle.
+            // The cooldown stops a single stall from storm-looping power-cycles
+            // faster than the chip can come back.
+            recover();
+            hx711Recoveries++;
+            lastRecoverMs = currentTime;
+            notReadySince = currentTime;          // fresh window before retrying
+            Serial.printf("HX711 stall recovered (power-cycled); total recoveries=%u\n", hx711Recoveries);
+        }
+        return currentWeight;  // Return last known value until a fresh sample arrives
     }
-    
+    notReadySince = 0; // got a fresh sample — clear the stall watchdog
+
     float rawReading = hx711.get_units(1);
     
     // Handle NaN or invalid readings
@@ -260,9 +291,36 @@ float Scale::getCurrentWeight() {
     return currentWeight;
 }
 
+bool Scale::isReady() {
+    return isConnected && hx711.is_ready();
+}
+
+bool Scale::probeRaw(float& out) {
+    // Non-blocking: only read when a conversion is already waiting, so this never
+    // busy-waits on the HX711 (which is what freezes the scale on a glitch).
+    if (!isConnected || !hx711.is_ready()) return false;
+    out = hx711.get_value(1); // raw minus tare offset, before scale division
+    return true;
+}
+
+void Scale::recover() {
+    // Clear an HX711 lockup / power-down by pulsing it off then back on.
+    // power-down needs PD_SCK held high >60us; power_up restarts conversions.
+    hx711.power_down();
+    delay(1);
+    hx711.power_up();
+    samplesInitialized = false; // first post-recovery reading re-seeds the filter
+}
+
 long Scale::getRawValue() {
     if (!isConnected) {
         return 0;  // Return 0 if HX711 not connected
+    }
+    // Called from async web handlers (calibrate, scale status). get_value() busy-
+    // waits for a sample, so without a timeout a stalled HX711 would hang that task
+    // forever (and racing the loop's recover() can stall it). Bail if not ready.
+    if (!hx711.wait_ready_timeout(250)) {
+        return 0;
     }
     return hx711.get_value(1); // Get raw value from HX711
 }

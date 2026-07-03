@@ -17,6 +17,12 @@ public:
     void loadCalibration(); // Load calibration factor from NVS
     float getCalibrationFactor() const { return calibrationFactor; } // Getter for API
     bool isHX711Connected() const { return isConnected; } // Check if HX711 is responding
+
+    // --- Diagnostic / robustness helpers ---
+    bool isReady();              // HX711 has a fresh sample ready (non-blocking)
+    bool probeRaw(float& out);   // non-blocking: if ready, read raw (offset-removed) value; false if not ready
+    void recover();              // power-cycle the HX711 to clear a lockup / power-down
+    uint32_t getRecoveryCount() const { return hx711Recoveries; } // times getWeight() auto-recovered a stalled HX711
     
     // Filtering configuration - adjustable for different load cells
     void setBrewingThreshold(float threshold);
@@ -45,6 +51,27 @@ private:
     float currentWeight;
     bool isConnected = false;  // Track HX711 connection status
     class FlowRate* flowRatePtr = nullptr; // For pausing flow rate during tare
+
+    // HX711 stall self-heal: if the chip is observed not-ready continuously for
+    // this long (normal cadence is ~100ms @10Hz, so 3 missed conversions = clearly
+    // stuck, not jitter), an electrical glitch has likely latched it up / into
+    // power-down — power-cycle it instead of returning a stale reading forever
+    // (which presents as a frozen scale until power-off). Kept short so a glitch
+    // mid-shot loses <~0.3s of data before recovery (plus the HX711's own ~400ms
+    // post-power-up settle, which is inherent at 10Hz).
+    // Detection measures *continuously observed* not-ready time (notReadySince is
+    // set on the first not-ready poll and cleared the instant a sample arrives),
+    // NOT time since the last read — so a loop that simply didn't call getWeight()
+    // for a while (BLE / shot-save) can't false-trigger a recovery.
+    static const unsigned long HX711_STALL_TIMEOUT_MS = 300;
+    // After a power-cycle the HX711 needs ~400ms (@10Hz) to produce settled data
+    // and re-assert ready. Don't recover again until this cooldown has elapsed,
+    // otherwise we power-cycle faster than it can come back and storm-loop forever
+    // (one stall -> endless ~3/s recoveries, scale stuck). Must be > the settle time.
+    static const unsigned long HX711_RECOVERY_COOLDOWN_MS = 800;
+    unsigned long notReadySince = 0;  // millis() of first consecutive not-ready poll (0 = ready)
+    unsigned long lastRecoverMs = 0;  // millis() of last recover() — gates the cooldown
+    uint32_t      hx711Recoveries = 0; // count of auto-recoveries (surfaced over API)
     
     // Smart filtering variables - reduced buffer for faster response
     static const int MAX_SAMPLES = 10;  // Reduced from 50 to 10 for faster response

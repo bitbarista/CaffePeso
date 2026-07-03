@@ -23,6 +23,8 @@ extern Buzzer buzzer; // defined in main.cpp
 extern esp_reset_reason_t g_lastReset;
 extern uint32_t           g_bootCount;
 extern String             g_resetHistory;
+extern uint32_t           g_hxRecovTotal;  // lifetime HX711 self-heal recoveries
+extern String             g_hxRecovLog;    // most-recent-first "boot#@<uptime>s" markers
 const char* resetReasonStr(esp_reset_reason_t r);
 
 Preferences preferences;
@@ -784,6 +786,7 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += "\"connected\":" + String(scale.isHX711Connected() ? "true" : "false") + ",";
     json += "\"weight\":" + String(scale.getCurrentWeight(), 2) + ",";
     json += "\"raw_value\":" + String(scale.getRawValue()) + ",";
+    json += "\"hx711_recoveries\":" + String(scale.getRecoveryCount()) + ",";
     json += "\"calibration_factor\":" + String(scale.getCalibrationFactor(), 6);
     json += "}";
     request->send(200, "application/json", json);
@@ -856,7 +859,11 @@ void setupWebServer(Scale &scale, FlowRate &flowRate, BluetoothScale &bluetoothS
     json += "\"boot_count\":" + String(g_bootCount) + ",";
     json += "\"reset_code\":" + String((int)g_lastReset) + ",";
     json += "\"reset_reason\":\"" + String(resetReasonStr(g_lastReset)) + "\",";
-    json += "\"reset_history\":\"" + g_resetHistory + "\"";
+    json += "\"reset_history\":\"" + g_resetHistory + "\",";
+    // HX711 self-heal log (persisted): total = lifetime power-cycle recoveries;
+    // history = most-recent-first "boot#@<uptime>s" markers of each recovery.
+    json += "\"hx711_recoveries_total\":" + String(g_hxRecovTotal) + ",";
+    json += "\"hx711_recovery_history\":\"" + g_hxRecovLog + "\"";
     json += "}";
     request->send(200, "application/json", json);
   });
