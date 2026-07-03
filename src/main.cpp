@@ -53,6 +53,11 @@ esp_reset_reason_t g_lastReset = ESP_RST_UNKNOWN;
 uint32_t           g_bootCount = 0;
 String             g_resetHistory; // most-recent-first CSV of reset-reason codes
 
+// HX711 stall self-heal logging — persisted to NVS so recoveries can be reviewed
+// after the fact (e.g. after a shot session) without watching a live sweep.
+uint32_t           g_hxRecovTotal = 0;  // lifetime recovery count across all boots
+String             g_hxRecovLog;        // most-recent-first CSV of "boot#@<uptime>s" markers
+
 const char* resetReasonStr(esp_reset_reason_t r) {
   switch (r) {
     case ESP_RST_POWERON:   return "Power-on";
@@ -84,11 +89,53 @@ static void captureResetReason() {
     if (hist[i] == ',' && ++commas == 12) { hist = hist.substring(0, i); break; }
   }
   diag.putString("rr", hist);
+
+  // Restore the persisted HX711 recovery log/total (same namespace).
+  g_hxRecovTotal = diag.getUInt("hx_tot", 0);
+  g_hxRecovLog   = diag.getString("hx_log", "");
+
   diag.end();
   g_resetHistory = hist;
 
   Serial.printf("[BOOT] #%u reset reason: %s (%d)\n",
                 g_bootCount, resetReasonStr(g_lastReset), (int)g_lastReset);
+}
+
+// Detect HX711 self-heal recoveries (counted in Scale) and persist them to NVS so
+// they survive reboots and can be reviewed later. Debounced to one NVS write per
+// 5s so a burst of glitches can't wear flash or stall the loop.
+static void logHx711Recoveries() {
+  static uint32_t      lastSeen  = 0;
+  static unsigned long lastFlush = 0;
+  static bool          dirty     = false;
+
+  uint32_t now = scale.getRecoveryCount();
+  if (now > lastSeen) {
+    g_hxRecovTotal += (now - lastSeen);
+    lastSeen = now;
+    // Prepend a marker: which boot + seconds into that boot the recovery happened.
+    // (No RTC, so this is uptime-relative; boot# groups events per power cycle.)
+    // TODO(future): once the scale has real time (NTP-over-WiFi, or a DS3231 RTC),
+    // log a wall-clock timestamp here instead of millis()/1000 uptime.
+
+    String ev = String(g_bootCount) + "@" + String(millis() / 1000) + "s";
+    g_hxRecovLog = ev + (g_hxRecovLog.length() ? "," + g_hxRecovLog : "");
+    int commas = 0;                          // keep the ring at 20 entries
+    for (int i = 0; i < (int)g_hxRecovLog.length(); ++i) {
+      if (g_hxRecovLog[i] == ',' && ++commas == 20) { g_hxRecovLog = g_hxRecovLog.substring(0, i); break; }
+    }
+    dirty = true;
+  }
+
+  if (dirty && millis() - lastFlush >= 5000) {
+    Preferences diag;
+    diag.begin("diag", false);
+    diag.putUInt("hx_tot", g_hxRecovTotal);
+    diag.putString("hx_log", g_hxRecovLog);
+    diag.end();
+    dirty = false;
+    lastFlush = millis();
+  }
 }
 
 void setup() {
@@ -363,6 +410,9 @@ void loop() {
 
   // Drive the piezo pattern player (non-blocking).
   buzzer.update();
+
+  // Persist any HX711 self-heal recoveries to NVS (debounced) for later review.
+  logHx711Recoveries();
 
   // Tare beep — fires on every touch tare (tap or hold); strobe self-clears.
   if (touchSensor.wasTareCompleted()) buzzer.trigger(BuzzerEvent::Tare);
